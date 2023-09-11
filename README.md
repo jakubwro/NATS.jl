@@ -25,6 +25,11 @@ payload(msg) = "Hello."
 
 ### Request Reply.
 
+```bash
+> nats reply help.please 'OK, I CAN HELP!!!'
+
+20:35:19 Listening on "help.please" in group "NATS-RPLY-22"
+```
 
 ```julia-repl
 julia> using NATS
