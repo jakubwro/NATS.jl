@@ -72,7 +72,7 @@ function publish(conn::Connection, subject::String; reply_to::Union{String, Noth
     end
 end
 
-function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
+function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true, max_msgs::Union{Nothing, Int} = nothing)
     sid = randstring()
     SUBSCRIPTION_CHANNEL_SIZE = 10
     ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)
@@ -80,9 +80,11 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
         conn.subs[sid] = ch
     end
     t = Threads.@spawn :default begin
+        count = 0
         while true
             try
                 msg = take!(ch)
+                count = count + 1
                 task = Threads.@spawn :default try
                     res = f(msg)
                     if !isnothing(msg.reply_to)
@@ -92,6 +94,9 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
                     @error e
                 end
                 sync && wait(task)
+                if !isnothing(max_msgs) && count >= max_msgs
+                    break
+                end
             catch e
                 if e isa InvalidStateException
                     # Closed channel, stop.
@@ -105,7 +110,22 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
 
     sub = Sub(subject, queue_group, sid)
     send(conn, sub)
-    sub
+    sub, ch
+end
+
+function request(conn::Connection, subject::String; nreplies = 1, timer::Timer = Timer(3))
+    reply_to = randstring()
+    replies = Channel(10)
+    sub, ch = subscribe(conn, reply_to) do msg
+        put!(replies, msg)
+        Base.n_avail(replies) >= nreplies && close(replies)
+    end
+    publish(conn, subject; reply_to)
+    @async begin 
+        wait(timer)
+        close(replies)
+    end
+    first(collect(replies), nreplies)
 end
 
 function unsubscribe(conn::Connection, sub::Sub; max_msgs::Union{Int, Nothing} = nothing)
@@ -144,7 +164,6 @@ function start!(conn::Connection)
                 end
                 msg = take!(conn.outbox)
                 write(conn.io, serialize(msg))
-                @show isopen(conn.io)
             catch e
                 @show e
             end
@@ -199,4 +218,5 @@ end
 
 function process(conn::Connection, err::Err)
     @debug "Received Err."
+    @show err
 end

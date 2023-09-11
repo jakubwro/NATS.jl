@@ -13,7 +13,7 @@ DISPATCH_PROTOCOL_MESSAGE = Dict(
 function next_protocol_message(io::IO)::ProtocolMessage
     headline = readuntil(io, CRLF)
     isempty(headline) && error("Empty message.")
-    op = first(split(headline, SEPARATOR; keepempty=false))
+    op = first(split(headline, SEPARATOR; keepempty=false, limit=2))
     isempty(op) && error("Received empty line.")
     type = get(DISPATCH_PROTOCOL_MESSAGE, op, nothing)
     isnothing(type) && error("Unexpected protocol message: '$op'")

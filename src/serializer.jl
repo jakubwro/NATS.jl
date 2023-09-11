@@ -7,9 +7,10 @@ function serialize(connect::Connect)
 end
 
 function serialize(pub::Pub)
-    nbytes = ncodeunits(pub.payload)
+    payload = isnothing(pub.payload) ? "" : pub.payload
+    nbytes = ncodeunits(payload)
     reply_to = isnothing(pub.reply_to) ? "" : " $(pub.reply_to)"
-    "PUB $(pub.subject)$reply_to $nbytes\r\n$(pub.payload)\r\n"
+    "PUB $(pub.subject)$reply_to $nbytes\r\n$(payload)\r\n"
 end
 
 function serialize(hpub::HPub)
