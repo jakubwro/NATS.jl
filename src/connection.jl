@@ -72,7 +72,7 @@ function publish(conn::Connection, subject::String; reply_to::Union{String, Noth
     end
 end
 
-function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing}, sync = true)
+function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
     sid = randstring()
     SUBSCRIPTION_CHANNEL_SIZE = 10
     ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)

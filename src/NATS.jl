@@ -18,6 +18,6 @@ include("parser.jl")
 include("serializer.jl")
 include("connection.jl")
 
-export connect, ping, subscribe, subscribe, publish
+export connect, ping, subscribe, subscribe, publish, payload
 
 end
