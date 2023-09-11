@@ -1,31 +1,25 @@
-CRLF = "\r\n"
-SEPARATOR = ' '
-DISPATCH_PROTOCOL_MESSAGE = Dict(
-    "INFO" => Info,
-    "PING" => Ping,
-    "PONG" => Pong,
-    "MSG"  => Msg,
-    "HMSG" => HMsg,
-    "+OK"  => Ok,
-    "-ERR" => Err
-)
+const CRLF = "\r\n"
+const SEPARATOR = ' '
 
 function next_protocol_message(io::IO)::ProtocolMessage
     headline = readuntil(io, CRLF)
-    isempty(headline) && error("Empty message.")
-    op = first(split(headline, SEPARATOR; keepempty=false, limit=2))
-    isempty(op) && error("Received empty line.")
-    type = get(DISPATCH_PROTOCOL_MESSAGE, op, nothing)
-    isnothing(type) && error("Unexpected protocol message: '$op'")
-    next_protocol_message(type, headline, io)
+    if startswith(headline, "INFO")     parse_info(headline)
+    elseif startswith(headline, "PING") Ping()
+    elseif startswith(headline, "PONG") Pong()
+    elseif startswith(headline, "MSG")  parse_msg(headline, io)
+    elseif startswith(headline, "HMSG") parse_hmsg(headline, io)
+    elseif startswith(headline, "+OK")  Ok()
+    elseif startswith(headline, "-ERR") parse_err(headline)
+    else                                error("Unexpected protocol message: '$headline'")
+    end
 end
 
-function next_protocol_message(::Type{Info}, headline::String, io::IO)::Info
+function parse_info(headline::String)::Info
     json = SubString(headline, length("INFO "))
     JSON3.read(json, Info)
 end
 
-function next_protocol_message(::Type{Msg}, headline::String, io::IO)::Msg
+function parse_msg(headline::String, io::IO)::Msg
     args = split(headline, SEPARATOR; keepempty=false)
     (subject, sid) = args[2:3]
     (replyto, nbytes) = 
@@ -41,7 +35,7 @@ function next_protocol_message(::Type{Msg}, headline::String, io::IO)::Msg
     return Msg(subject, sid, replyto, nbytes, payload)
 end
 
-function next_protocol_message(::Type{HMsg}, headline::String, io::IO)::HMsg
+function parse_hmsg(headline::String, io::IO)::HMsg
     args = split(headline, SEPARATOR; keepempty=false)
     (subject, sid) = args[2:3]
     (replyto, hbytes, nbytes) = 
@@ -59,20 +53,8 @@ function next_protocol_message(::Type{HMsg}, headline::String, io::IO)::HMsg
     return HMsg(subject, sid, replyto, hbytes, nbytes, headers, payload)
 end
 
-function next_protocol_message(::Type{Ok}, headline::String, io::IO)::Ok
-    Ok()
-end
-
-function next_protocol_message(::Type{Err}, headline::String, io::IO)::Err
+function parse_err(headline::String)::Err
     left = length("-ERR '") + 1
     right = length(headline) - length("'")
     Err(headline[left:right])
-end
-
-function next_protocol_message(::Type{Ping}, headline::String, io::IO)::Ping
-    Ping()
-end
-
-function next_protocol_message(::Type{Pong}, headline::String, io::IO)::Pong
-    Pong()
 end
