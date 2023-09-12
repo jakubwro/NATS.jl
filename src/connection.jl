@@ -95,7 +95,7 @@ end
 function process_server_messages(conn)
     while true
         try
-            process(conn, @show next_protocol_message(conn.io))
+            process(conn, next_protocol_message(conn.io))
         catch e
             @show e
             @warn "Error parsing protocol message. Closing connection."
@@ -110,7 +110,6 @@ function process_client_messages(conn)
         try
             msg = take!(conn.outbox)
             if msg isa Unsub && !isnothing(msg.max_msgs)
-                @warn "Unsub"
                 conn.unsubs[msg.sid] = msg.max_msgs
             end
             write(conn.io, serialize(msg))
@@ -149,7 +148,7 @@ function process(conn::Connection, msg::Msg)
         get(conn.subs, msg.sid, nothing)
     end
     if isnothing(ch)
-        @error "No subscription found for sid $(msg.sid)"
+        @warn "Noone awaits subscription $(msg.sid)"
     elseif !isopen(ch)
         @warn "Subscription channel is closed. Dropping off message."
     else

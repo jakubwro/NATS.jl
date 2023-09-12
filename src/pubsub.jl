@@ -1,3 +1,5 @@
+const SUBSCRIPTION_CHANNEL_SIZE = 1000
+
 function publish(conn::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload::Union{String, Nothing} = nothing, headers::Union{Nothing, Dict{String, Vector{String}}} = nothing)
     if isnothing(headers)
         nbytes = isnothing(payload) ? 0 : ncodeunits(payload)
@@ -9,7 +11,6 @@ end
 
 function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
     sid = randstring()
-    SUBSCRIPTION_CHANNEL_SIZE = 10
     ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)
     lock(conn.lock) do
         conn.subs[sid] = ch
@@ -24,7 +25,12 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
                         publish(conn, msg.reply_to, res)
                     end
                 catch e
-                    @error e
+                    if e isa InvalidStateException
+                        # Channel is closed. Message will be lost.
+                        # TODO: add param to indicate how to signal this exception to user.
+                    else
+                        @error e
+                    end
                 end
                 sync && wait(task)
             catch e
