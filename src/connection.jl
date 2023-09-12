@@ -148,12 +148,11 @@ function process(conn::Connection, msg::Msg)
     ch = lock(conn.lock) do
         get(conn.subs, msg.sid, nothing)
     end
-    if isnothing(ch)
-        @warn "Noone awaits subscription $(msg.sid)"
-    elseif !isopen(ch)
-        @warn "Subscription channel is closed. Dropping off message."
+    if isnothing(ch) || !isopen(ch)
+        @warn "Noone awaits message for sid $(msg.sid)."
+        # TODO: if this is jetstream message, send NAK.
     else
-        put!(ch, msg)
+        put!(ch, msg) # TODO: catch exception and send NAK
         lock(conn.lock) do
             count = get(conn.unsubs, msg.sid, nothing)
             if !isnothing(count)
