@@ -9,12 +9,19 @@ function publish(conn::Connection, subject::String; reply_to::Union{String, Noth
     end
 end
 
-function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
+function subscribe(conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing)
     sid = randstring()
     ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)
     lock(conn.lock) do
         conn.subs[sid] = ch
     end
+    sub = Sub(subject, queue_group, sid)
+    send(conn, sub)
+    sub, ch
+end
+
+function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
+    sub, ch = subscribe(conn, subject; queue_group)
     t = Threads.@spawn :default begin
         while true
             try
@@ -25,12 +32,7 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
                         publish(conn, msg.reply_to, res)
                     end
                 catch e
-                    if e isa InvalidStateException
-                        # Channel is closed. Message will be lost.
-                        # TODO: add param to indicate how to signal this exception to user.
-                    else
-                        @error e
-                    end
+                    @error e
                 end
                 sync && wait(task)
             catch e
@@ -44,8 +46,6 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
         end
     end
 
-    sub = Sub(subject, queue_group, sid)
-    send(conn, sub)
     sub, ch
 end
 

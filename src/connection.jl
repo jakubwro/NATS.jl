@@ -66,14 +66,15 @@ end
 
 """
 Cleanup subscription data when no more messages are expected.
-This method is NOT threadsafe.
 """
 function _cleanup_sub(conn::Connection, sid::String)
-    if haskey(conn.subs, sid)
-        close(conn.subs[sid])
-        delete!(conn.subs, sid)
+    lock(conn.lock) do
+        if haskey(conn.subs, sid)
+            close(conn.subs[sid])
+            delete!(conn.subs, sid)
+        end
+        delete!(conn.unsubs, sid)
     end
-    delete!(conn.unsubs, sid)
 end
 
 function connection_init(host = "localhost", port = 4222)

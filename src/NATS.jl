@@ -19,6 +19,7 @@ include("serializer.jl")
 include("connection.jl")
 include("pubsub.jl")
 include("reqreply.jl")
+include("jetstream.jl")
 
 export connect, ping, subscribe, subscribe, publish, payload, request
 

@@ -28,19 +28,13 @@ end
 function request(conn::Connection, subject::String, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = randstring()
-    replies = Channel{Msg}(nreplies)
-    sub, ch = subscribe(conn, reply_to) do msg
-        put!(replies, msg)
-        Base.n_avail(replies) >= nreplies && close(replies)
-    end
+    sub, ch = subscribe(conn, reply_to)
     unsubscribe(conn, sub; max_msgs = nreplies)
     publish(conn, subject; reply_to)
     @async begin 
         wait(timer)
-        lock(conn.lock) do
-            _cleanup_sub(conn, sub.sid)
-        end
-        close(replies)
+        # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
+        unsubscribe(conn, sub; max_msgs = 0)
     end
-    first(collect(replies), nreplies)
+    first(collect(ch), nreplies)
 end
