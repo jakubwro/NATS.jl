@@ -11,3 +11,7 @@ end
 function ack(nc::Connection, msg::Msg)
     publish(nc, msg.reply_to)
 end
+
+function nak(nc::Connection, msg::Msg)
+    publish(nc, msg.reply_to; payload = "-NAK")
+end

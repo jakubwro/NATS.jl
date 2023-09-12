@@ -34,6 +34,8 @@ function request(conn::Connection, subject::String, nreplies; timer::Timer = Tim
     @async begin 
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
+        # There is still small probablity than message will be delivered in between. In such
+        # case `-NAK`` will be sent to reply subject in `connection.jl` for jetstream message.
         unsubscribe(conn, sub; max_msgs = 0)
     end
     first(collect(ch), nreplies)

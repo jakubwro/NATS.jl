@@ -107,3 +107,5 @@ end
 
 struct Ok <: ProtocolMessage
 end
+
+needs_ack(msg::Msg) = !isnothing(msg.reply_to) && startswith(msg.reply_to, "\$JS.ACK")

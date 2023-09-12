@@ -150,7 +150,7 @@ function process(conn::Connection, msg::Msg)
     end
     if isnothing(ch) || !isopen(ch)
         @warn "Noone awaits message for sid $(msg.sid)."
-        # TODO: if this is jetstream message, send NAK.
+        needs_ack(msg) && nak(conn, msg)
     else
         put!(ch, msg) # TODO: catch exception and send NAK
         lock(conn.lock) do
