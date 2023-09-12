@@ -3,7 +3,6 @@ struct Connection
     info::Channel{Info}
     subs::Dict{String, Channel}
     outbox::Channel{ProtocolMessage}
-    tasks::Vector{Task}
     lock::ReentrantLock
 end
 
@@ -37,12 +36,13 @@ function connect(
     @debug "Connecting to nats://$host:$port."
     sock = Sockets.connect(port)
     @debug "Connected to nats://$host:$port."
-    connection = Connection(sock, Channel{Info}(10), Dict{String, Channel}(), Channel{ProtocolMessage}(100), Task[], ReentrantLock())
+    connection = Connection(sock, Channel{Info}(10), Dict{String, Channel}(), Channel{ProtocolMessage}(100), ReentrantLock())
     @debug "Starting listeners."
-    start!(connection)
+    @async process_server_messages(connection)
+    @async process_client_messages(connection)
     @debug "Waiting for server INFO."
-    connection_info = fetch(connection.info)
-    @debug "Info: $connection_info."
+    # connection_info = fetch(connection.info)
+    # @debug "Info: $connection_info."
     @debug "Sending CONNECT."
     send(connection, Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey))
     connection
@@ -138,40 +138,29 @@ function unsubscribe(conn::Connection, sub::Sub; max_msgs::Union{Int, Nothing} =
     nothing
 end
 
-function start!(conn::Connection)
-    receiver = Threads.@spawn :interactive begin
-        while true
-            try
-                if !isopen(conn.io)
-                    @warn "EOF"
-                    break
-                end
-                process(conn, next_protocol_message(conn.io))
-            catch e
-                @show e
-                @warn "Error parsing protocol message. Closing connection."
-                close(conn)
-            end
+function process_server_messages(conn)
+    while true
+        try
+            process(conn, next_protocol_message(conn.io))
+        catch e
+            @show e
+            @warn "Error parsing protocol message. Closing connection."
+            close(conn)
+            break
         end
     end
-    
-    sender = Threads.@spawn :interactive begin
-        while true
-            try
-                if !isopen(conn.io)
-                    @warn "EOF"
-                    break
-                end
-                msg = take!(conn.outbox)
-                write(conn.io, serialize(msg))
-            catch e
-                @show e
-            end
-        end
-    end
+end
 
-    push!(conn.tasks, receiver)
-    push!(conn.tasks, sender)
+function process_client_messages(conn)
+    while true
+        try
+            msg = take!(conn.outbox)
+            write(conn.io, serialize(msg))
+        catch e
+            @show e
+            break
+        end
+    end
 end
 
 function process(conn::Connection, msg::ProtocolMessage)
