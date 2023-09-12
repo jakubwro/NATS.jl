@@ -17,6 +17,8 @@ include("protocol_data.jl")
 include("parser.jl")
 include("serializer.jl")
 include("connection.jl")
+include("pubsub.jl")
+include("reqreply.jl")
 
 export connect, ping, subscribe, subscribe, publish, payload, request
 

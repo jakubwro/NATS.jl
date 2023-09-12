@@ -2,6 +2,7 @@ struct Connection
     io::IO
     info::Channel{Info}
     subs::Dict{String, Channel}
+    unsubs::Dict{String, Int64}
     outbox::Channel{ProtocolMessage}
     lock::ReentrantLock
 end
@@ -36,7 +37,7 @@ function connect(
     @debug "Connecting to nats://$host:$port."
     sock = Sockets.connect(port)
     @debug "Connected to nats://$host:$port."
-    connection = Connection(sock, Channel{Info}(10), Dict{String, Channel}(), Channel{ProtocolMessage}(100), ReentrantLock())
+    connection = Connection(sock, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(100), ReentrantLock())
     @debug "Starting listeners."
     @async process_server_messages(connection)
     @async process_client_messages(connection)
@@ -63,85 +64,38 @@ function ping(conn)
     send(conn, Ping())
 end
 
-function publish(conn::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload::Union{String, Nothing} = nothing, headers::Union{Nothing, Dict{String, Vector{String}}} = nothing)
-    if isnothing(headers)
-        nbytes = isnothing(payload) ? 0 : ncodeunits(payload)
-        send(conn, Pub(subject, reply_to, nbytes, payload))
-    else
-        
-    end
-end
-
-function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true, max_msgs::Union{Nothing, Int} = nothing)
-    sid = randstring()
-    SUBSCRIPTION_CHANNEL_SIZE = 10
-    ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)
-    lock(conn.lock) do
-        conn.subs[sid] = ch
-    end
-    t = Threads.@spawn :default begin
-        count = 0
-        while true
-            try
-                msg = take!(ch)
-                count = count + 1
-                task = Threads.@spawn :default try
-                    res = f(msg)
-                    if !isnothing(msg.reply_to)
-                        publish(conn, msg.reply_to, res)
-                    end
-                catch e
-                    @error e
-                end
-                sync && wait(task)
-                if !isnothing(max_msgs) && count >= max_msgs
-                    break
-                end
-            catch e
-                if e isa InvalidStateException
-                    # Closed channel, stop.
-                else
-                    @error e
-                end
-                break
-            end
-        end
-    end
-
-    sub = Sub(subject, queue_group, sid)
-    send(conn, sub)
-    sub, ch
-end
-
-function request(conn::Connection, subject::String; nreplies = 1, timer::Timer = Timer(3))
-    reply_to = randstring()
-    replies = Channel(10)
-    sub, ch = subscribe(conn, reply_to) do msg
-        put!(replies, msg)
-        Base.n_avail(replies) >= nreplies && close(replies)
-    end
-    publish(conn, subject; reply_to)
-    @async begin 
-        wait(timer)
-        close(replies)
-    end
-    first(collect(replies), nreplies)
-end
-
-function unsubscribe(conn::Connection, sub::Sub; max_msgs::Union{Int, Nothing} = nothing)
-    sid = sub.sid
-    send(conn, Unsub(sid, max_msgs))
-    lock(conn.lock) do
+"""
+Cleanup subscription data when no more messages are expected.
+This method is NOT threadsafe.
+"""
+function _cleanup_sub(conn::Connection, sid::String)
+    if haskey(conn.subs, sid)
         close(conn.subs[sid])
         delete!(conn.subs, sid)
     end
-    nothing
+    delete!(conn.unsubs, sid)
+end
+
+function connection_init(host = "localhost", port = 4222)
+    sock = Sockets.connect(host, port)
+    info = next_protocol_message(sock)
+    info isa Info || error("Expected INFO message, received $msg.")
+    sock, info
+end
+
+function theloop()
+    while true
+        io, info = connection_init()
+        # send connect
+        # send existing subs
+        # start processor 
+    end
 end
 
 function process_server_messages(conn)
     while true
         try
-            process(conn, next_protocol_message(conn.io))
+            process(conn, @show next_protocol_message(conn.io))
         catch e
             @show e
             @warn "Error parsing protocol message. Closing connection."
@@ -155,6 +109,10 @@ function process_client_messages(conn)
     while true
         try
             msg = take!(conn.outbox)
+            if msg isa Unsub && !isnothing(msg.max_msgs)
+                @warn "Unsub"
+                conn.unsubs[msg.sid] = msg.max_msgs
+            end
             write(conn.io, serialize(msg))
         catch e
             @show e
@@ -192,8 +150,21 @@ function process(conn::Connection, msg::Msg)
     end
     if isnothing(ch)
         @error "No subscription found for sid $(msg.sid)"
+    elseif !isopen(ch)
+        @warn "Subscription channel is closed. Dropping off message."
     else
         put!(ch, msg)
+        lock(conn.lock) do
+            count = get(conn.unsubs, msg.sid, nothing)
+            if !isnothing(count)
+                count = count - 1
+                if count == 0
+                    _cleanup_sub(conn, msg.sid)
+                else
+                    conn.unsubs[msg.sid] = count
+                end
+            end
+        end
     end
 end
 
