@@ -28,28 +28,44 @@ function send(nc::Connection, message::ProtocolMessage)
 end
 
 function sendloop(nc::Connection, io::IO)
-    try
-        while true
-            msg = fetch(nc.outbox)
-            if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
-                @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs # TODO: move it somewhere else
-            end
-            write(io, serialize(msg))
-            take!(nc.outbox)
+    while true
+        msg = fetch(nc.outbox)
+        if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
+            @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs # TODO: move it somewhere else
         end
-    catch e
-        e
+        write(io, serialize(msg))
+        take!(nc.outbox)
     end
 end
 
 function parserloop(nc::Connection, io::IO)
-    try
-        while true
-            process(nc, next_protocol_message(io))
-        end
-    catch e
-        e
+    while true
+        process(nc, next_protocol_message(io))
     end
+end
+
+function reconnect(nc::Connection, host, port, con_msg)
+    sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
+    lock(nc.lock) do; nc.status = CONNECTED end
+    ch = Channel(0)
+    sender_task = Threads.@spawn :interactive sendloop(nc, sock)
+    parser_task = Threads.@spawn :interactive parserloop(nc, sock)
+    bind(ch, sender_task)
+    bind(ch, parser_task)
+    try take!(ch) catch err end
+    close(sock)
+    close(nc.outbox)
+    try wait(sender_task) catch err end
+    try wait(parser_task) catch err end
+    @info "Disconnected. Trying to reconnect."
+    new_outbox = Channel{ProtocolMessage}(1000)
+    put!(new_outbox, con_msg)
+    # TODO: restore old subs.
+    for msg in collect(nc.outbox)
+        put!(new_outbox, msg)
+    end
+    lock(nc.lock) do; nc.status = RECONNECTING end
+    lock(nc.lock) do; nc.outbox = new_outbox end
 end
 
 function connect(
@@ -75,29 +91,8 @@ function connect(
     nc = Connection()
     con_msg = Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey)
     send(nc, con_msg)
-
-    t = Threads.@spawn :interactive begin
-        while true
-            # delays = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
-            sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
-            lock(nc.lock) do; nc.status = CONNECTED end
-            sender_task = Threads.@spawn :interactive sendloop(nc, sock)
-            parser_task = Threads.@spawn :interactive parserloop(nc, sock)
-            wait(parser_task)
-            @info "Disconnected. Trying to reconnect."
-            close(nc.outbox)
-            new_outbox = Channel{ProtocolMessage}(1000)
-            put!(new_outbox, con_msg)
-            # TODO: restore old subs.
-            for msg in collect(nc.outbox)
-                put!(new_outbox, msg)
-            end
-            lock(nc.lock) do; nc.status = RECONNECTING end
-            wait(sender_task)
-            lock(nc.lock) do; nc.outbox = new_outbox end
-        end
-    end
-    errormonitor(t)
+    reconnect_task = Threads.@spawn :interactive while true reconnect(nc, host, port, con_msg) end
+    errormonitor(reconnect_task)
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
