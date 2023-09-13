@@ -20,11 +20,36 @@ outbox(nc::Connection) = @lock nc.lock nc.outbox
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
-function send(conn::Connection, message::ProtocolMessage)
-    # if conn.status != CONNECTED
-    #     error("Not connected.")
-    # end
-    put!(conn.outbox, message)
+function send(nc::Connection, message::ProtocolMessage)
+    if status(nc::Connection) in [CLOSED, FAILURE]
+        error("Connection is broken.")
+    end
+    put!(nc.outbox, message)
+end
+
+function sendloop(nc::Connection, io::IO)
+    try
+        while true
+            msg = fetch(nc.outbox)
+            if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
+                @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs # TODO: move it somewhere else
+            end
+            write(io, serialize(msg))
+            take!(nc.outbox)
+        end
+    catch e
+        e
+    end
+end
+
+function parserloop(nc::Connection, io::IO)
+    try
+        while true
+            process(nc, next_protocol_message(io))
+        end
+    catch e
+        e
+    end
 end
 
 function connect(
@@ -51,43 +76,29 @@ function connect(
     con_msg = Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey)
     send(nc, con_msg)
 
-    Threads.@spawn :interactive begin
+    t = Threads.@spawn :interactive begin
         while true
+            # delays = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
             sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
             lock(nc.lock) do; nc.status = CONNECTED end
-            sender_task = Threads.@spawn :interactive while true
-                try
-                    msg = fetch(nc.outbox)
-                    if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
-                        @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs
-                    end
-                    write(sock, serialize(msg))
-                    take!(nc.outbox)
-                catch e
-                    @show e
-                    break # TODO: check for `istaskfailed` somewhere.
-                end
+            sender_task = Threads.@spawn :interactive sendloop(nc, sock)
+            parser_task = Threads.@spawn :interactive parserloop(nc, sock)
+            wait(parser_task)
+            @info "Disconnected. Trying to reconnect."
+            close(nc.outbox)
+            new_outbox = Channel{ProtocolMessage}(1000)
+            put!(new_outbox, con_msg)
+            # TODO: restore old subs.
+            for msg in collect(nc.outbox)
+                put!(new_outbox, msg)
             end
-
-            try
-                while true
-                    process(nc, next_protocol_message(sock))
-                end
-            catch
-                close(nc.outbox)
-                new_outbox = Channel{ProtocolMessage}(1000)
-                put!(new_outbox, con_msg)
-                # TODO: restore old subs.
-                for msg in collect(nc.outbox)
-                    put!(new_outbox, msg)
-                end
-                lock(nc.lock) do; nc.status = RECONNECTING end
-                wait(sender_task)
-                lock(nc.lock) do; nc.outbox = new_outbox end
-                @info "Disconnected. Trying to reconnect."
-            end
+            lock(nc.lock) do; nc.status = RECONNECTING end
+            wait(sender_task)
+            lock(nc.lock) do; nc.outbox = new_outbox end
         end
     end
+    errormonitor(t)
+
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
     nc
