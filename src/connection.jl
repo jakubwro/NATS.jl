@@ -68,28 +68,9 @@ function reconnect(nc::Connection, host, port, con_msg)
     lock(nc.lock) do; nc.outbox = new_outbox end
 end
 
-function connect(
-    host = NATS_DEFAULT_HOST,
-    port = NATS_DEFAULT_PORT;
-    verbose::Bool = true,
-    pedantic::Bool = true,
-    tls_required::Bool = false,
-    auth_token::Union{String, Nothing} = nothing,
-    user::Union{String, Nothing} = nothing,
-    pass::Union{String, Nothing} = nothing,
-    name::Union{String, Nothing} = nothing,
-    lang::String = NATS_CLIENT_LANG,
-    version::String = NATS_CLIENT_VERSION,
-    protocol::Union{Int, Nothing} = nothing,
-    echo::Union{Bool, Nothing} = nothing,
-    sig::Union{String, Nothing} = nothing,
-    jwt::Union{String, Nothing} = nothing,
-    no_responders::Union{Bool, Nothing} = nothing,
-    headers::Union{Bool, Nothing} = nothing,
-    nkey::Union{String, Nothing} = nothing
-)
+function connect(host = NATS_DEFAULT_HOST, port = NATS_DEFAULT_PORT; kw...)
     nc = Connection()
-    con_msg = Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey)
+    con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
     send(nc, con_msg)
     reconnect_task = Threads.@spawn :interactive while true reconnect(nc, host, port, con_msg) end
     errormonitor(reconnect_task)

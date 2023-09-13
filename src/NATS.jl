@@ -13,6 +13,7 @@ const NATS_CLIENT_LANG = "julia"
 const NATS_DEFAULT_HOST = "localhost"
 const NATS_DEFAULT_PORT = 4222
 
+include("defaults.jl")
 include("protocol_data.jl")
 include("parser.jl")
 include("serializer.jl")
