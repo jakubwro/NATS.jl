@@ -1,16 +1,29 @@
-struct Connection
-    io::IO
+
+@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING CLOSED FAILURE
+
+mutable struct Connection
+    status::ConnectionStatus
     info::Channel{Info}
     subs::Dict{String, Channel}
     unsubs::Dict{String, Int64}
     outbox::Channel{ProtocolMessage}
     lock::ReentrantLock
+    function Connection()
+        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(100), ReentrantLock())
+    end
 end
 
-show(io::IO, connection::Connection) = print(io, typeof(connection), "(",
-    connection.io, ", " , length(connection.subs)," subs, ", connection.outbox.n_avail_items ," msgs in outbox)")
+info(nc::Connection) = fetch(nc.info)
+status(nc::Connection) = @lock nc.lock nc.status
+outbox(nc::Connection) = @lock nc.lock nc.outbox
+
+show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
+    status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 function send(conn::Connection, message::ProtocolMessage)
+    # if conn.status != CONNECTED
+    #     error("Not connected.")
+    # end
     put!(conn.outbox, message)
 end
 
@@ -34,31 +47,62 @@ function connect(
     headers::Union{Bool, Nothing} = nothing,
     nkey::Union{String, Nothing} = nothing
 )
-    @debug "Connecting to nats://$host:$port."
-    sock = Sockets.connect(port)
-    @debug "Connected to nats://$host:$port."
-    connection = Connection(sock, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(100), ReentrantLock())
-    @debug "Starting listeners."
-    @async process_server_messages(connection)
-    @async process_client_messages(connection)
-    @debug "Waiting for server INFO."
-    # connection_info = fetch(connection.info)
-    # @debug "Info: $connection_info."
-    @debug "Sending CONNECT."
-    send(connection, Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey))
-    connection
+    nc = Connection()
+    con_msg = Connect(verbose, pedantic, tls_required, auth_token, user, pass, name, lang, version, protocol, echo, sig, jwt, no_responders, headers, nkey)
+    send(nc, con_msg)
+
+    Threads.@spawn :interactive begin
+        while true
+            sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
+            lock(nc.lock) do; nc.status = CONNECTED end
+            sender_task = Threads.@spawn :interactive while true
+                try
+                    msg = fetch(nc.outbox)
+                    if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
+                        @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs
+                    end
+                    write(sock, serialize(msg))
+                    take!(nc.outbox)
+                catch e
+                    @show e
+                    break # TODO: check for `istaskfailed` somewhere.
+                end
+            end
+
+            try
+                while true
+                    process(nc, next_protocol_message(sock))
+                end
+            catch
+                close(nc.outbox)
+                new_outbox = Channel{ProtocolMessage}(1000)
+                put!(new_outbox, con_msg)
+                # TODO: restore old subs.
+                for msg in collect(nc.outbox)
+                    put!(new_outbox, msg)
+                end
+                lock(nc.lock) do; nc.status = RECONNECTING end
+                wait(sender_task)
+                lock(nc.lock) do; nc.outbox = new_outbox end
+                @info "Disconnected. Trying to reconnect."
+            end
+        end
+    end
+    # connection_info = fetch(nc.info)
+    # @info "Info: $connection_info."
+    nc
 end
 
-function close(conn::Connection)
-    lock(conn.lock) do
-        for (sid, ch) in conn.subs
-            Sockets.close(ch)
-        end
-        empty!(conn.subs)
-    end
+# function close(conn::Connection)
+#     lock(conn.lock) do
+#         for (sid, ch) in conn.subs
+#             Sockets.close(ch)
+#         end
+#         empty!(conn.subs)
+#     end
     
-    close(conn.io)
-end
+#     close(conn.io)
+# end
 
 function ping(conn)
     send(conn, Ping())
@@ -68,13 +112,15 @@ end
 Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_sub(conn::Connection, sid::String)
-    lock(conn.lock) do
+    # lock(conn.lock) do
         if haskey(conn.subs, sid)
             close(conn.subs[sid])
             delete!(conn.subs, sid)
         end
+        # @show "deleting $sid"
+        # sleep(0.1)
         delete!(conn.unsubs, sid)
-    end
+    # end
 end
 
 function connection_init(host = "localhost", port = 4222)
@@ -82,43 +128,6 @@ function connection_init(host = "localhost", port = 4222)
     info = next_protocol_message(sock)
     info isa Info || error("Expected INFO message, received $msg.")
     sock, info
-end
-
-function theloop()
-    while true
-        io, info = connection_init()
-        # send connect
-        # send existing subs
-        # start processor 
-    end
-end
-
-function process_server_messages(conn)
-    while true
-        try
-            process(conn, next_protocol_message(conn.io))
-        catch e
-            @show e
-            @warn "Error parsing protocol message. Closing connection."
-            close(conn)
-            break
-        end
-    end
-end
-
-function process_client_messages(conn)
-    while true
-        try
-            msg = take!(conn.outbox)
-            if msg isa Unsub && !isnothing(msg.max_msgs)
-                conn.unsubs[msg.sid] = msg.max_msgs
-            end
-            write(conn.io, serialize(msg))
-        catch e
-            @show e
-            break
-        end
-    end
 end
 
 function process(conn::Connection, msg::ProtocolMessage)
@@ -134,9 +143,9 @@ function process(conn::Connection, info::Info)
     end
 end
 
-function process(conn::Connection, ping::Ping)
+function process(nc::Connection, ping::Ping)
     @debug "Sending PONG."
-    write(conn.io, serialize(Pong())) # Reply immediately bypassing outbox channel.
+    send(nc, Pong())
 end
 
 function process(conn::Connection, pong::Pong)
@@ -167,15 +176,15 @@ function process(conn::Connection, msg::Msg)
     end
 end
 
-function process(conn::Connection, hmsg::HMsg)
+function process(nc::Connection, hmsg::HMsg)
     @debug "Received HMsg."
 end
 
-function process(conn::Connection, ok::Ok)
+function process(nc::Connection, ok::Ok)
     @debug "Received OK."
 end
 
-function process(conn::Connection, err::Err)
+function process(nc::Connection, err::Err)
     @debug "Received Err."
     @show err
 end
