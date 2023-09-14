@@ -19,11 +19,16 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
     sub
 end
 
-function unsubscribe(conn::Connection, sub::Sub; max_msgs::Union{Int, Nothing} = nothing)
+
+function unsubscribe(nc::Connection, sid::String; max_msgs::Union{Int, Nothing} = nothing)
     # TODO: do not send unsub if sub alredy removed by Msg handler.
-    send(conn, Unsub(sub.sid, max_msgs))
+    send(nc, Unsub(sid, max_msgs))
     if isnothing(max_msgs) || max_msgs == 0
-        _cleanup_sub(conn, sub.sid)
+        _cleanup_sub(nc, sid)
     end
     nothing
+end
+
+function unsubscribe(nc::Connection, sub::Sub; max_msgs::Union{Int, Nothing} = nothing)
+    unsubscribe(nc, sub.sid; max_msgs)
 end

@@ -1,5 +1,5 @@
 
-@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING CLOSED FAILURE
+@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING CLOSING CLOSED FAILURE
 
 mutable struct Connection
     status::ConnectionStatus
@@ -57,6 +57,10 @@ function reconnect(nc::Connection, host, port, con_msg)
     close(nc.outbox)
     try wait(sender_task) catch err @error err end
     try wait(parser_task) catch err @error err end
+    if nc.status in [CLOSING, CLOSED, FAILURE]
+        @info "Connection is closing."
+        error("Connection closed.")
+    end
     @info "Disconnected. Trying to reconnect."
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
@@ -81,16 +85,17 @@ function connect(host = NATS_DEFAULT_HOST, port = NATS_DEFAULT_PORT; kw...)
     nc
 end
 
-# function close(conn::Connection)
-#     lock(conn.lock) do
-#         for (sid, ch) in conn.subs
-#             Sockets.close(ch)
-#         end
-#         empty!(conn.subs)
-#     end
-    
-#     close(conn.io)
-# end
+function close(conn::Connection)
+    lock(conn.lock) do; conn.status = CLOSING end
+    lock(conn.lock) do
+        for (sid, f) in conn.handlers
+            unsubscribe(conn, sid)
+        end
+    end
+    sleep(1)
+    try close(conn.outbox) catch end
+    lock(conn.lock) do; conn.status = CLOSED end
+end
 
 function ping(conn)
     send(conn, Ping())
@@ -121,13 +126,6 @@ function _cleanup_unsub_msg(conn::Connection, sid::String)
             end
         end
     end
-end
-
-function connection_init(host = "localhost", port = 4222)
-    sock = Sockets.connect(host, port)
-    info = next_protocol_message(sock)
-    info isa Info || error("Expected INFO message, received $msg.")
-    sock, info
 end
 
 function process(conn::Connection, msg::ProtocolMessage)
