@@ -9,7 +9,7 @@ mutable struct Connection
     outbox::Channel{ProtocolMessage}
     lock::ReentrantLock
     function Connection()
-        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(100), ReentrantLock())
+        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(OUTBOX_SIZE), ReentrantLock())
     end
 end
 
@@ -58,10 +58,11 @@ function reconnect(nc::Connection, host, port, con_msg)
     try wait(sender_task) catch err end
     try wait(parser_task) catch err end
     @info "Disconnected. Trying to reconnect."
-    new_outbox = Channel{ProtocolMessage}(1000)
+    new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
     # TODO: restore old subs.
     for msg in collect(nc.outbox)
+        # TODO: skip Connect, Ping, Pong
         put!(new_outbox, msg)
     end
     lock(nc.lock) do; nc.status = RECONNECTING end

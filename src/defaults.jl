@@ -21,3 +21,5 @@ const DEFAULT_CONNECT_ARGS = (
     headers = nothing,
     nkey = nothing
 )
+const OUTBOX_SIZE = 1000000
+
