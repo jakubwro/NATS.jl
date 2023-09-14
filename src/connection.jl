@@ -33,7 +33,7 @@ function sendloop(nc::Connection, io::IO)
         if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
             @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs # TODO: move it somewhere else
         end
-        write(io, serialize(msg))
+        show(io, MIME("application/nats"), msg)
         take!(nc.outbox)
     end
 end
