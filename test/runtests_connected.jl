@@ -53,3 +53,8 @@ end
     @test length(replies) == n
     @test all(r -> r.payload == "This is a reply.", replies)
 end
+
+@testset "No responders." begin
+    nc = NATS.connect()
+    @test_throws ErrorException request(nc, "FOO.NULL")
+end
