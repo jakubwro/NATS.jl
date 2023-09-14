@@ -18,6 +18,6 @@ include("pubsub.jl")
 include("reqreply.jl")
 include("jetstream.jl")
 
-export connect, ping, subscribe, subscribe, publish, payload, request
+export connect, ping, publish, subscribe, unsubscribe, payload, request, reply
 
 end

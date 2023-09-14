@@ -28,7 +28,13 @@ end
 function request(conn::Connection, subject::String, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = randstring()
-    sub, ch = subscribe(conn, reply_to)
+    replies = Channel(nreplies)
+    sub = subscribe(conn, reply_to) do msg
+        put!(replies, msg)
+        if Base.n_avail(replies) == nreplies
+            close(replies)
+        end
+    end
     unsubscribe(conn, sub; max_msgs = nreplies)
     publish(conn, subject; reply_to)
     @async begin 
@@ -37,6 +43,13 @@ function request(conn::Connection, subject::String, nreplies; timer::Timer = Tim
         # There is still small probablity than message will be delivered in between. In such
         # case `-NAK`` will be sent to reply subject in `connection.jl` for jetstream message.
         unsubscribe(conn, sub; max_msgs = 0)
+        close(replies)
     end
-    first(collect(ch), nreplies)
+    first(collect(replies), nreplies)
+end
+
+function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, String} = nothing)
+    subscribe(nc, subject; queue_group) do msg
+        publish(nc, msg.reply_to; payload = f(msg))
+    end
 end

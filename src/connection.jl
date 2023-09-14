@@ -4,8 +4,8 @@
 mutable struct Connection
     status::ConnectionStatus
     info::Channel{Info}
-    subs::Dict{String, Channel}
     unsubs::Dict{String, Int64}
+    handlers::Dict{String, Function}
     outbox::Channel{ProtocolMessage}
     lock::ReentrantLock
     function Connection()
@@ -18,7 +18,7 @@ status(nc::Connection) = @lock nc.lock nc.status
 outbox(nc::Connection) = @lock nc.lock nc.outbox
 
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
+    status(nc), ", " , length(nc.handlers)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 function send(nc::Connection, message::ProtocolMessage)
     if status(nc::Connection) in [CLOSED, FAILURE]
@@ -55,8 +55,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     try take!(ch) catch err end
     close(sock)
     close(nc.outbox)
-    try wait(sender_task) catch err @show err end
-    try wait(parser_task) catch err @show err end
+    try wait(sender_task) catch err @error err end
+    try wait(parser_task) catch err @error err end
     @info "Disconnected. Trying to reconnect."
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
@@ -101,12 +101,7 @@ Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_sub(conn::Connection, sid::String)
     lock(conn.lock) do
-        if haskey(conn.subs, sid)
-            close(conn.subs[sid])
-            delete!(conn.subs, sid)
-        end
-        # @show "deleting $sid"
-        # sleep(0.1)
+        delete!(conn.handlers, sid)
         delete!(conn.unsubs, sid)
     end
 end
@@ -158,17 +153,15 @@ function process(conn::Connection, pong::Pong)
 end
 
 function process(conn::Connection, msg::Msg)
-    @debug "Received Msg."
-    ch = lock(conn.lock) do
-        get(conn.subs, msg.sid, nothing)
+    @debug "Received $msg"
+    f = lock(conn.lock) do
+        get(conn.handlers, msg.sid, nothing)
     end
-    if isnothing(ch) || !isopen(ch)
-        @warn "Noone awaits message for sid $(msg.sid)."
-        needs_ack(msg) && nak(conn, msg)
-    else
-        put!(ch, msg) # TODO: catch exception and send NAK
-        _cleanup_unsub_msg(conn, msg.sid)
-    end
+    
+    t = Threads.@spawn :default Base.invokelatest(f, msg)
+    errormonitor(t)
+    # Base.invokelatest(f, msg)
+    _cleanup_unsub_msg(conn, msg.sid)
 end
 
 function process(nc::Connection, hmsg::HMsg)

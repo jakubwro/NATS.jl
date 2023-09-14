@@ -9,44 +9,14 @@ function publish(conn::Connection, subject::String; reply_to::Union{String, Noth
     end
 end
 
-function subscribe(conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing)
-    sid = randstring()
-    ch = Channel(SUBSCRIPTION_CHANNEL_SIZE)
-    lock(conn.lock) do
-        conn.subs[sid] = ch
-    end
-    sub = Sub(subject, queue_group, sid)
-    send(conn, sub)
-    sub, ch
-end
-
 function subscribe(f, conn::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
-    sub, ch = subscribe(conn, subject; queue_group)
-    t = Threads.@spawn :default begin
-        while true
-            try
-                msg = take!(ch)
-                task = Threads.@spawn :default try
-                    res = f(msg)
-                    if !isnothing(msg.reply_to)
-                        publish(conn, msg.reply_to; payload = res)
-                    end
-                catch e
-                    @error e
-                end
-                sync && wait(task)
-            catch e
-                if e isa InvalidStateException
-                    # Closed channel, stop.
-                else
-                    @error e
-                end
-                break
-            end
-        end
+    sid = randstring()
+    sub = Sub(subject, queue_group, sid)
+    lock(conn.lock) do
+        conn.handlers[sid] = f
     end
-
-    sub, ch
+    send(conn, sub)
+    sub
 end
 
 function unsubscribe(conn::Connection, sub::Sub; max_msgs::Union{Int, Nothing} = nothing)
