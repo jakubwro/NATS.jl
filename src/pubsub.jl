@@ -5,7 +5,7 @@ function publish(conn::Connection, subject::String; reply_to::Union{String, Noth
         nbytes = isnothing(payload) ? 0 : ncodeunits(payload)
         send(conn, Pub(subject, reply_to, nbytes, payload))
     else
-        
+        error("not implemented")
     end
 end
 

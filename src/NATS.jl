@@ -8,11 +8,11 @@ using JSON3
 
 import Base: show, close
 
-include("defaults.jl")
-include("protocol_data.jl")
+include("consts.jl")
+include("protocol.jl")
 include("parser.jl")
 include("headers.jl")
-include("serializer.jl")
+include("show.jl")
 include("connection.jl")
 include("pubsub.jl")
 include("reqreply.jl")

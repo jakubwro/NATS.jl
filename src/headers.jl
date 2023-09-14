@@ -38,14 +38,3 @@ end
 function statuscode(hmsg::HMsg)
     statuscode(hmsg.headers)
 end
-
-function show(io::IO, ::MIME"application/nats", headers::Headers)
-    print(io, "NATS/1.0\r\n")
-    for (key, value) in headers
-        print(io, key)
-        print(io, ": ")
-        print(io, value)
-        print(io, "\r\n")
-    end
-    print(io, "\r\n")
-end

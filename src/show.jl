@@ -38,3 +38,14 @@ end
 function show(io::IO, ::MIME"application/nats", unsub::Pong)
     write(io, "PONG\r\n")
 end
+
+function show(io::IO, ::MIME"application/nats", headers::Headers)
+    print(io, "NATS/1.0\r\n")
+    for (key, value) in headers
+        print(io, key)
+        print(io, ": ")
+        print(io, value)
+        print(io, "\r\n")
+    end
+    print(io, "\r\n")
+end
