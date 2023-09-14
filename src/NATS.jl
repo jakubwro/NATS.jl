@@ -11,6 +11,7 @@ import Base: show, close
 include("defaults.jl")
 include("protocol_data.jl")
 include("parser.jl")
+include("headers.jl")
 include("serializer.jl")
 include("connection.jl")
 include("pubsub.jl")

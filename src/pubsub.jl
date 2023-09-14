@@ -28,7 +28,6 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
                 msg = take!(ch)
                 task = Threads.@spawn :default try
                     res = f(msg)
-                    @show res
                     if !isnothing(msg.reply_to)
                         publish(conn, msg.reply_to; payload = res)
                     end
