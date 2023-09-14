@@ -28,27 +28,27 @@ end
     @test payload(result) == "This is a reply."
 end
 
-
 @testset "Many requests." begin
     nc = NATS.connect()
+    n = 4000
     sub, = subscribe(nc, "FOO.REQUESTS") do msg
         "This is a reply."
     end
-    begin
-        results = Channel(1000000)
-        cond = Channel()
-        for i in 1:4000
-            @async begin
-                msg = request(nc, "FOO.REQUESTS")
-                put!(results, msg)
-                if Base.n_avail(results) == 4000
-                    close(cond)
-                    close(results)
-                end
+    results = Channel(n)
+    cond = Channel()
+    for _ in 1:n
+        @async begin
+            msg = request(nc, "FOO.REQUESTS")
+            put!(results, msg)
+            if Base.n_avail(results) == n
+                close(cond)
+                close(results)
             end
         end
-        try take!(cond) catch end
-        collect(results)
     end
-    unsubscribe(nc, sub)
+    try take!(cond) catch end
+    NATS.unsubscribe(nc, sub)
+    replies = collect(results)
+    @test length(replies) == n
+    @test all(r -> r.payload == "This is a reply.", replies)
 end

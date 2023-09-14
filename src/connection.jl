@@ -55,8 +55,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     try take!(ch) catch err end
     close(sock)
     close(nc.outbox)
-    try wait(sender_task) catch err end
-    try wait(parser_task) catch err end
+    try wait(sender_task) catch err @show err end
+    try wait(parser_task) catch err @show err end
     @info "Disconnected. Trying to reconnect."
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
@@ -111,6 +111,23 @@ function _cleanup_sub(conn::Connection, sid::String)
     end
 end
 
+"""
+Cleanup subscription data when no more messages are expected.
+"""
+function _cleanup_unsub_msg(conn::Connection, sid::String)
+    lock(conn.lock) do
+        count = get(conn.unsubs, sid, nothing)
+        if !isnothing(count)
+            count = count - 1
+            if count == 0
+                _cleanup_sub(conn, sid)
+            else
+                conn.unsubs[sid] = count
+            end
+        end
+    end
+end
+
 function connection_init(host = "localhost", port = 4222)
     sock = Sockets.connect(host, port)
     info = next_protocol_message(sock)
@@ -150,17 +167,7 @@ function process(conn::Connection, msg::Msg)
         needs_ack(msg) && nak(conn, msg)
     else
         put!(ch, msg) # TODO: catch exception and send NAK
-        lock(conn.lock) do
-            count = get(conn.unsubs, msg.sid, nothing)
-            if !isnothing(count)
-                count = count - 1
-                if count == 0
-                    _cleanup_sub(conn, msg.sid)
-                else
-                    conn.unsubs[msg.sid] = count
-                end
-            end
-        end
+        _cleanup_unsub_msg(conn, msg.sid)
     end
 end
 
