@@ -55,8 +55,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     try take!(ch) catch err end
     close(sock)
     close(nc.outbox)
-    try wait(sender_task) catch err @debug "Sender task finished." err end
-    try wait(parser_task) catch err @debug "Parser task finished." err end
+    try wait(sender_task) catch err @info "Sender task finished." err end
+    try wait(parser_task) catch err @info "Parser task finished." err end
     if nc.status in [CLOSING, CLOSED, FAILURE]
         # @info "Connection is closing."
         error("Connection closed.")
@@ -158,20 +158,14 @@ function process(conn::Connection, pong::Pong)
     @debug "Received pong."
 end
 
-function process(conn::Connection, msg::Msg)
+function process(conn::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
-    f = lock(conn.lock) do
+    handler = lock(conn.lock) do
         get(conn.handlers, msg.sid, nothing)
     end
-    
-    t = Threads.@spawn :default Base.invokelatest(f, msg)
-    errormonitor(t)
-    # Base.invokelatest(f, msg)
+    handler_task = Threads.@spawn :default Base.invokelatest(handler, msg)
+    errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
     _cleanup_unsub_msg(conn, msg.sid)
-end
-
-function process(nc::Connection, hmsg::HMsg)
-    @debug "Received HMsg."
 end
 
 function process(nc::Connection, ok::Ok)

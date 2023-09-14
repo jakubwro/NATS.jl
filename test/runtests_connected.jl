@@ -21,7 +21,7 @@ end
 
 @testset "Request reply tests" begin
     nc = NATS.connect()
-    reply(nc, "FOO.REQUESTS") do msg
+    sub = reply(nc, "FOO.REQUESTS") do msg
         "This is a reply."
     end
     result = request(nc, "FOO.REQUESTS")

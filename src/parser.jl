@@ -50,6 +50,7 @@ function parse_hmsg(headline::String, io::IO)::HMsg
     bytes = read(io, nbytes - hbytes)
     payload = String(bytes)
     ncodeunits(payload) == nbytes - hbytes || error("Wrong payload length.")
+    read(io, length(CRLF))
     HMsg(subject, sid, replyto, hbytes, nbytes, headers, payload)
 end
 

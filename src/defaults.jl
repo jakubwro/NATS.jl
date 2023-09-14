@@ -17,8 +17,8 @@ const DEFAULT_CONNECT_ARGS = (
     echo = nothing,
     sig = nothing,
     jwt = nothing,
-    no_responders = nothing,
-    headers = nothing,
+    no_responders = true,
+    headers = true,
     nkey = nothing
 )
 const OUTBOX_SIZE = 1000000

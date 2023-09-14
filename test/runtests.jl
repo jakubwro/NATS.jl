@@ -20,6 +20,10 @@ using NATS: next_protocol_message, Info, Msg, Ping, Pong, Ok, Err, HMsg, seriali
     buffer = IOBuffer("HMSG FOO.BAR 9 BAZ.69 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
     @test next_protocol_message(buffer) == HMsg("FOO.BAR", "9", "BAZ.69", 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World")
 
+    buffer = IOBuffer("HMSG FOO.BAR 9 16 16\r\nNATS/1.0 503\r\n\r\n\r\n")
+    @test next_protocol_message(buffer) == HMsg("FOO.BAR", "9", nothing, 16, 16, "NATS/1.0 503\r\n\r\n", "")
+    @test isempty(read(buffer))
+
     buffer = IOBuffer("PING\r\n")
     @test next_protocol_message(buffer) == Ping()
 
