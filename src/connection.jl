@@ -55,8 +55,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     try take!(ch) catch err end
     close(sock)
     close(nc.outbox)
-    try wait(sender_task) catch err @debug "Sender task finished." end
-    try wait(parser_task) catch err @debug "Parser task finished." end
+    try wait(sender_task) catch err @debug "Sender task finished." err end
+    try wait(parser_task) catch err @debug "Parser task finished." err end
     if nc.status in [CLOSING, CLOSED, FAILURE]
         # @info "Connection is closing."
         error("Connection closed.")

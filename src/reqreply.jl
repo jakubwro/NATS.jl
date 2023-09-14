@@ -52,9 +52,9 @@ function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, S
     req_count = Threads.Atomic{Int}(0)
     subscribe(nc, subject; queue_group) do msg
         cnt = Threads.atomic_add!(req_count, 1)
-        @info "[#$(cnt+1)] received on subject $(msg.subject)" msg
+        @info "[#$(cnt+1)] received on subject $(msg.subject)"
         payload = f(msg)
-        @info "[#$(cnt+1)] replying on subject $(msg.reply_to)" msg
+        @info "[#$(cnt+1)] replying on subject $(msg.reply_to)"
         publish(nc, msg.reply_to; payload)
     end
 end
