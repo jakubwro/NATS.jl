@@ -100,7 +100,7 @@ end
 Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_sub(conn::Connection, sid::String)
-    # lock(conn.lock) do
+    lock(conn.lock) do
         if haskey(conn.subs, sid)
             close(conn.subs[sid])
             delete!(conn.subs, sid)
@@ -108,7 +108,7 @@ function _cleanup_sub(conn::Connection, sid::String)
         # @show "deleting $sid"
         # sleep(0.1)
         delete!(conn.unsubs, sid)
-    # end
+    end
 end
 
 function connection_init(host = "localhost", port = 4222)
