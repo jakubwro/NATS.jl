@@ -62,4 +62,8 @@ end
     h = ["A" => "B", "C" => "D", "C" => "E"]
     str = serialize_header(h)
     @test  h == deserialize_header(str)
+
+    no_responder_header = "NATS/1.0 503\r\n\r\n"
+    h = deserialize_header(no_responder_header)
+    @test NATS.statuscode(no_responder_header) == 503
 end

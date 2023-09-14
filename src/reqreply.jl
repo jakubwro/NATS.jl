@@ -31,7 +31,7 @@ function request(conn::Connection, subject::String, nreplies; timer::Timer = Tim
     replies = Channel(nreplies)
     sub = subscribe(conn, reply_to) do msg
         put!(replies, msg)
-        if Base.n_avail(replies) == nreplies
+        if Base.n_avail(replies) == nreplies || statuscode(msg) == 503
             close(replies)
         end
     end
@@ -45,7 +45,11 @@ function request(conn::Connection, subject::String, nreplies; timer::Timer = Tim
         unsubscribe(conn, sub; max_msgs = 0)
         close(replies)
     end
-    first(collect(replies), nreplies)
+    received = first(collect(replies), nreplies)
+    if length(received) == 1 && statuscode(only(received)) == 503
+        error("No responders.") 
+    end
+    received
 end
 
 function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, String} = nothing)
