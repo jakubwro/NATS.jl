@@ -48,17 +48,17 @@ function reconnect(nc::Connection, host, port, con_msg)
     sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
     lock(nc.lock) do; nc.status = CONNECTED end
     ch = Channel(0)
-    sender_task = Threads.@spawn :interactive sendloop(nc, sock)
-    parser_task = Threads.@spawn :interactive parserloop(nc, sock)
+    sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
+    parser_task = Threads.@spawn :default disable_sigint() do; parserloop(nc, sock) end
     bind(ch, sender_task)
     bind(ch, parser_task)
     try take!(ch) catch err end
     close(sock)
     close(nc.outbox)
-    try wait(sender_task) catch err @error err end
-    try wait(parser_task) catch err @error err end
+    try wait(sender_task) catch err @debug "Sender task finished." end
+    try wait(parser_task) catch err @debug "Parser task finished." end
     if nc.status in [CLOSING, CLOSED, FAILURE]
-        @info "Connection is closing."
+        # @info "Connection is closing."
         error("Connection closed.")
     end
     @info "Disconnected. Trying to reconnect."
@@ -73,16 +73,25 @@ function reconnect(nc::Connection, host, port, con_msg)
     lock(nc.lock) do; nc.outbox = new_outbox end
 end
 
-function connect(host = NATS_DEFAULT_HOST, port = NATS_DEFAULT_PORT; kw...)
+function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
     nc = Connection()
     con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
     send(nc, con_msg)
-    reconnect_task = Threads.@spawn :interactive while true reconnect(nc, host, port, con_msg) end
+    reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, con_msg) end end
     errormonitor(reconnect_task)
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
     nc
+end
+
+function connect(x, host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
+    nc = connect(host, port; kw...)
+    try
+        x(nc)
+    finally
+        close(nc)
+    end
 end
 
 function close(conn::Connection)
@@ -92,7 +101,6 @@ function close(conn::Connection)
             unsubscribe(conn, sid)
         end
     end
-    sleep(1)
     try close(conn.outbox) catch end
     lock(conn.lock) do; conn.status = CLOSED end
 end
