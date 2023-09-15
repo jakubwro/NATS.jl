@@ -81,7 +81,7 @@ end
 """
     connect([host, port; kw...])
 Initialize and return `Connection`.
-See [`Connect protocol message`](/protocol/#NATS.Connect).
+See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
 function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
     nc = Connection()
