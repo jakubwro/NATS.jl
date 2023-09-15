@@ -192,7 +192,7 @@ pong = md"""
 """
 
 err = md"""
-The `` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
+The `-ERR` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
 
 | name      | description    | type   | presence |
 |-----------|----------------|--------|----------|
