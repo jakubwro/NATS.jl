@@ -10,6 +10,7 @@ import Base: show, close
 
 include("consts.jl")
 include("protocol.jl")
+include("utils.jl")
 include("parser.jl")
 include("headers.jl")
 include("show.jl")

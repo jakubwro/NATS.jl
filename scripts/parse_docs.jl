@@ -9,26 +9,27 @@ function parse_operations(operations)
     Expr(:macrocall, Symbol("@enum"), :(), :ProtocolOperation, Symbol.(ops)...)
 end
 
-
 function parse_row(row)
-    parse_row(row) = (name = row[1][1].code, type = row[3][1], presence = row[4][1])
-    (name, type, presence) = parse_row(row)
+    all(isempty, row) && return nothing, nothing
+    parse_row(row) = (name = row[1][1].code, type = row[3][1], presence = row[4][1], desc = Markdown.plaininline(row[2]))
+    (name, type, presence, desc) = parse_row(row)
     name = replace(name, "-" => "_", " " => "_", "#" => "")
     prop_type = typemap[type]
     if presence != "always" && presence != "true"
         prop_type = Expr(:curly, :Union, prop_type, :Nothing)
     end
-    Expr(:(::), Symbol(name), prop_type)
+    desc, Expr(:(::), Symbol(name), prop_type)
 end
 
 function parse_markdown(md::Markdown.MD, struct_name::Symbol)
     expr = quote
         struct $struct_name <: ProtocolMessage
-            $(map(parse_row, md.content[1].rows[2:end])...)
+            $(filter(!isnothing, collect(Iterators.flatten(map(parse_row, md.content[2].rows[2:end]))))...)
         end
     end
+    doc = Markdown.plaininline(md.content[1].content)
     expr = Base.remove_linenums!(expr)
-    expr.args[1]
+    doc, expr.args[1]
 end
 
 operations = md"""
@@ -51,6 +52,9 @@ operations = md"""
 # FIXME: duplicated client_id, report bug to nats docs.
 # | `client_id`       | The ID of the client.                                                                                                                                                  | string   | optional |
 info = md"""
+A client will need to start as a plain TCP connection, then when the server accepts a connection from the client, it will send information about itself, the configuration and security requirements necessary for the client to successfully authenticate with the server and exchange messages.
+When using the updated client protocol (see CONNECT below), INFO messages can be sent anytime by the server. This means clients with that protocol level need to be able to asynchronously handle INFO messages.
+
 | name              | description                                                                                                                                                            | type     | presence |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|----------|
 | `server_id`       | The unique identifier of the NATS server.                                                                                                                              | string   | always   |
@@ -80,6 +84,8 @@ info = md"""
 """
 
 connect = md"""
+The CONNECT message is the client version of the `INFO` message. Once the client has established a TCP/IP socket connection with the NATS server, and an `INFO` message has been received from the server, the client may send a `CONNECT` message to the NATS server to provide more information about the current connection as well as security information.
+
 | name            | description                                                                                                                                                                                                                                                                       | type   | required                     |
 |-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|------------------------------|
 | `verbose`       | Turns on [`+OK`](./#okerr) protocol acknowledgements.                                                                                                                                                                                                                             | bool   | true                         |
@@ -101,6 +107,8 @@ connect = md"""
 """
 
 pub = md"""
+The PUB message publishes the message payload to the given subject name, optionally supplying a reply subject. If a reply subject is supplied, it will be delivered to eligible subscribers along with the supplied payload. Note that the payload itself is optional. To omit the payload, set the payload size to 0, but the second CRLF is still required.
+
 | name       | description                                                                                   | type   | required |
 |------------|-----------------------------------------------------------------------------------------------|--------|----------|
 | `subject`  | The destination subject to publish to.                                                        | string | true     |
@@ -110,6 +118,8 @@ pub = md"""
 """
 
 hpub = md"""
+The HPUB message is the same as PUB but extends the message payload to include NATS headers. Note that the payload itself is optional. To omit the payload, set the total message size equal to the size of the headers. Note that the trailing CR+LF is still required.
+
 | name            | description                                                                                     | type   | required |
 |-----------------|-------------------------------------------------------------------------------------------------|--------|----------|
 | `subject`       | The destination subject to publish to.                                                          | string | true     |
@@ -121,6 +131,8 @@ hpub = md"""
 """
 
 sub = md"""
+`SUB` initiates a subscription to a subject, optionally joining a distributed queue group.
+
 | name          | description                                                    | type   | required |
 |---------------|----------------------------------------------------------------|--------|----------|
 | `subject`     | The subject name to subscribe to.                              | string | true     |
@@ -129,6 +141,8 @@ sub = md"""
 """
 
 unsub = md"""
+`UNSUB` unsubscribes the connection from the specified subject, or auto-unsubscribes after the specified number of messages has been received.
+
 | name       | description                                                                | type   | required |
 |------------|----------------------------------------------------------------------------|--------|----------|
 | `sid`      | The unique alphanumeric subscription ID of the subject to unsubscribe from.| string | true     |
@@ -136,6 +150,8 @@ unsub = md"""
 """
 
 msg = md"""
+The `MSG` protocol message is used to deliver an application message to the client.
+
 | name       | description                                                   | type   | presence |
 |------------|---------------------------------------------------------------|--------|----------|
 | `subject`  | Subject name this message was received on.                    | string | always   |
@@ -146,9 +162,11 @@ msg = md"""
 """
 
 hmsg = md"""
+The HMSG message is the same as MSG, but extends the message payload with headers. See also [ADR-4 NATS Message Headers](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-4.md).
+
 | name            | description                                                                                     | type   | presence |
 |-----------------|-------------------------------------------------------------------------------------------------|--------|----------|
-| `subject`       | Subject name this message was received on.                                                      | string | always   |
+| `subject`       | Subject name this message was received on.                                                      | string | always   
 | `sid`           | The unique alphanumeric subscription ID of the subject.                                         | string | always   |
 | `reply-to`      | The subject on which the publisher is listening for responses.                                  | string | optional |
 | `#header bytes` | The size of the headers section in bytes including the `␍␊␍␊` delimiter before the payload.     | int    | always   |
@@ -157,17 +175,52 @@ hmsg = md"""
 | `payload`       | The message payload data.                                                                       | string | optional |
 """
 
-docs = [info, connect, pub, hpub, sub, unsub, msg, hmsg]
-structs = [:Info, :Connect, :Pub, :HPub, :Sub, :Unsub, :Msg, :HMsg]
+ping = md"""
+`PING` and `PONG` implement a simple keep-alive mechanism between client and server.
 
-open("../src/protocol_data.jl", "w") do f;
-    println(f, "# This file is autogenerated. Maunal changes will be lost.")
+| name | description  | type   | presence |
+|------|--------------|--------|----------|
+|      |              |        |          |
+"""
+
+pong = md"""
+`PING` and `PONG` implement a simple keep-alive mechanism between client and server.
+
+| name | description  | type   | presence |
+|------|--------------|--------|----------|
+|      |              |        |          |
+"""
+
+err = md"""
+The `` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
+
+| name      | description    | type   | presence |
+|-----------|----------------|--------|----------|
+| `message` | Error message. | string | always   |
+"""
+
+ok = md"""
+When the `verbose` connection option is set to `true` (the default value), the server acknowledges each well-formed protocol message from the client with a `+OK` message.
+
+| name | description  | type   | presence |
+|------|--------------|--------|----------|
+|      |              |        |          |
+"""
+
+docs = [info, connect, pub, hpub, sub, unsub, msg, hmsg, ping, pong, err, ok]
+structs = [:Info, :Connect, :Pub, :HPub, :Sub, :Unsub, :Msg, :HMsg, :Ping, :Pong, :Err, :Ok]
+
+open("../src/protocol.jl", "w") do f;
+    println(f, "# This file is autogenerated by `$(relpath(@__FILE__, dirname(@__DIR__)))`. Maunal changes will be lost.")
     println(f)
-    println(f, parse_operations(operations))
-    println(f)
+    # println(f, parse_operations(operations))
+    # println(f)
     println(f, "abstract type ProtocolMessage end")
-    for struct_def in parse_markdown.(docs, structs)
+    for (doc, struct_def) in parse_markdown.(docs, structs)
         println(f)
+        println(f, "\"\"\"")
+        println(f, doc)
+        println(f, "\"\"\"")
         println(f, struct_def)
     end
 end

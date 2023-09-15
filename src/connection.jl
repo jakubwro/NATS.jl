@@ -20,6 +20,9 @@ outbox(nc::Connection) = @lock nc.lock nc.outbox
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     status(nc), ", " , length(nc.handlers)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
+"""
+Enqueue protocol message in `outbox` to be written to socket.
+"""
 function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
     if st in [CLOSED, FAILURE]
