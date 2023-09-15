@@ -6,7 +6,9 @@ makedocs(
     format = Documenter.HTML(),
     modules = [NATS],
     pages = [
+        "index.md",
         "protocol.md",
+        "connect.md",
         "pubsub.md",
         "reqreply.md"
     ]

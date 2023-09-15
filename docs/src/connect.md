@@ -1,0 +1,6 @@
+
+# Connection
+
+```@docs
+connect
+```
