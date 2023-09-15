@@ -78,6 +78,11 @@ function reconnect(nc::Connection, host, port, con_msg)
     lock(nc.lock) do; nc.outbox = new_outbox end
 end
 
+"""
+    connect([host, port; kw...])
+Initialize and return `Connection`.
+See [`Connect protocol message`](/protocol/#NATS.Connect).
+"""
 function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
     nc = Connection()
     con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
