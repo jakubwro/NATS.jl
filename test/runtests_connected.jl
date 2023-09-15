@@ -5,10 +5,10 @@ using NATS
 @testset "Publish subscribe tests" begin
     nc = NATS.connect()
     c = Channel()
-    sub = subscribe(nc, "FOO.BAR") do msg
+    sub = subscribe(nc, "SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(nc, "FOO.BAR"; payload = "Hi!")
+    publish(nc, "SOME.BAR"; payload = "Hi!")
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
@@ -20,10 +20,10 @@ end
 
 @testset "Request reply tests" begin
     nc = NATS.connect()
-    sub = reply(nc, "FOO.REQUESTS") do msg
+    sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply."
     end
-    result = request(nc, "FOO.REQUESTS")
+    result = request(nc, "SOME.REQUESTS")
     unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
@@ -32,14 +32,14 @@ end
 @testset "Many requests." begin
     nc = NATS.connect()
     n = 4000
-    sub = reply(nc, "FOO.REQUESTS") do msg
+    sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply."
     end
     results = Channel(n)
     cond = Channel()
     for _ in 1:n
         @async begin
-            msg = request(nc, "FOO.REQUESTS")
+            msg = request(nc, "SOME.REQUESTS")
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -56,5 +56,5 @@ end
 
 @testset "No responders." begin
     nc = NATS.connect()
-    @test_throws ErrorException request(nc, "FOO.NULL")
+    @test_throws ErrorException request(nc, "SOME.NULL")
 end

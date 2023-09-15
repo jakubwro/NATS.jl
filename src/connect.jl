@@ -109,58 +109,58 @@ function connect(x, host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_P
     end
 end
 
-function close(conn::Connection)
-    lock(conn.lock) do; conn.status = CLOSING end
-    lock(conn.lock) do
-        for (sid, f) in conn.handlers
-            unsubscribe(conn, sid)
+function close(nc::Connection)
+    lock(nc.lock) do; nc.status = CLOSING end
+    lock(nc.lock) do
+        for (sid, f) in nc.handlers
+            unsubscribe(nc, sid)
         end
     end
-    try close(conn.outbox) catch end
-    lock(conn.lock) do; conn.status = CLOSED end
+    try close(nc.outbox) catch end
+    lock(nc.lock) do; nc.status = CLOSED end
 end
 
-function ping(conn)
-    send(conn, Ping())
+function ping(nc)
+    send(nc, Ping())
 end
 
 """
 Cleanup subscription data when no more messages are expected.
 """
-function _cleanup_sub(conn::Connection, sid::String)
-    lock(conn.lock) do
-        delete!(conn.handlers, sid)
-        delete!(conn.unsubs, sid)
+function _cleanup_sub(nc::Connection, sid::String)
+    lock(nc.lock) do
+        delete!(nc.handlers, sid)
+        delete!(nc.unsubs, sid)
     end
 end
 
 """
 Cleanup subscription data when no more messages are expected.
 """
-function _cleanup_unsub_msg(conn::Connection, sid::String)
-    lock(conn.lock) do
-        count = get(conn.unsubs, sid, nothing)
+function _cleanup_unsub_msg(nc::Connection, sid::String)
+    lock(nc.lock) do
+        count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)
             count = count - 1
             if count == 0
-                _cleanup_sub(conn, sid)
+                _cleanup_sub(nc, sid)
             else
-                conn.unsubs[sid] = count
+                nc.unsubs[sid] = count
             end
         end
     end
 end
 
-function process(conn::Connection, msg::ProtocolMessage)
+function process(nc::Connection, msg::ProtocolMessage)
     @error "Unexpected protocol message $msg."
 end
 
-function process(conn::Connection, info::Info)
+function process(nc::Connection, info::Info)
     @debug "New INFO received."
-    put!(conn.info, info)
-    while conn.info.n_avail_items > 1
+    put!(nc.info, info)
+    while nc.info.n_avail_items > 1
         @debug "Dropping old info"
-        take!(conn.info)
+        take!(nc.info)
     end
 end
 
@@ -169,18 +169,22 @@ function process(nc::Connection, ping::Ping)
     send(nc, Pong())
 end
 
-function process(conn::Connection, pong::Pong)
+function process(nc::Connection, pong::Pong)
     @info "Received pong."
 end
 
-function process(conn::Connection, msg::Union{Msg, HMsg})
+function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
-    handler = lock(conn.lock) do
-        get(conn.handlers, msg.sid, nothing)
+    handler = lock(nc.lock) do
+        get(nc.handlers, msg.sid, nothing)
     end
-    handler_task = Threads.@spawn :default Base.invokelatest(handler, msg)
-    errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
-    _cleanup_unsub_msg(conn, msg.sid)
+    if isnothing(handler)
+        needs_ack(msg) && nak(nc, msg)
+    else
+        handler_task = Threads.@spawn :default Base.invokelatest(handler, msg)
+        errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
+        _cleanup_unsub_msg(nc, msg.sid)
+    end
 end
 
 function process(nc::Connection, ok::Ok)

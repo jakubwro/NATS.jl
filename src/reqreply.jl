@@ -1,7 +1,7 @@
 const REQUEST_TIMEOUT_SECONDS = 5
 
 """
-    request(conn, subject[, nreplies; timer])
+    request(nc, subject[, nreplies; timer])
 
 Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) message.
 
@@ -19,30 +19,30 @@ julia> request(nc, "help.please", nreplies = 2; timer = Timer(0))
 NATS.Msg[]
 ```
 """
-function request(conn::Connection, subject::String; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
-    replies = request(conn, subject, 1; timer)
+function request(nc::Connection, subject::String; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+    replies = request(nc, subject, 1; timer)
     isempty(replies) && error("No replies received.") 
     first(replies)
 end
 
-function request(conn::Connection, subject::String, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+function request(nc::Connection, subject::String, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = randstring()
     replies = Channel(nreplies)
-    sub = subscribe(conn, reply_to) do msg
+    sub = subscribe(nc, reply_to) do msg
         put!(replies, msg)
         if Base.n_avail(replies) == nreplies || statuscode(msg) == 503
             close(replies)
         end
     end
-    unsubscribe(conn, sub; max_msgs = nreplies)
-    publish(conn, subject; reply_to)
+    unsubscribe(nc, sub; max_msgs = nreplies)
+    publish(nc, subject; reply_to)
     @async begin 
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
         # There is still small probablity than message will be delivered in between. In such
-        # case `-NAK`` will be sent to reply subject in `connection.jl` for jetstream message.
-        unsubscribe(conn, sub; max_msgs = 0)
+        # case `-NAK`` will be sent to reply subject in `ncection.jl` for jetstream message.
+        unsubscribe(nc, sub; max_msgs = 0)
         close(replies)
     end
     received = first(collect(replies), nreplies)
