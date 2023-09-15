@@ -55,7 +55,7 @@ end
 """
     reply(f, nc, subject[; queue_group])
 
-Reply for messages for a topic. Works like `subscribe` with automatic `publish` to topic from `reply_to` field.
+Reply for messages for a subject. Works like `subscribe` with automatic `publish` to the subject from `reply_to` field.
 
 # Examples
 ```julia-repl
