@@ -183,6 +183,5 @@ function process(nc::Connection, ok::Ok)
 end
 
 function process(nc::Connection, err::Err)
-    @debug "Received Err."
-    @show err
+    @error "NATS protocol error!" err
 end
