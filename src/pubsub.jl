@@ -2,7 +2,7 @@ const SUBSCRIPTION_CHANNEL_SIZE = 1000
 
 function publish(conn::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload::Union{String, Nothing} = nothing, headers::Union{Nothing, Dict{String, Vector{String}}} = nothing)
     if isnothing(headers)
-        nbytes = isnothing(payload) ? 0 : ncodeunits(payload)
+        nbytes = sizeof(payload)
         send(conn, Pub(subject, reply_to, nbytes, payload))
     else
         error("not implemented")
@@ -18,7 +18,6 @@ function subscribe(f, conn::Connection, subject::String; queue_group::Union{Stri
     send(conn, sub)
     sub
 end
-
 
 function unsubscribe(nc::Connection, sid::String; max_msgs::Union{Int, Nothing} = nothing)
     # TODO: do not send unsub if sub alredy removed by Msg handler.

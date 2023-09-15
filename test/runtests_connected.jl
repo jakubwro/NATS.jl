@@ -6,7 +6,6 @@ using NATS
     nc = NATS.connect()
     c = Channel()
     sub = subscribe(nc, "FOO.BAR") do msg
-        @show "Received"
         put!(c, msg)
     end
     publish(nc, "FOO.BAR"; payload = "Hi!")

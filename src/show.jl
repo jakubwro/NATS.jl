@@ -8,14 +8,14 @@ end
 
 function show(io::IO, ::MIME"application/nats", pub::Pub)
     payload = isnothing(pub.payload) ? "" : pub.payload
-    nbytes = ncodeunits(payload)
+    nbytes = sizeof(payload)
     reply_to = isnothing(pub.reply_to) ? "" : " $(pub.reply_to)"
     write(io, "PUB $(pub.subject)$reply_to $nbytes\r\n$(payload)\r\n")
 end
 
 function show(io::IO, ::MIME"application/nats", hpub::HPub)
-    hbytes = ncodeunits(hpub.headers)
-    pbytes = ncodeunits(hpub.payload)
+    hbytes = sizeof(hpub.headers)
+    pbytes = sizeof(hpub.payload)
     nbytes = pbytes + hbytes
     reply_to = isnothing(hpub.reply_to) ? "" : " $(hpub.reply_to)"
     write(io, "HPUB $(hpub.subject)$reply_to $hbytes $nbytes\r\n$(hpub.headers)$(hpub.payload)\r\n")

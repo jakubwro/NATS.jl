@@ -31,7 +31,7 @@ function parse_msg(headline::String, io::IO)::Msg
     bytes = read(io, nbytes)
     readuntil(io, CRLF)
     payload = String(bytes)
-    @assert ncodeunits(payload) == nbytes "Unexpected payload length."
+    @assert sizeof(payload) == nbytes "Unexpected payload length."
     Msg(subject, sid, replyto, nbytes, payload)
 end
 
@@ -44,12 +44,10 @@ function parse_hmsg(headline::String, io::IO)::HMsg
         else
             args[4], parse(Int64, args[5]), parse(Int64, args[6])
         end
-    bytes = read(io, hbytes)
-    headers = String(bytes)
-    ncodeunits(headers) == hbytes || error("Wrong headers length.")
-    bytes = read(io, nbytes - hbytes)
-    payload = String(bytes)
-    ncodeunits(payload) == nbytes - hbytes || error("Wrong payload length.")
+    headers = hbytes == 0 ? nothing : String(read(io, hbytes))
+    sizeof(headers) == hbytes || error("Wrong headers length.")
+    payload = hbytes == nbytes ? nothing : String(read(io, nbytes - hbytes))
+    sizeof(payload) == nbytes - hbytes || error("Wrong payload length.")
     read(io, length(CRLF))
     HMsg(subject, sid, replyto, hbytes, nbytes, headers, payload)
 end
