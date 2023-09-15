@@ -7,6 +7,8 @@ makedocs(
     modules = [NATS],
     pages = [
         "protocol.md",
+        "pubsub.md"
+        "reqreply.md"
     ]
 )
 
