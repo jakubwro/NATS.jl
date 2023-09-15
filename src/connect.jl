@@ -90,7 +90,7 @@ function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT
     reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, con_msg) end end
     errormonitor(reconnect_task)
 
-    # TODO: recaftor
+    # TODO: refactor
     # 1. init socket
     # 2. run parser
     # 3. reconnect
