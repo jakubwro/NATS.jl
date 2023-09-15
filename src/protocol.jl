@@ -4,6 +4,8 @@ abstract type ProtocolMessage end
 
 """
 A client will need to start as a plain TCP connection, then when the server accepts a connection from the client, it will send information about itself, the configuration and security requirements necessary for the client to successfully authenticate with the server and exchange messages. When using the updated client protocol (see CONNECT below), INFO messages can be sent anytime by the server. This means clients with that protocol level need to be able to asynchronously handle INFO messages.
+
+$(TYPEDFIELDS)
 """
 struct Info <: ProtocolMessage
     "The unique identifier of the NATS server."
@@ -58,9 +60,11 @@ end
 
 """
 The CONNECT message is the client version of the `INFO` message. Once the client has established a TCP/IP socket connection with the NATS server, and an `INFO` message has been received from the server, the client may send a `CONNECT` message to the NATS server to provide more information about the current connection as well as security information.
+
+$(TYPEDFIELDS)
 """
 struct Connect <: ProtocolMessage
-    "Turns on [`+OK`](./#okerr) protocol acknowledgements."
+    "Turns on [`+OK`](./#NATS.Ok) protocol acknowledgements."
     verbose::Bool
     "Turns on additional strict format checking, e.g. for properly formed subjects."
     pedantic::Bool
@@ -78,7 +82,7 @@ struct Connect <: ProtocolMessage
     lang::String
     "The version of the client."
     version::String
-    "Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving [`INFO`](./#info) messages with known servers it can reconnect to."
+    "Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving [`INFO`](./#NATS.Info) messages with known servers it can reconnect to."
     protocol::Union{Int, Nothing}
     "If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`."
     echo::Union{Bool, Nothing}
@@ -86,7 +90,7 @@ struct Connect <: ProtocolMessage
     sig::Union{String, Nothing}
     "The JWT that identifies a user permissions and account."
     jwt::Union{String, Nothing}
-    "Enable [quick replies for cases where a request is sent to a topic with no responders](/nats-concepts/core-nats/request-reply/reqreply.md#no-responders)."
+    "Enable quick replies for cases where a request is sent to a topic with no responders."
     no_responders::Union{Bool, Nothing}
     "Whether the client supports headers."
     headers::Union{Bool, Nothing}
@@ -96,6 +100,8 @@ end
 
 """
 The PUB message publishes the message payload to the given subject name, optionally supplying a reply subject. If a reply subject is supplied, it will be delivered to eligible subscribers along with the supplied payload. Note that the payload itself is optional. To omit the payload, set the payload size to 0, but the second CRLF is still required.
+
+$(TYPEDFIELDS)
 """
 struct Pub <: ProtocolMessage
     "The destination subject to publish to."
@@ -110,6 +116,8 @@ end
 
 """
 The HPUB message is the same as PUB but extends the message payload to include NATS headers. Note that the payload itself is optional. To omit the payload, set the total message size equal to the size of the headers. Note that the trailing CR+LF is still required.
+
+$(TYPEDFIELDS)
 """
 struct HPub <: ProtocolMessage
     "The destination subject to publish to."
@@ -128,6 +136,8 @@ end
 
 """
 `SUB` initiates a subscription to a subject, optionally joining a distributed queue group.
+
+$(TYPEDFIELDS)
 """
 struct Sub <: ProtocolMessage
     "The subject name to subscribe to."
@@ -140,6 +150,8 @@ end
 
 """
 `UNSUB` unsubscribes the connection from the specified subject, or auto-unsubscribes after the specified number of messages has been received.
+
+$(TYPEDFIELDS)
 """
 struct Unsub <: ProtocolMessage
     "The unique alphanumeric subscription ID of the subject to unsubscribe from."
@@ -150,6 +162,8 @@ end
 
 """
 The `MSG` protocol message is used to deliver an application message to the client.
+
+$(TYPEDFIELDS)
 """
 struct Msg <: ProtocolMessage
     "Subject name this message was received on."
@@ -166,6 +180,8 @@ end
 
 """
 The HMSG message is the same as MSG, but extends the message payload with headers. See also [ADR-4 NATS Message Headers](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-4.md).
+
+$(TYPEDFIELDS)
 """
 struct HMsg <: ProtocolMessage
     "Subject name this message was received on."
@@ -186,18 +202,24 @@ end
 
 """
 `PING` and `PONG` implement a simple keep-alive mechanism between client and server.
+
+$(TYPEDFIELDS)
 """
 struct Ping <: ProtocolMessage
 end
 
 """
 `PING` and `PONG` implement a simple keep-alive mechanism between client and server.
+
+$(TYPEDFIELDS)
 """
 struct Pong <: ProtocolMessage
 end
 
 """
 The `` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
+
+$(TYPEDFIELDS)
 """
 struct Err <: ProtocolMessage
     "Error message."
@@ -206,6 +228,8 @@ end
 
 """
 When the `verbose` connection option is set to `true` (the default value), the server acknowledges each well-formed protocol message from the client with a `+OK` message.
+
+$(TYPEDFIELDS)
 """
 struct Ok <: ProtocolMessage
 end

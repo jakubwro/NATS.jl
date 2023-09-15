@@ -5,6 +5,7 @@ using Random
 using Sockets
 using StructTypes
 using JSON3
+using DocStringExtensions
 
 import Base: show, close
 
