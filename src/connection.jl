@@ -21,8 +21,11 @@ show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     status(nc), ", " , length(nc.handlers)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 function send(nc::Connection, message::ProtocolMessage)
-    if status(nc::Connection) in [CLOSED, FAILURE]
+    st = status(nc::Connection)
+    if st in [CLOSED, FAILURE]
         error("Connection is broken.")
+    elseif st != CONNECTED && st != CONNECTING
+        @warn "Connection status: $st"
     end
     put!(nc.outbox, message)
 end
@@ -38,25 +41,24 @@ function sendloop(nc::Connection, io::IO)
     end
 end
 
-function parserloop(nc::Connection, io::IO)
-    while true
-        process(nc, next_protocol_message(io))
-    end
-end
-
 function reconnect(nc::Connection, host, port, con_msg)
-    sock = retry(Sockets.connect, delays=Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1))(port)
+    sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
     lock(nc.lock) do; nc.status = CONNECTED end
-    ch = Channel(0)
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
-    parser_task = Threads.@spawn :default disable_sigint() do; parserloop(nc, sock) end
-    bind(ch, sender_task)
-    bind(ch, parser_task)
-    try take!(ch) catch err end
-    close(sock)
-    close(nc.outbox)
-    try wait(sender_task) catch err @info "Sender task finished." err end
-    try wait(parser_task) catch err @info "Parser task finished." err end
+    try
+        while true
+            process(nc, next_protocol_message(sock))
+        end
+    catch err
+        @error err
+        close(nc.outbox)
+        close(sock)
+    end
+    try
+        wait(sender_task)
+    catch err
+        @debug "Sender task finished." err
+    end
     if nc.status in [CLOSING, CLOSED, FAILURE]
         # @info "Connection is closing."
         error("Connection closed.")
@@ -79,6 +81,11 @@ function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT
     send(nc, con_msg)
     reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, con_msg) end end
     errormonitor(reconnect_task)
+
+    # TODO: recaftor
+    # 1. init socket
+    # 2. run parser
+    # 3. reconnect
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
@@ -155,7 +162,7 @@ function process(nc::Connection, ping::Ping)
 end
 
 function process(conn::Connection, pong::Pong)
-    @debug "Received pong."
+    @info "Received pong."
 end
 
 function process(conn::Connection, msg::Union{Msg, HMsg})

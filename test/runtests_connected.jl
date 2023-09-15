@@ -13,7 +13,7 @@ using NATS
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test length(nc.handlers) == 1
-    NATS.unsubscribe(nc, sub)
+    unsubscribe(nc, sub)
     sleep(0.1)
     @test length(nc.handlers) == 0
 end
@@ -24,6 +24,7 @@ end
         "This is a reply."
     end
     result = request(nc, "FOO.REQUESTS")
+    unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
 end
@@ -47,7 +48,7 @@ end
         end
     end
     try take!(cond) catch end
-    NATS.unsubscribe(nc, sub)
+    unsubscribe(nc, sub)
     replies = collect(results)
     @test length(replies) == n
     @test all(r -> r.payload == "This is a reply.", replies)

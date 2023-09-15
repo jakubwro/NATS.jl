@@ -22,4 +22,4 @@ const DEFAULT_CONNECT_ARGS = (
     nkey = nothing
 )
 const OUTBOX_SIZE = 1000000
-
+const SOCKET_CONNECT_DELAYS = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
