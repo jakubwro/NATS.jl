@@ -3,9 +3,26 @@
 
 Work in progress.
 
-## Example
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
 
-### Publish Subscribe.
+## Description
+
+### Using with REPL.
+
+NATS connection uses asynchronous tasks to handle connection. To make `CTR+C` work smooth in REPL
+start `julia` with at least one interactive thread `JULIA_NUM_THREADS=1,1 julia --project`, otherwise interrupt
+signal might not be delivered to a repl task.
+
+```
+julia> using NATS
+
+julia> nc = NATS.connect("localhost", 4222);
+
+julia> request(nc, "some.long.operation")
+^CERROR: InterruptException:
+```
+
+## Publish Subscribe.
 
 ```julia
 julia> using NATS
@@ -23,7 +40,7 @@ julia> publish(nc, "test_subject"; payload="Hello.")
 payload(msg) = "Hello."
 ```
 
-### Request Reply.
+## Request Reply.
 
 ```bash
 > nats reply help.please 'OK, I CAN HELP!!!'
@@ -43,7 +60,7 @@ julia> @time NATS.request(nc, "help.please") .|> payload
  "OK, I CAN HELP!!!"
 ```
 
-### JetStream pull consumer next.
+## JetStream pull consumer next.
 
 ```bash
 > nats stream add TEST_STREAM
