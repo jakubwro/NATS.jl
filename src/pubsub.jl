@@ -20,7 +20,7 @@ end
 function unsubscribe(nc::Connection, sid::String; max_msgs::Union{Int, Nothing} = nothing)
     # TODO: do not send unsub if sub alredy removed by Msg handler.
     usnub = Unsub(sid, max_msgs)
-    send(nc, unsub)
+    send(nc, usnub)
     if isnothing(max_msgs) || max_msgs == 0
         _cleanup_sub(nc, sid)
     end
