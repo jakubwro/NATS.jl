@@ -52,6 +52,19 @@ function request(conn::Connection, subject::String, nreplies; timer::Timer = Tim
     received
 end
 
+"""
+    reply(f, nc, subject[; queue_group])
+
+Reply for messages for a topic. Works like `subscribe` with automatic `publish` to topic from `reply_to` field.
+
+# Examples
+```julia-repl
+julia> sub = reply(nc, "FOO.REQUESTS") do msg; "This is a reply." end
+NATS.Sub("FOO.REQUESTS", nothing, "jdnMEcJN")
+
+julia> unsubscribe(nc, sub)
+```
+"""
 function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, String} = nothing)
     req_count = Threads.Atomic{Int}(0)
     subscribe(nc, subject; queue_group) do msg
