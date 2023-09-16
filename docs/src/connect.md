@@ -1,5 +1,5 @@
 
-# Connection
+# Connect
 
 ```@docs
 connect
