@@ -19,13 +19,13 @@ julia> request(nc, "help.please", nreplies = 2; timer = Timer(0))
 NATS.Msg[]
 ```
 """
-function request(nc::Connection, subject::String; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
-    replies = request(nc, subject, 1; timer)
+function request(nc::Connection, subject::String; payload = nothing, timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+    replies = request(nc, subject, 1; payload, timer)
     isempty(replies) && error("No replies received.") 
     first(replies)
 end
 
-function request(nc::Connection, subject::String, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+function request(nc::Connection, subject::String, nreplies; payload = nothing, timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = randstring()
     replies = Channel(nreplies)
@@ -36,7 +36,7 @@ function request(nc::Connection, subject::String, nreplies; timer::Timer = Timer
         end
     end
     unsubscribe(nc, sub; max_msgs = nreplies)
-    publish(nc, subject; reply_to)
+    publish(nc, subject; reply_to, payload)
     @async begin 
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
@@ -66,12 +66,13 @@ julia> unsubscribe(nc, sub)
 ```
 """
 function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, String} = nothing, info = false)
-    req_count = Threads.Atomic{Int}(0)
+    req_count = Threads.Atomic{Int}(1)
     subscribe(nc, subject; queue_group) do msg
         cnt = Threads.atomic_add!(req_count, 1)
-        info && @info "[#$(cnt+1)] received on subject $(msg.subject)"
-        payload = f(msg)
-        info && @info "[#$(cnt+1)] replying on subject $(msg.reply_to)"
+        info && @info "[#$(cnt)] received on subject $(msg.subject)"
+        T = methods(f)[1].sig.parameters[2]
+        payload = f(convert(T, msg))
+        info && @info "[#$(cnt)] replying on subject $(msg.reply_to)"
         publish(nc, msg.reply_to; payload)
     end
 end

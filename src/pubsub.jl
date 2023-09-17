@@ -1,4 +1,5 @@
-function publish(nc::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload::Union{String, Nothing} = nothing, headers::Union{Nothing, Headers} = nothing)
+function publish(nc::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload = nothing, headers::Union{Nothing, Headers} = nothing)
+    payload = String(repr(MIME("application/nats"), payload))
     if isnothing(headers)
         nbytes = sizeof(payload)
         send(nc, Pub(subject, reply_to, nbytes, payload))

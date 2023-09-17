@@ -2,6 +2,30 @@ import StructTypes: omitempties
 
 StructTypes.omitempties(::Type{Connect}) = true
 
+function convert(::Type{String}, msg::NATS.Msg)
+    payload(msg)
+end
+
+function convert(::Type{String}, hmsg::NATS.HMsg)
+    payload(msg)
+end
+
+function convert(::Type{Any}, hmsg::NATS.HMsg)
+    hmsg
+end
+
+function Base.show(io::IO, ::MIME"application/nats", ::Nothing)
+    # Empty payload, nothing to write.
+    nothing
+end
+
+# TODO: move above funcs
+
+function Base.show(io::IO, ::MIME"application/nats", payload::String)
+    write(io, payload)
+    nothing
+end
+
 function show(io::IO, ::MIME"application/nats", connect::Connect)
     write(io, "CONNECT $(JSON3.write(connect))\r\n")
 end

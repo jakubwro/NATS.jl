@@ -58,3 +58,32 @@ end
     nc = NATS.connect()
     @test_throws ErrorException request(nc, "SOME.NULL")
 end
+
+
+@testset "Typed subscription handlers" begin
+    nc = NATS.connect()
+    c = Channel()
+
+    sub = subscribe(nc, "SOME.BAR") do msg::String
+        put!(c, msg)
+    end
+    publish(nc, "SOME.BAR"; payload = "Hi!")
+    result = take!(c)
+    @test result == "Hi!"
+    @test length(nc.handlers) == 1
+    unsubscribe(nc, sub)
+    sleep(0.1)
+    @test length(nc.handlers) == 0
+end
+
+
+@testset "Typed request reply tests" begin
+    nc = NATS.connect()
+    sub = reply(nc, "SOME.REQUESTS") do msg::String
+        "Received $msg"
+    end
+    result = request(nc, "SOME.REQUESTS"; payload = "Hi!")
+    unsubscribe(nc, sub)
+    @test result isa NATS.Msg
+    @test payload(result) == "Received Hi!"
+end

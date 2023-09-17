@@ -44,8 +44,14 @@ function sendloop(nc::Connection, io::IO)
     end
 end
 
+@mockable function mockable_socket_connect(port::Integer)
+    # @show Pretend.activated()
+    Pretend.activated() && @warn "Using mocked connection."
+    Sockets.connect(port)
+end
+
 function reconnect(nc::Connection, host, port, con_msg)
-    sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
+    sock = retry(mockable_socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
     lock(nc.lock) do; nc.status = CONNECTED end
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
     try
@@ -112,7 +118,7 @@ end
 function close(nc::Connection)
     lock(nc.lock) do; nc.status = CLOSING end
     lock(nc.lock) do
-        for (sid, f) in nc.handlers
+        for (sid, _) in nc.handlers
             unsubscribe(nc, sid)
         end
     end
@@ -181,7 +187,10 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
     if isnothing(handler)
         needs_ack(msg) && nak(nc, msg)
     else
-        handler_task = Threads.@spawn :default Base.invokelatest(handler, msg)
+        handler_task = Threads.@spawn :default begin
+            T = methods(handler)[1].sig.parameters[2]
+            Base.invokelatest(handler, convert(T, msg))
+        end
         errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
         _cleanup_unsub_msg(nc, msg.sid)
     end
