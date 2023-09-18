@@ -1,14 +1,6 @@
 import StructTypes: omitempties
 
-StructTypes.omitempties(::Type{Connect}) = true
-
-function convert(::Type{String}, msg::Union{NATS.Msg, NATS.HMsg})
-    payload(msg)
-end
-
-function convert(::Type{Any}, msg::Union{NATS.Msg, NATS.HMsg})
-    msg
-end
+# Payload serialization.
 
 function Base.show(io::IO, ::MIME_PAYLOAD, ::Nothing)
     # Empty payload, nothing to write.
@@ -26,10 +18,12 @@ end
 
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Headers}) where TPayload
     Base.show(io, mime, first(tup))
+    nothing
 end
 
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Headers, TPayload}) where TPayload
     Base.show(io, mime, last(tup))
+    nothing
 end
 
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Nothing}) where TPayload
@@ -37,36 +31,29 @@ function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Nothing}) wh
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Nothing, Nothing})
-    nothing
-end
+# Headers serialization.
 
 function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
     Base.show(io, mime, last(tup))
+    nothing
 end
 
 function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Headers, TPayload}) where TPayload
     Base.show(io, mime, first(tup))
-end
-
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Nothing}) where TPayload
-    Base.show(io, mime, last(tup))
-end
-
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Nothing, Nothing})
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_HEADERS, s::String)
-    if startswith(s, "NATS/1.0\r\n")
-        write(io, s)
-    end
-
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Nothing}) where TPayload
     nothing
 end
 
 function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
     # Empty headers, nothing to write.
+    nothing
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, s::String)
+    startswith(s, "NATS/1.0\r\n") && write(io, s) # TODO: better validations.
     nothing
 end
 
@@ -79,14 +66,12 @@ function Base.show(io::IO, ::MIME_HEADERS, headers::Headers)
         print(io, "\r\n")
     end
     print(io, "\r\n")
-end
-
-# TODO: move above funcs
-
-function Base.show(io::IO, ::MIME_PROTOCOL, payload::String)
-    write(io, payload)
     nothing
 end
+
+# Protocol serialization.
+
+StructTypes.omitempties(::Type{Connect}) = true
 
 function show(io::IO, ::MIME_PROTOCOL, connect::Connect)
     write(io, "CONNECT $(JSON3.write(connect))\r\n")

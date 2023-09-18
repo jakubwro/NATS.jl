@@ -1,6 +1,8 @@
 
 import Base: read, write, close, eof, readuntil
 
+# https://github.com/JuliaLang/julia/issues/24526
+
 struct TCPSocketMock <: IO
     input::IO
     output::IO
