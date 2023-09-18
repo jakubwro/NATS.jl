@@ -47,6 +47,11 @@ function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Nothing}) wh
     nothing
 end
 
+function Base.show(io::IO, ::MIME_HEADERS, ::Any)
+    # Default is empty header.
+    nothing
+end
+
 function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
     # Empty headers, nothing to write.
     nothing

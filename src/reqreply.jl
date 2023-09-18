@@ -52,6 +52,11 @@ function request(nc::Connection, subject::String, data, nreplies; timer::Timer =
     received
 end
 
+function request(T::Type, nc::Connection, subject::String, data = nothing)
+    result = request(nc, subject, data)
+    convert(T, result)
+end
+
 """
     reply(f, nc, subject[; queue_group])
 
