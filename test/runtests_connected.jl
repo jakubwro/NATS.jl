@@ -54,6 +54,31 @@ end
     @test all(r -> r.payload == "This is a reply.", replies)
 end
 
+@testset "4K requests external" begin
+    nc = NATS.connect()
+    n = 1000
+    results = Channel(n)
+    cond = Channel()
+    t = @timed begin
+        for _ in 1:n
+            @async begin
+                msg = request(nc, "help.please")
+                put!(results, msg)
+                if Base.n_avail(results) == n
+                    close(cond)
+                    close(results)
+                end
+            end
+        end
+        try take!(cond) catch end
+        replies = collect(results)
+    end
+    replies = t.value
+    @test length(replies) == n
+    @test all(r -> r.payload == "OK, I CAN HELP!!!", replies)
+    @info "Total time of $n requests is $(t.time) s, average $(1000 * t.time / n) ms per request."
+end
+
 @testset "No responders." begin
     nc = NATS.connect()
     @test_throws ErrorException request(nc, "SOME.NULL")
