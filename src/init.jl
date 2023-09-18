@@ -1,4 +1,20 @@
+
+function interrupt_handler()
+    while true
+        try
+            while(true)
+                sleep(1000)
+            end
+        catch
+            @warn "Handling interrupt."
+        end
+    end
+end
+
 function __init__()
+
+    Base.register_interrupt_handler(NATS, @async interrupt_handler())
+
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
         if exc.f == convert && length(argtypes) > 1
              # Color is not necessary, this is just to show it's possible.
