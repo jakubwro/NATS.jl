@@ -80,10 +80,13 @@ end
     @test String(repr(MIME_PAYLOAD(), ("Hi!", Headers()))) == "Hi!"
     @test String(repr(MIME_PAYLOAD(), (nothing, Headers()))) == ""
     @test String(repr(MIME_PAYLOAD(), Headers())) == ""
+    @test String(repr(MIME_PAYLOAD(), (nothing, nothing))) == ""
 
     @test String(repr(MIME_HEADERS(), "Hi!")) == ""
-    @test String(repr(MIME_HEADERS(), ("Hi!", Headers()))) == ""
-    @test String(repr(MIME_HEADERS(), (nothing, Headers()))) == ""
-    @test String(repr(MIME_HEADERS(), Headers())) == ""
+    @test String(repr(MIME_HEADERS(), ("Hi!", Headers()))) == "NATS/1.0\r\n\r\n"
+    @test String(repr(MIME_HEADERS(), ("Hi!", nothing))) == ""
+    @test String(repr(MIME_HEADERS(), (nothing, Headers()))) == "NATS/1.0\r\n\r\n"
+    @test String(repr(MIME_HEADERS(), Headers())) == "NATS/1.0\r\n\r\n"
     @test String(repr(MIME_HEADERS(), ["A" => "B"])) == "NATS/1.0\r\nA: B\r\n\r\n"
+    @test String(repr(MIME_HEADERS(), (nothing, nothing))) == ""
 end

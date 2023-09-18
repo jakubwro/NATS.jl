@@ -19,13 +19,13 @@ julia> request(nc, "help.please", nreplies = 2; timer = Timer(0))
 NATS.Msg[]
 ```
 """
-function request(nc::Connection, subject::String; payload = nothing, timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
-    replies = request(nc, subject, 1; payload, timer)
+function request(nc::Connection, subject::String, data = nothing; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+    replies = request(nc, subject, data, 1; timer)
     isempty(replies) && error("No replies received.") 
     first(replies)
 end
 
-function request(nc::Connection, subject::String, nreplies; payload = nothing, timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
+function request(nc::Connection, subject::String, data, nreplies; timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = randstring()
     replies = Channel(nreplies)
@@ -36,7 +36,7 @@ function request(nc::Connection, subject::String, nreplies; payload = nothing, t
         end
     end
     unsubscribe(nc, sub; max_msgs = nreplies)
-    publish(nc, subject; reply_to, payload)
+    publish(nc, subject, data; reply_to)
     @async begin 
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
@@ -72,8 +72,8 @@ function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, S
     subscribe(nc, subject; queue_group) do msg
         cnt = Threads.atomic_add!(req_count, 1)
         info && @info "[#$(cnt)] received on subject $(msg.subject)"
-        payload = f(convert(T, msg))
+        data = f(convert(T, msg))
         info && @info "[#$(cnt)] replying on subject $(msg.reply_to)"
-        publish(nc, msg.reply_to; payload)
+        publish(nc, msg.reply_to, data)
     end
 end

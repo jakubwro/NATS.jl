@@ -2,7 +2,7 @@
 using Test
 using NATS
 
-@testset "Publish subscribe tests" begin
+@testset "Publish subscribe" begin
     nc = NATS.connect()
     c = Channel()
     sub = subscribe(nc, "SOME.BAR") do msg
@@ -18,7 +18,7 @@ using NATS
     @test length(nc.handlers) == 0
 end
 
-@testset "Request reply tests" begin
+@testset "Request reply" begin
     nc = NATS.connect()
     sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply."
@@ -105,7 +105,7 @@ end
     sub = reply(nc, "SOME.REQUESTS") do msg::String
         "Received $msg"
     end
-    result = request(nc, "SOME.REQUESTS"; payload = "Hi!")
+    result = request(nc, "SOME.REQUESTS", "Hi!")
     unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "Received Hi!"
@@ -121,4 +121,33 @@ end
     @test_throws MethodError reply(nc, "SOME.REQUESTS") do msg::Integer
         "Received $msg"
     end
+end
+
+@testset "Publish subscribe with headers" begin
+    nc = NATS.connect()
+    c = Channel()
+    sub = subscribe(nc, "SOME.BAR") do msg
+        put!(c, msg)
+    end
+    publish(nc, "SOME.BAR"; payload = "Hi!", headers = ["A" => "B"])
+    result = take!(c)
+    @test result isa NATS.HMsg
+    @test payload(result) == "Hi!"
+    @test headers(result) == ["A" => "B"]
+    @test length(nc.handlers) == 1
+    unsubscribe(nc, sub)
+    sleep(0.1)
+    @test length(nc.handlers) == 0
+end
+
+@testset "Request reply with headers" begin
+    nc = NATS.connect()
+    sub = reply(nc, "SOME.REQUESTS") do msg
+        "This is a reply.", ["A" => "B"]
+    end
+    result = request(nc, "SOME.REQUESTS")
+    unsubscribe(nc, sub)
+    @test result isa NATS.HMsg
+    @test payload(result) == "This is a reply."
+    @test headers(result) == ["A" => "B"]
 end

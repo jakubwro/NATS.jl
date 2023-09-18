@@ -32,12 +32,29 @@ function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Headers, TPayload}) wh
     Base.show(io, mime, last(tup))
 end
 
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Nothing}) where TPayload
+    Base.show(io, mime, first(tup))
+    nothing
+end
+
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Nothing, Nothing})
+    nothing
+end
+
 function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
     Base.show(io, mime, last(tup))
 end
 
 function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Headers, TPayload}) where TPayload
     Base.show(io, mime, first(tup))
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Nothing}) where TPayload
+    Base.show(io, mime, last(tup))
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Nothing, Nothing})
+    nothing
 end
 
 function Base.show(io::IO, mime::MIME_HEADERS, s::String)
@@ -54,7 +71,6 @@ function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
 end
 
 function Base.show(io::IO, ::MIME_HEADERS, headers::Headers)
-    isempty(headers) && return # Nothing to write, skip headers.
     print(io, "NATS/1.0\r\n")
     for (key, value) in headers
         print(io, key)
