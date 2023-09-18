@@ -10,9 +10,59 @@ function convert(::Type{Any}, msg::Union{NATS.Msg, NATS.HMsg})
     msg
 end
 
-function Base.show(io::IO, ::MIME_PROTOCOL, ::Nothing)
+function Base.show(io::IO, ::MIME_PAYLOAD, ::Nothing)
     # Empty payload, nothing to write.
     nothing
+end
+
+function Base.show(io::IO, ::MIME_PAYLOAD, ::Headers)
+    nothing
+end
+
+function Base.show(io::IO, ::MIME_PAYLOAD, payload::String)
+    write(io, payload)
+    nothing
+end
+
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Headers}) where TPayload
+    Base.show(io, mime, first(tup))
+end
+
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Headers, TPayload}) where TPayload
+    Base.show(io, mime, last(tup))
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
+    Base.show(io, mime, last(tup))
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Headers, TPayload}) where TPayload
+    Base.show(io, mime, first(tup))
+end
+
+function Base.show(io::IO, mime::MIME_HEADERS, s::String)
+    if startswith(s, "NATS/1.0\r\n")
+        write(io, s)
+    end
+
+    nothing
+end
+
+function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
+    # Empty headers, nothing to write.
+    nothing
+end
+
+function Base.show(io::IO, ::MIME_HEADERS, headers::Headers)
+    isempty(headers) && return # Nothing to write, skip headers.
+    print(io, "NATS/1.0\r\n")
+    for (key, value) in headers
+        print(io, key)
+        print(io, ": ")
+        print(io, value)
+        print(io, "\r\n")
+    end
+    print(io, "\r\n")
 end
 
 # TODO: move above funcs
@@ -57,15 +107,4 @@ end
 
 function show(io::IO, ::MIME_PROTOCOL, unsub::Pong)
     write(io, "PONG\r\n")
-end
-
-function show(io::IO, ::MIME_PROTOCOL, headers::Headers)
-    print(io, "NATS/1.0\r\n")
-    for (key, value) in headers
-        print(io, key)
-        print(io, ": ")
-        print(io, value)
-        print(io, "\r\n")
-    end
-    print(io, "\r\n")
 end

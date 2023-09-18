@@ -1,5 +1,6 @@
 function publish(nc::Connection, subject::String; reply_to::Union{String, Nothing} = nothing, payload = nothing, headers::Union{Nothing, Headers} = nothing)
-    payload = String(repr(MIME_PROTOCOL(), payload))
+    payload = String(repr(MIME_PAYLOAD(), payload))
+    # TODO: check for empty array and assing nothing
     if isnothing(headers)
         nbytes = sizeof(payload)
         send(nc, Pub(subject, reply_to, nbytes, payload))

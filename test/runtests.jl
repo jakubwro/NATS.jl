@@ -2,7 +2,10 @@ using NATS
 using Test
 using JSON3
 
-using NATS: next_protocol_message, Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HPub, Sub, Unsub, Connect, headers, header
+using NATS: next_protocol_message
+using NATS: Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HPub, Sub, Unsub, Connect
+using NATS: Headers, headers, header
+using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
 
 @testset "Parsing server operations." begin
     buffer = IOBuffer("""INFO {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
@@ -66,8 +69,21 @@ end
     @test headers(hmsg, "C") == ["D", "E"]
     @test_throws ArgumentError header(hmsg, "C")
     @test header(hmsg, "A") == "B"
-    @test String(repr(NATS.MIME_PROTOCOL(), headers(hmsg))) == hmsg.headers
+    @test String(repr(MIME_HEADERS(), headers(hmsg))) == hmsg.headers
 
     no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", nothing)
     @test NATS.statuscode(no_responder_hmsg) == 503
+end
+
+@testset "Serializing typed handler results" begin
+    @test String(repr(MIME_PAYLOAD(), "Hi!")) == "Hi!"
+    @test String(repr(MIME_PAYLOAD(), ("Hi!", Headers()))) == "Hi!"
+    @test String(repr(MIME_PAYLOAD(), (nothing, Headers()))) == ""
+    @test String(repr(MIME_PAYLOAD(), Headers())) == ""
+
+    @test String(repr(MIME_HEADERS(), "Hi!")) == ""
+    @test String(repr(MIME_HEADERS(), ("Hi!", Headers()))) == ""
+    @test String(repr(MIME_HEADERS(), (nothing, Headers()))) == ""
+    @test String(repr(MIME_HEADERS(), Headers())) == ""
+    @test String(repr(MIME_HEADERS(), ["A" => "B"])) == "NATS/1.0\r\nA: B\r\n\r\n"
 end

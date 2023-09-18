@@ -26,5 +26,5 @@ const SOCKET_CONNECT_DELAYS = Base.ExponentialBackOff(n=1000, first_delay=0.5, m
 const SUBSCRIPTION_CHANNEL_SIZE = 10000
 
 const MIME_PROTOCOL = MIME"application/nats"
-const MIME_PAYLOAD = MIME"application/nats-payload"
-const MIME_HEADERS = MIME"application/nats-headers"
+const MIME_PAYLOAD  = MIME"application/nats-payload"
+const MIME_HEADERS  = MIME"application/nats-headers"

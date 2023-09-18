@@ -56,7 +56,7 @@ end
 
 @testset "4K requests external" begin
     nc = NATS.connect()
-    n = 1000
+    n = 4000
     results = Channel(n)
     cond = Channel()
     t = @timed begin
@@ -84,7 +84,6 @@ end
     @test_throws ErrorException request(nc, "SOME.NULL")
 end
 
-
 @testset "Typed subscription handlers" begin
     nc = NATS.connect()
     c = Channel()
@@ -100,7 +99,6 @@ end
     sleep(0.1)
     @test length(nc.handlers) == 0
 end
-
 
 @testset "Typed request reply tests" begin
     nc = NATS.connect()
