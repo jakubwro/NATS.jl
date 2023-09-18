@@ -23,7 +23,10 @@ end
     sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply."
     end
-    result = request(nc, "SOME.REQUESTS")
+    result, tm = @timed request(nc, "SOME.REQUESTS")
+    @info "First reply time was $(1000 * tm) ms."
+    result, tm = @timed request(nc, "SOME.REQUESTS")
+    @info "Second reply time was $(1000 * tm) ms."
     unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
