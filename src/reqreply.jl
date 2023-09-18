@@ -66,11 +66,12 @@ julia> unsubscribe(nc, sub)
 ```
 """
 function reply(f, nc::Connection, subject::String; queue_group::Union{Nothing, String} = nothing, info = false)
+    T = argtype(f)
+    find_msg_conversion_or_throw(T)
     req_count = Threads.Atomic{Int}(1)
     subscribe(nc, subject; queue_group) do msg
         cnt = Threads.atomic_add!(req_count, 1)
         info && @info "[#$(cnt)] received on subject $(msg.subject)"
-        T = methods(f)[1].sig.parameters[2]
         payload = f(convert(T, msg))
         info && @info "[#$(cnt)] replying on subject $(msg.reply_to)"
         publish(nc, msg.reply_to; payload)

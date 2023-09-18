@@ -9,6 +9,7 @@ function publish(nc::Connection, subject::String; reply_to::Union{String, Nothin
 end
 
 function subscribe(f, nc::Connection, subject::String; queue_group::Union{String, Nothing} = nothing, sync = true)
+    find_msg_conversion_or_throw(argtype(f))
     sid = randstring()
     sub = Sub(subject, queue_group, sid)
     lock(nc.lock) do

@@ -87,3 +87,15 @@ end
     @test result isa NATS.Msg
     @test payload(result) == "Received Hi!"
 end
+
+@testset "Method error hints." begin
+    nc = NATS.connect()
+    
+    @test_throws MethodError subscribe(nc, "SOME.THING") do msg::Float64
+        put!(c, msg)
+    end
+    @test_throws MethodError request(nc, "SOME.REQUESTS"; payload = 4)
+    @test_throws MethodError reply(nc, "SOME.REQUESTS") do msg::Integer
+        "Received $msg"
+    end
+end

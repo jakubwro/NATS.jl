@@ -2,16 +2,12 @@ import StructTypes: omitempties
 
 StructTypes.omitempties(::Type{Connect}) = true
 
-function convert(::Type{String}, msg::NATS.Msg)
+function convert(::Type{String}, msg::Union{NATS.Msg, NATS.HMsg})
     payload(msg)
 end
 
-function convert(::Type{String}, hmsg::NATS.HMsg)
-    payload(msg)
-end
-
-function convert(::Type{Any}, hmsg::NATS.HMsg)
-    hmsg
+function convert(::Type{Any}, msg::Union{NATS.Msg, NATS.HMsg})
+    msg
 end
 
 function Base.show(io::IO, ::MIME"application/nats", ::Nothing)

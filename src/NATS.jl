@@ -10,6 +10,7 @@ using DocStringExtensions
 
 import Base: show, convert, close
 
+include("init.jl")
 include("consts.jl")
 include("protocol.jl")
 include("utils.jl")

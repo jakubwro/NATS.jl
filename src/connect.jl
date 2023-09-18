@@ -188,7 +188,7 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         needs_ack(msg) && nak(nc, msg)
     else
         handler_task = Threads.@spawn :default begin
-            T = methods(handler)[1].sig.parameters[2]
+            T = argtype(handler)
             Base.invokelatest(handler, convert(T, msg))
         end
         errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
