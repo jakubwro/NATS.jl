@@ -21,7 +21,7 @@ function __init__()
                        ```
                        import Base: show
 
-                       function Base.show(io::IO, ::MIME"application/nats", x::$(argtypes[3]))
+                       function Base.show(io::IO, NATS.MIME_PROTOCOL, x::$(argtypes[3]))
                             # Write content to `io` here.
                         end
 

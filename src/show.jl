@@ -10,30 +10,30 @@ function convert(::Type{Any}, msg::Union{NATS.Msg, NATS.HMsg})
     msg
 end
 
-function Base.show(io::IO, ::MIME"application/nats", ::Nothing)
+function Base.show(io::IO, ::MIME_PROTOCOL, ::Nothing)
     # Empty payload, nothing to write.
     nothing
 end
 
 # TODO: move above funcs
 
-function Base.show(io::IO, ::MIME"application/nats", payload::String)
+function Base.show(io::IO, ::MIME_PROTOCOL, payload::String)
     write(io, payload)
     nothing
 end
 
-function show(io::IO, ::MIME"application/nats", connect::Connect)
+function show(io::IO, ::MIME_PROTOCOL, connect::Connect)
     write(io, "CONNECT $(JSON3.write(connect))\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", pub::Pub)
+function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
     payload = isnothing(pub.payload) ? "" : pub.payload
     nbytes = sizeof(payload)
     reply_to = isnothing(pub.reply_to) ? "" : " $(pub.reply_to)"
     write(io, "PUB $(pub.subject)$reply_to $nbytes\r\n$(payload)\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", hpub::HPub)
+function show(io::IO, ::MIME_PROTOCOL, hpub::HPub)
     hbytes = sizeof(hpub.headers)
     pbytes = sizeof(hpub.payload)
     nbytes = pbytes + hbytes
@@ -41,25 +41,25 @@ function show(io::IO, ::MIME"application/nats", hpub::HPub)
     write(io, "HPUB $(hpub.subject)$reply_to $hbytes $nbytes\r\n$(hpub.headers)$(hpub.payload)\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", sub::Sub)
+function show(io::IO, ::MIME_PROTOCOL, sub::Sub)
     queue_group = isnothing(sub.queue_group) ? "" : " $(sub.queue_group)"
     write(io, "SUB $(sub.subject)$queue_group $(sub.sid)\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", unsub::Unsub)
+function show(io::IO, ::MIME_PROTOCOL, unsub::Unsub)
     max_msgs = isnothing(unsub.max_msgs) ? "" : " $(unsub.max_msgs)"
     write(io, "UNSUB $(unsub.sid)$max_msgs\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", unsub::Ping) 
+function show(io::IO, ::MIME_PROTOCOL, unsub::Ping) 
     write(io, "PING\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", unsub::Pong)
+function show(io::IO, ::MIME_PROTOCOL, unsub::Pong)
     write(io, "PONG\r\n")
 end
 
-function show(io::IO, ::MIME"application/nats", headers::Headers)
+function show(io::IO, ::MIME_PROTOCOL, headers::Headers)
     print(io, "NATS/1.0\r\n")
     for (key, value) in headers
         print(io, key)

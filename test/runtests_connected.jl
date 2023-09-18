@@ -29,7 +29,7 @@ end
     @test payload(result) == "This is a reply."
 end
 
-@testset "Many requests." begin
+@testset "4K requests" begin
     nc = NATS.connect()
     n = 4000
     sub = reply(nc, "SOME.REQUESTS") do msg

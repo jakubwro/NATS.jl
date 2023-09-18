@@ -38,8 +38,7 @@ using NATS: next_protocol_message, Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HP
 end
 
 @testset "Serializing client operations." begin
-    mime = MIME("application/nats")
-    serialize(m) = String(repr(mime, m))
+    serialize(m) = String(repr(NATS.MIME_PROTOCOL(), m))
 
     json = """{"verbose":false,"pedantic":false,"tls_required":false,"lang":"julia","version":"0.0.1"}"""
     @test serialize(JSON3.read(json, NATS.Connect)) == """CONNECT $json\r\n"""
@@ -67,7 +66,7 @@ end
     @test headers(hmsg, "C") == ["D", "E"]
     @test_throws ArgumentError header(hmsg, "C")
     @test header(hmsg, "A") == "B"
-    @test String(repr(MIME("application/nats"), headers(hmsg))) == hmsg.headers
+    @test String(repr(NATS.MIME_PROTOCOL(), headers(hmsg))) == hmsg.headers
 
     no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", nothing)
     @test NATS.statuscode(no_responder_hmsg) == 503

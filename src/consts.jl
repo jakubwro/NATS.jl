@@ -24,3 +24,7 @@ const DEFAULT_CONNECT_ARGS = (
 const OUTBOX_SIZE = 1000000
 const SOCKET_CONNECT_DELAYS = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
 const SUBSCRIPTION_CHANNEL_SIZE = 10000
+
+const MIME_PROTOCOL = MIME"application/nats"
+const MIME_PAYLOAD = MIME"application/nats-payload"
+const MIME_HEADERS = MIME"application/nats-headers"

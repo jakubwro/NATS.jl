@@ -30,7 +30,7 @@ function wait_on_sub_and_publish(io::IO)
     @assert op isa Sub
 
     for i in 1:10
-        show(io, MIME"application/nats", Pub(op.reply_to, nothing, 0, nothing))
+        show(io, MIME_PROTOCOL(), Pub(op.reply_to, nothing, 0, nothing))
     end
 end
 
@@ -40,7 +40,7 @@ function reply_on_request(io::IO)
     op = NATS.next_protocol_message(io)
     while true
         @assert op isa Msg
-        show(io, MIME"application/nats", NATS.Pub(op.reply_to, nothing, 0, nothing))
+        show(io, MIME_PROTOCOL(), NATS.Pub(op.reply_to, nothing, 0, nothing))
     end
 end
 
