@@ -1,3 +1,8 @@
+"""
+$(SIGNATURES)
+
+Publish message to a subject.
+"""
 function publish(
     nc::Connection,
     subject::String;
@@ -28,6 +33,11 @@ function publish(
     end
 end
 
+"""
+$(SIGNATURES)
+
+Publish message to a subject with default connection.
+"""
 function publish(
     subject::String;
     reply_to::Union{String, Nothing} = nothing,
@@ -45,6 +55,11 @@ function publish(
     publish(default_connection(), subject, data; reply_to)
 end
 
+"""
+$(SIGNATURES)
+
+Subscribe to a subject.
+"""
 function subscribe(
     f,
     nc::Connection,
@@ -62,6 +77,11 @@ function subscribe(
     sub
 end
 
+"""
+$(SIGNATURES)
+
+Subscribe to a subject with default connection.
+"""
 function subscribe(
     f,
     subject::String;
@@ -84,6 +104,11 @@ function unsubscribe(
     usnub
 end
 
+"""
+$(SIGNATURES)
+
+Unsubscrible from a subject.
+"""
 function unsubscribe(
     nc::Connection,
     sub::Sub;
@@ -92,6 +117,11 @@ function unsubscribe(
     unsubscribe(nc, sub.sid; max_msgs)
 end
 
+"""
+$(SIGNATURES)
+
+Unsubscrible from with default connection.
+"""
 function unsubscribe(
     sub::Sub;
     max_msgs::Union{Int, Nothing} = nothing
