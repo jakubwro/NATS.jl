@@ -1,7 +1,7 @@
 const REQUEST_TIMEOUT_SECONDS = 5
 
 """
-    request([nc, ]subject[, nreplies; timer])
+$(SIGNATURES)
 
 Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) message.
 
@@ -102,7 +102,7 @@ end
 
 
 """
-    reply(f, nc, subject[, queue_group])
+$(SIGNATURES)
 
 Reply for messages for a subject. Works like `subscribe` with automatic `publish` to the subject from `reply_to` field.
 
