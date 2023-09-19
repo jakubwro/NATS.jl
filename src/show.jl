@@ -8,44 +8,30 @@ function Base.show(io::IO, ::MIME_PAYLOAD, ::Nothing)
 end
 
 function Base.show(io::IO, ::MIME_PAYLOAD, ::Headers)
+    # When only headers are provided, do not write any payload.
+    # TODO: what if someone used Vector{Pair{String, String}} as payload?
     nothing
 end
 
 function Base.show(io::IO, ::MIME_PAYLOAD, payload::String)
+    # Allows to return string from handler for `reply`.
     write(io, payload)
     nothing
 end
 
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Headers}) where TPayload
+    # Allows to return tuple from handler, useful to override headers.
     Base.show(io, mime, first(tup))
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{Headers, TPayload}) where TPayload
-    Base.show(io, mime, last(tup))
-    nothing
-end
-
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Nothing}) where TPayload
+    # Handle edge case when some method will return nothing headers, but still in a tuple with payload.
     Base.show(io, mime, first(tup))
     nothing
 end
 
 # Headers serialization.
-
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
-    Base.show(io, mime, last(tup))
-    nothing
-end
-
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{Headers, TPayload}) where TPayload
-    Base.show(io, mime, first(tup))
-    nothing
-end
-
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Nothing}) where TPayload
-    nothing
-end
 
 function Base.show(io::IO, ::MIME_HEADERS, ::Any)
     # Default is empty header.
@@ -57,8 +43,13 @@ function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
     nothing
 end
 
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
+    Base.show(io, mime, last(tup))
+    nothing
+end
+
 function Base.show(io::IO, mime::MIME_HEADERS, s::String)
-    startswith(s, "NATS/1.0\r\n") && write(io, s) # TODO: better validations.
+    startswith(s, "NATS/1.0\r\n") && write(io, s) # TODO: better validations, not sure if this method is needed.
     nothing
 end
 

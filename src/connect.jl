@@ -209,8 +209,10 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         needs_ack(msg) && nak(nc, msg)
     else
         handler_task = Threads.@spawn :default begin
-            T = argtype(handler)
-            Base.invokelatest(handler, convert(T, msg))
+            # lock(nc.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+                T = argtype(handler)
+                Base.invokelatest(handler, convert(T, msg))
+            # end
         end
         errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
         _cleanup_unsub_msg(nc, msg.sid)
