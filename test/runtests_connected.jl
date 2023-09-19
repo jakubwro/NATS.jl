@@ -41,7 +41,7 @@ end
     results = Channel(n)
     cond = Channel()
     for _ in 1:n
-        @async begin
+        t = @async begin
             msg = request("SOME.REQUESTS")
             put!(results, msg)
             if Base.n_avail(results) == n
@@ -49,7 +49,9 @@ end
                 close(results)
             end
         end
+        errormonitor(t)
     end
+    @async begin sleep(6); close(cond); close(results) end
     try take!(cond) catch end
     unsubscribe(sub)
     replies = collect(results)
@@ -64,7 +66,7 @@ end
     cond = Channel()
     t = @timed begin
         for _ in 1:n
-            @async begin
+            t = @async begin #TODO: add error monitor.
                 msg = request("help.please")
                 put!(results, msg)
                 if Base.n_avail(results) == n
@@ -73,6 +75,7 @@ end
                 end
             end
         end
+        @async begin sleep(6); close(cond); close(results) end
         try take!(cond) catch end
         replies = collect(results)
     end

@@ -8,8 +8,10 @@ mutable struct Connection
     handlers::Dict{String, Function}
     outbox::Channel{ProtocolMessage}
     lock::ReentrantLock
+    stats::Dict{String, Int64}
+    rng::AbstractRNG
     function Connection()
-        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(OUTBOX_SIZE), ReentrantLock())
+        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(OUTBOX_SIZE), ReentrantLock(), Dict{String, Int64}(), MersenneTwister())
     end
 end
 
@@ -197,7 +199,11 @@ end
 function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
     handler = lock(nc.lock) do
-        get(nc.handlers, msg.sid, nothing)
+        h = get(nc.handlers, msg.sid, nothing)
+        if !isnothing(h) 
+            nc.stats[msg.sid] = nc.stats[ msg.sid] + 1
+        end
+        h
     end
     if isnothing(handler)
         needs_ack(msg) && nak(nc, msg)

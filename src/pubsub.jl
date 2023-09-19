@@ -35,10 +35,11 @@ function subscribe(
     nc::Connection = default_connection()
 )
     find_msg_conversion_or_throw(argtype(f))
-    sid = randstring()
+    sid = randstring(nc.rng, 20)
     sub = Sub(subject, queue_group, sid)
     lock(nc.lock) do
         nc.handlers[sid] = f
+        nc.stats[sid] = 0
     end
     send(nc, sub)
     sub

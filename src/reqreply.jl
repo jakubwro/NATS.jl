@@ -37,7 +37,7 @@ function request(
     nc = default_connection()
 )
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
-    reply_to = randstring()
+    reply_to = randstring(nc.rng, 20)
     replies = Channel(nreplies)
     sub = subscribe(reply_to; nc) do msg
         put!(replies, msg)
