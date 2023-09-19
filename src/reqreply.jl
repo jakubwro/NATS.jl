@@ -72,6 +72,11 @@ function request(
     received
 end
 
+"""
+$(SIGNATURES)
+
+The same as above but uses implicit connection (this functionality to be defined yet).
+"""
 function request(
     subject::String,
     data,
@@ -136,6 +141,8 @@ end
 
 """
 $(SIGNATURES)
+
+The same as above but uses implicit connection (this functionality to be defined yet).
 
 """
 function reply(
