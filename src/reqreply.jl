@@ -60,7 +60,8 @@ function request(
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
         # There is still small probablity than message will be delivered in between. In such
-        # case `-NAK`` will be sent to reply subject in `ncection.jl` for jetstream message.
+        # case `-NAK`` will be sent to reply subject in `conncection.jl` for jetstream message.
+        # TODO: allow for registering custom handler of such case.
         unsubscribe(nc, sub; max_msgs = 0)
         close(replies)
     end
@@ -133,6 +134,10 @@ function reply(
     end
 end
 
+"""
+$(SIGNATURES)
+
+"""
 function reply(
     f,
     subject::String;
