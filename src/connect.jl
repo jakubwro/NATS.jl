@@ -13,6 +13,17 @@ mutable struct Connection
     end
 end
 
+const CONNECTIONS = Vector{Connection}()
+
+function default_connection()
+    if isempty(CONNECTIONS)
+        error("No connection availabe. Call `NATS.connect()` before.")
+    end
+
+    # TODO: This is temporary workaround, find better way to handle multiple connections.
+    last(CONNECTIONS)
+end
+
 info(nc::Connection) = fetch(nc.info)
 status(nc::Connection) = @lock nc.lock nc.status
 outbox(nc::Connection) = @lock nc.lock nc.outbox
@@ -90,6 +101,9 @@ Initialize and return `Connection`.
 See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
 function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
+    if !isempty(CONNECTIONS)
+        return first(CONNECTIONS)
+    end
     nc = Connection()
     con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
     send(nc, con_msg)
@@ -103,6 +117,7 @@ function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
+    push!(CONNECTIONS, nc)
     nc
 end
 
@@ -202,4 +217,18 @@ end
 
 function process(nc::Connection, err::Err)
     @error "NATS protocol error!" err
+end
+
+function drain(nc::Connection)
+    # TODO: set status DRAINING on connection 
+    # stop all subs
+    # wait all subs processed
+    # wait all messages send
+    # remove connection from CONNECTIONS
+    # close connection
+end
+
+function drain()
+    drain.(CONNECTIONS)
+    nothing
 end

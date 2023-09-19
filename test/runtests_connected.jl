@@ -5,29 +5,29 @@ using NATS
 @testset "Publish subscribe" begin
     nc = NATS.connect()
     c = Channel()
-    sub = subscribe(nc, "SOME.BAR") do msg
+    sub = subscribe("SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!")
+    publish("SOME.BAR"; payload = "Hi!")
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test length(nc.handlers) == 1
-    unsubscribe(nc, sub)
+    unsubscribe(sub)
     sleep(0.1)
     @test length(nc.handlers) == 0
 end
 
 @testset "Request reply" begin
     nc = NATS.connect()
-    sub = reply(nc, "SOME.REQUESTS") do msg
+    sub = reply("SOME.REQUESTS") do msg
         "This is a reply."
     end
-    result, tm = @timed request(nc, "SOME.REQUESTS")
+    result, tm = @timed request("SOME.REQUESTS")
     @info "First reply time was $(1000 * tm) ms."
-    result, tm = @timed request(nc, "SOME.REQUESTS")
+    result, tm = @timed request("SOME.REQUESTS")
     @info "Second reply time was $(1000 * tm) ms."
-    unsubscribe(nc, sub)
+    unsubscribe(sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
 end
@@ -35,14 +35,14 @@ end
 @testset "4K requests" begin
     nc = NATS.connect()
     n = 4000
-    sub = reply(nc, "SOME.REQUESTS") do msg
+    sub = reply("SOME.REQUESTS") do msg
         "This is a reply."
     end
     results = Channel(n)
     cond = Channel()
     for _ in 1:n
         @async begin
-            msg = request(nc, "SOME.REQUESTS")
+            msg = request("SOME.REQUESTS")
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -51,7 +51,7 @@ end
         end
     end
     try take!(cond) catch end
-    unsubscribe(nc, sub)
+    unsubscribe(sub)
     replies = collect(results)
     @test length(replies) == n
     @test all(r -> r.payload == "This is a reply.", replies)
@@ -65,7 +65,7 @@ end
     t = @timed begin
         for _ in 1:n
             @async begin
-                msg = request(nc, "help.please")
+                msg = request("help.please")
                 put!(results, msg)
                 if Base.n_avail(results) == n
                     close(cond)
@@ -84,32 +84,32 @@ end
 
 @testset "No responders." begin
     nc = NATS.connect()
-    @test_throws ErrorException request(nc, "SOME.NULL")
+    @test_throws ErrorException request("SOME.NULL")
 end
 
 @testset "Typed subscription handlers" begin
     nc = NATS.connect()
     c = Channel()
 
-    sub = subscribe(nc, "SOME.BAR") do msg::String
+    sub = subscribe("SOME.BAR") do msg::String
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!")
+    publish("SOME.BAR"; payload = "Hi!")
     result = take!(c)
     @test result == "Hi!"
     @test length(nc.handlers) == 1
-    unsubscribe(nc, sub)
+    unsubscribe(sub)
     sleep(0.1)
     @test length(nc.handlers) == 0
 end
 
 @testset "Typed request reply tests" begin
     nc = NATS.connect()
-    sub = reply(nc, "SOME.REQUESTS") do msg::String
+    sub = reply("SOME.REQUESTS") do msg::String
         "Received $msg"
     end
-    result = request(nc, "SOME.REQUESTS", "Hi!")
-    unsubscribe(nc, sub)
+    result = request("SOME.REQUESTS", "Hi!")
+    unsubscribe(sub)
     @test result isa NATS.Msg
     @test payload(result) == "Received Hi!"
 end
@@ -117,11 +117,11 @@ end
 @testset "Method error hints." begin
     nc = NATS.connect()
     
-    @test_throws MethodError subscribe(nc, "SOME.THING") do msg::Float64
+    @test_throws MethodError subscribe("SOME.THING") do msg::Float64
         put!(c, msg)
     end
-    @test_throws MethodError request(nc, "SOME.REQUESTS"; payload = 4)
-    @test_throws MethodError reply(nc, "SOME.REQUESTS") do msg::Integer
+    @test_throws MethodError request("SOME.REQUESTS"; payload = 4)
+    @test_throws MethodError reply("SOME.REQUESTS") do msg::Integer
         "Received $msg"
     end
 end
@@ -129,28 +129,34 @@ end
 @testset "Publish subscribe with headers" begin
     nc = NATS.connect()
     c = Channel()
-    sub = subscribe(nc, "SOME.BAR") do msg
+    sub = subscribe("SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!", headers = ["A" => "B"])
+    publish("SOME.BAR"; payload = "Hi!", headers = ["A" => "B"])
     result = take!(c)
     @test result isa NATS.HMsg
     @test payload(result) == "Hi!"
     @test headers(result) == ["A" => "B"]
     @test length(nc.handlers) == 1
-    unsubscribe(nc, sub)
+    unsubscribe(sub)
     sleep(0.1)
     @test length(nc.handlers) == 0
 end
 
 @testset "Request reply with headers" begin
     nc = NATS.connect()
-    sub = reply(nc, "SOME.REQUESTS") do msg
+    sub = reply("SOME.REQUESTS") do msg
         "This is a reply.", ["A" => "B"]
     end
-    result = request(nc, "SOME.REQUESTS")
-    unsubscribe(nc, sub)
+    result = request("SOME.REQUESTS")
+    unsubscribe(sub)
     @test result isa NATS.HMsg
     @test payload(result) == "This is a reply."
     @test headers(result) == ["A" => "B"]
+end
+
+@testset "All subs should be closed" begin
+    nc = NATS.connect()
+    @test isempty(nc.handlers)
+    @test isempty(nc.unsubs)
 end
