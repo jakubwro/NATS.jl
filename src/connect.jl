@@ -32,15 +32,34 @@ end
 const state = State(Connection[], Dict{String, Function}(), Vector{Function}(), ReentrantLock(), Stats(0, 0))
 
 function status()
-    println("connections:    $(length(state.connections))")
+    println("=== Connection status ====================")
+    println("connections:    $(length(state.connections))        ")
     for (i, nc) in enumerate(state.connections)
         print("  [#$i]:  ")
-        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox")
+        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox             ")
         println()
     end
-    println("subscriptions:  $(length(state.handlers))")
-    println("msgs_handled:   $(state.stats.msgs_handled)")
-    println("msgs_unhandled: $(state.stats.msgs_not_handled)")
+    println("subscriptions:  $(length(state.handlers))           ")
+    println("msgs_handled:   $(state.stats.msgs_handled)         ")
+    println("msgs_unhandled: $(state.stats.msgs_not_handled)        ")
+    println("==========================================")
+end
+
+function istatus(cond = nothing)
+    try
+        while true
+            status()
+            sleep(0.05)
+            if !isnothing(cond) && !isopen(cond)
+                return
+            end
+            write(stdout, "\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K")
+        end
+    catch e
+        if !(e isa InterruptException)
+            throw(e)
+        end
+    end
 end
 
 function default_connection()

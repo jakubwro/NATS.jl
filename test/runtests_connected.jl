@@ -56,11 +56,13 @@ end
         errormonitor(t)
     end
     @async begin sleep(6); close(cond); close(results) end
+    @async NATS.istatus(cond)
     try take!(cond) catch end
     unsubscribe(sub)
     replies = collect(results)
     @test length(replies) == n
     @test all(r -> r.payload == "This is a reply.", replies)
+    NATS.status()
 end
 
 @testset "4K requests external" begin
