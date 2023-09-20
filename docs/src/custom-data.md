@@ -10,7 +10,9 @@ struct Person
     age::Int64
 end
 
-function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+import Base: convert
+
+function convert(::Type{Person}, msg::NATS.Message)
     name, age = split(payload(msg), ",")
     Person(name, parse(Int64, age))
 end
@@ -18,7 +20,7 @@ end
 
 ```
 sub = subscribe("EMPLOYEES") do person::Person
-    put!(c, person)
+    @show person
 end
 ```
 
@@ -45,7 +47,57 @@ end
 ```
 
 ```
+sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+    if person.name == "Alice"
+        Person("Bob", 44)
+    else
+        Person("Unknown", 0)
+    end
+end
 
 ```
 
+## Error handling
 
+Errors can be handled with custom headers.
+
+```
+using NATS
+
+import Base: convert, show
+
+struct Person
+    name::String
+    age::Int64
+    departament::String
+end
+
+function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+    name, age, departament = split(payload(msg), ",")
+    Person(name, parse(Int64, age), departament)
+end
+
+function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
+    print(io, person.name)
+    print(io, ",")
+    print(io, person.age)
+    print(io, ",")
+    print(io, person.departament)
+end
+
+
+nc = NATS.connect()
+sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+    if person.name == "Alice"
+        Person("Bob", 44), ["status" => "ok"]
+    else
+        Person("Unknown", 0), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
+    end
+end
+supervisor = request(Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
+@show supervisor
+
+hmsg = request(Person, "EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"))
+
+unsubscribe(sub)
+```

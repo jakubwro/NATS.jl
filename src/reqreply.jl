@@ -108,13 +108,20 @@ end
 
 
 """
-$(SIGNATURES)
-
 Reply for messages for a subject. Works like `subscribe` with automatic `publish` to the subject from `reply_to` field.
+
+$(SIGNATURES)
 
 # Examples
 ```julia-repl
-julia> sub = reply("FOO.REQUESTS") do msg; "This is a reply." end
+julia> sub = reply("FOO.REQUESTS") do msg
+    "This is a reply payload."
+end
+NATS.Sub("FOO.REQUESTS", nothing, "jdnMEcJN")
+
+julia> sub = reply("FOO.REQUESTS") do msg
+    "This is a reply payload.", ["example_header" => "This is a header value"]
+end
 NATS.Sub("FOO.REQUESTS", nothing, "jdnMEcJN")
 
 julia> unsubscribe(sub)
@@ -140,10 +147,19 @@ function reply(
 end
 
 """
-$(SIGNATURES)
-
 The same as above but uses implicit connection (this functionality to be defined yet).
 
+$(SIGNATURES)
+
+# Examples
+```julia-repl
+julia> nc = NATS.connect()
+NATS.Connection(CONNECTED, 0 subs, 0 unsubs, 0 outbox)
+
+julia> sub = reply(nc, "FOO.REQUESTS") do msg
+    "This is a reply payload."
+end
+```
 """
 function reply(
     f,

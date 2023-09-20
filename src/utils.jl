@@ -1,4 +1,6 @@
 
+const Message = Union{Msg, HMsg}
+
 payload(::ProtocolMessage) = nothing
 payload(msg::Msg) = msg.payload
 payload(hmsg::HMsg) = hmsg.payload
