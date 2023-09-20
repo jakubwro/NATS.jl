@@ -4,14 +4,60 @@
     age::Int64
 end
 
-function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+import Base: convert
+
+function convert(::Type{Person}, msg::NATS.Message)
     name, age = split(payload(msg), &quot;,&quot;)
     Person(name, parse(Int64, age))
 end</code></pre><pre><code class="nohighlight hljs">sub = subscribe(&quot;EMPLOYEES&quot;) do person::Person
-    put!(c, person)
+    @show person
 end</code></pre><h2 id="Returning-custom-types-from-handler."><a class="docs-heading-anchor" href="#Returning-custom-types-from-handler.">Returning custom types from handler.</a><a id="Returning-custom-types-from-handler.-1"></a><a class="docs-heading-anchor-permalink" href="#Returning-custom-types-from-handler." title="Permalink"></a></h2><p>It is also possible to return any type from a handler in <code>reply</code> and put any type as <code>publish</code> argument if conversion to <code>UTF-8</code> string is provided.   Note that both Julia and NATS protocol use <code>UTF-8</code> encoding, so no additional conversions are needed.</p><p>NATS module defines custom MIME types for payload and headers serialization:</p><pre><code class="nohighlight hljs">const MIME_PAYLOAD  = MIME&quot;application/nats-payload&quot;
 const MIME_HEADERS  = MIME&quot;application/nats-headers&quot;</code></pre><p>Conversion method should look like this.</p><pre><code class="nohighlight hljs">function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, person.name)
     print(io, &quot;,&quot;)
     print(io, person.age)
-end</code></pre><pre><code class="nohighlight hljs"></code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 20 September 2023 11:18">Wednesday 20 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="nohighlight hljs">sub = reply(&quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
+    if person.name == &quot;Alice&quot;
+        Person(&quot;Bob&quot;, 44)
+    else
+        Person(&quot;Unknown&quot;, 0)
+    end
+end
+</code></pre><h2 id="Error-handling"><a class="docs-heading-anchor" href="#Error-handling">Error handling</a><a id="Error-handling-1"></a><a class="docs-heading-anchor-permalink" href="#Error-handling" title="Permalink"></a></h2><p>Errors can be handled with custom headers.</p><pre><code class="nohighlight hljs">using NATS
+
+import Base: convert, show
+
+struct Person
+    name::String
+    age::Int64
+    departament::String
+end
+
+function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+    name, age, departament = split(payload(msg), &quot;,&quot;)
+    Person(name, parse(Int64, age), departament)
+end
+
+function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
+    print(io, person.name)
+    print(io, &quot;,&quot;)
+    print(io, person.age)
+    print(io, &quot;,&quot;)
+    print(io, person.departament)
+end
+
+
+nc = NATS.connect()
+sub = reply(&quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
+    if person.name == &quot;Alice&quot;
+        Person(&quot;Bob&quot;, 44), [&quot;status&quot; =&gt; &quot;ok&quot;]
+    else
+        Person(&quot;Unknown&quot;, 0), [&quot;status&quot; =&gt; &quot;error&quot;, &quot;message&quot; =&gt; &quot;Supervisor not defined for $(person.name)&quot; ]
+    end
+end
+supervisor = request(Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 33, &quot;IT&quot;))
+@show supervisor
+
+hmsg = request(Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Anna&quot;, 33, &quot;ACCOUNTING&quot;))
+
+unsubscribe(sub)</code></pre></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 20 September 2023 13:42">Wednesday 20 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
