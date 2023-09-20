@@ -169,3 +169,5 @@ end
     @test isempty(NATS.state.handlers)
     @test isempty(nc.unsubs)
 end
+
+NATS.status()

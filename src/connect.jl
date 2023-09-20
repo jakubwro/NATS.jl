@@ -29,7 +29,12 @@ struct State
     stats::Stats
 end
 
-const state = State(Connection[], Dict{String, Function}(), Vector{Function}(), ReentrantLock(), Stats(0, 0))
+
+function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
+    @error "Unexpected message delivered." msg
+end
+
+const state = State(Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))
 
 function status()
     println("=== Connection status ====================")
@@ -255,7 +260,16 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         h
     end
     if isnothing(handler)
-        needs_ack(msg) && nak(nc, msg)
+        fallbacks = lock(state.lock) do
+            collect(state.fallback_handlers)
+        end
+        for f in fallbacks
+            Base.invokelatest(f, nc, msg)
+        end
+        lock(state.lock) do
+            nc.stats.msgs_not_handled = nc.stats.msgs_not_handled + 1
+            state.stats.msgs_not_handled = state.stats.msgs_not_handled + 1
+        end
     else
         handler_task = Threads.@spawn :default begin
             # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.

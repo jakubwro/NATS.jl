@@ -1,5 +1,9 @@
 @enum AckPolicy EXPLICIT
 
+function jetstream_fallback_handler(nc::Connection, msg::Union{Msg, HMsg})
+    needs_ack(msg) && nak(nc, msg)
+end
+
 """
 https://docs.nats.io/reference/reference-protocols/nats_api_reference
 """
