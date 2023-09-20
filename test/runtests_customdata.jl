@@ -22,7 +22,6 @@ end
 
 nc = NATS.connect()
 sleep(5)
-@show nc.status
 @assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_DEFAULT_HOST):$(NATS.NATS_DEFAULT_PORT)."
 
 @testset "Publish subscribe with custom data" begin
@@ -36,10 +35,10 @@ sleep(5)
     @test result isa Person
     @test result.name == "Jacek"
     @test result.age == 33
-    @test length(nc.handlers) == 1
+    @test length(NATS.state.handlers) == 1
     unsubscribe(sub)
     sleep(0.1)
-    @test length(nc.handlers) == 0
+    @test length(NATS.state.handlers) == 0
 end
 
 @testset "Request reply with custom data" begin

@@ -1,37 +1,63 @@
 
 @enum ConnectionStatus CONNECTING CONNECTED RECONNECTING CLOSING CLOSED FAILURE
 
+
+mutable struct Stats
+    msgs_handled::Int64
+    msgs_not_handled::Int64
+end
+
 mutable struct Connection
     status::ConnectionStatus
     info::Channel{Info}
-    unsubs::Dict{String, Int64}
-    handlers::Dict{String, Function}
     outbox::Channel{ProtocolMessage}
-    lock::ReentrantLock
-    stats::Dict{String, Int64}
+    subs::Dict{String, Sub}
+    unsubs::Dict{String, Int64}
+    stats::Stats
     rng::AbstractRNG
     function Connection()
-        new(CONNECTING, Channel{Info}(10), Dict{String, Channel}(), Dict{String, Int64}(), Channel{ProtocolMessage}(OUTBOX_SIZE), ReentrantLock(), Dict{String, Int64}(), MersenneTwister())
+        new(CONNECTING, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
     end
 end
 
-const CONNECTIONS = Vector{Connection}()
+struct State
+    connections::Vector{Connection}
+    handlers::Dict{String, Function}
+    "Handlers of messages for which handler was not found."
+    fallback_handlers::Vector{Function}
+    lock::ReentrantLock
+    stats::Stats
+end
+
+const state = State(Connection[], Dict{String, Function}(), Vector{Function}(), ReentrantLock(), Stats(0, 0))
+
+function status()
+    println("connections:    $(length(state.connections))")
+    for (i, nc) in enumerate(state.connections)
+        print("  [#$i]:  ")
+        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox")
+        println()
+    end
+    println("subscriptions:  $(length(state.handlers))")
+    println("msgs_handled:   $(state.stats.msgs_handled)")
+    println("msgs_unhandled: $(state.stats.msgs_not_handled)")
+end
 
 function default_connection()
-    if isempty(CONNECTIONS)
+    if isempty(state.connections)
         error("No connection availabe. Call `NATS.connect()` before.")
     end
 
     # TODO: This is temporary workaround, find better way to handle multiple connections.
-    last(CONNECTIONS)
+    last(state.connections)
 end
 
 info(nc::Connection) = fetch(nc.info)
-status(nc::Connection) = @lock nc.lock nc.status
-outbox(nc::Connection) = @lock nc.lock nc.outbox
+status(nc::Connection) = @lock state.lock nc.status
+outbox(nc::Connection) = @lock state.lock nc.outbox
 
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    status(nc), ", " , length(nc.handlers)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
+    status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 """
 Enqueue protocol message in `outbox` to be written to socket.
@@ -50,7 +76,7 @@ function sendloop(nc::Connection, io::IO)
     while true
         msg = fetch(nc.outbox)
         if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
-            @lock nc.lock nc.unsubs[msg.sid] = msg.max_msgs # TODO: move it somewhere else
+            lock(state.lock) do; nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
         end
         show(io, MIME_PROTOCOL(), msg)
         take!(nc.outbox)
@@ -58,15 +84,15 @@ function sendloop(nc::Connection, io::IO)
 end
 
 @mockable function mockable_socket_connect(port::Integer)
-    # @show Pretend.activated()
     Pretend.activated() && @warn "Using mocked connection."
     Sockets.connect(port)
 end
 
 function reconnect(nc::Connection, host, port, con_msg)
     sock = retry(mockable_socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
-    lock(nc.lock) do; nc.status = CONNECTED end
+    lock(state.lock) do; nc.status = CONNECTED end
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
+    errormonitor(sender_task)
     try
         while true
             process(nc, next_protocol_message(sock))
@@ -75,6 +101,8 @@ function reconnect(nc::Connection, host, port, con_msg)
         @error err
         close(nc.outbox)
         close(sock)
+        # TODO: distinguish recoverable and unrecoverable exceptions.
+        # throw(err)
     end
     try
         wait(sender_task)
@@ -93,8 +121,8 @@ function reconnect(nc::Connection, host, port, con_msg)
         # TODO: skip Connect, Ping, Pong
         put!(new_outbox, msg)
     end
-    lock(nc.lock) do; nc.status = RECONNECTING end
-    lock(nc.lock) do; nc.outbox = new_outbox end
+    lock(state.lock) do; nc.status = RECONNECTING end
+    lock(state.lock) do; nc.outbox = new_outbox end
 end
 
 """
@@ -103,8 +131,8 @@ Initialize and return `Connection`.
 See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
 function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT; kw...)
-    if !isempty(CONNECTIONS)
-        return first(CONNECTIONS)
+    if !isempty(state.connections)
+        return first(state.connections)
     end
     nc = Connection()
     con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
@@ -119,7 +147,7 @@ function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
-    push!(CONNECTIONS, nc)
+    lock(state.lock) do; push!(state.connections, nc) end
     nc
 end
 
@@ -133,14 +161,14 @@ function connect(x, host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_P
 end
 
 function close(nc::Connection)
-    lock(nc.lock) do; nc.status = CLOSING end
-    lock(nc.lock) do
-        for (sid, _) in nc.handlers
-            unsubscribe(nc, sid)
+    lock(state.lock) do; nc.status = CLOSING end
+    lock(state.lock) do
+        for (sid, sub) in nc.subs
+            unsubscribe(nc, sub)
         end
     end
     try close(nc.outbox) catch end
-    lock(nc.lock) do; nc.status = CLOSED end
+    lock(state.lock) do; nc.status = CLOSED end
 end
 
 function ping(nc)
@@ -151,8 +179,9 @@ end
 Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_sub(nc::Connection, sid::String)
-    lock(nc.lock) do
-        delete!(nc.handlers, sid)
+    lock(state.lock) do
+        delete!(state.handlers, sid)
+        delete!(nc.subs, sid)
         delete!(nc.unsubs, sid)
     end
 end
@@ -161,7 +190,7 @@ end
 Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_unsub_msg(nc::Connection, sid::String)
-    lock(nc.lock) do
+    lock(state.lock) do
         count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)
             count = count - 1
@@ -198,10 +227,11 @@ end
 
 function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
-    handler = lock(nc.lock) do
-        h = get(nc.handlers, msg.sid, nothing)
-        if !isnothing(h) 
-            nc.stats[msg.sid] = nc.stats[ msg.sid] + 1
+    handler = lock(state.lock) do
+        h = get(state.handlers, msg.sid, nothing)
+        if !isnothing(h)
+            nc.stats.msgs_handled = nc.stats.msgs_handled + 1
+            state.stats.msgs_handled = state.stats.msgs_handled + 1
         end
         h
     end
@@ -209,7 +239,7 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         needs_ack(msg) && nak(nc, msg)
     else
         handler_task = Threads.@spawn :default begin
-            # lock(nc.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+            # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
                 T = argtype(handler)
                 Base.invokelatest(handler, convert(T, msg))
             # end

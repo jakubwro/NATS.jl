@@ -1,7 +1,7 @@
 function __init__()
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
         if exc.f == convert && length(argtypes) > 1
-             # Color is not necessary, this is just to show it's possible.
+             # TODO: check if 2nd arg is Msg of Hmsg
              print(io, """
                        
                        To use `$(argtypes[1])` as parameter of subscription handler apropriate conversion from `$(argtypes[2])` must be provided.

@@ -16,10 +16,10 @@ sleep(5)
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
-    @test length(nc.handlers) == 1
+    @test length(NATS.state.handlers) == 1
     unsubscribe(sub)
     sleep(0.1)
-    @test length(nc.handlers) == 0
+    @test length(NATS.state.handlers) == 0
 end
 
 @testset "Request reply" begin
@@ -104,10 +104,10 @@ end
     publish("SOME.BAR"; payload = "Hi!")
     result = take!(c)
     @test result == "Hi!"
-    @test length(nc.handlers) == 1
+    @test length(NATS.state.handlers) == 1
     unsubscribe(sub)
     sleep(0.1)
-    @test length(nc.handlers) == 0
+    @test length(NATS.state.handlers) == 0
 end
 
 @testset "Typed request reply tests" begin
@@ -144,10 +144,10 @@ end
     @test result isa NATS.HMsg
     @test payload(result) == "Hi!"
     @test headers(result) == ["A" => "B"]
-    @test length(nc.handlers) == 1
+    @test length(NATS.state.handlers) == 1
     unsubscribe(sub)
     sleep(0.1)
-    @test length(nc.handlers) == 0
+    @test length(NATS.state.handlers) == 0
 end
 
 @testset "Request reply with headers" begin
@@ -164,6 +164,6 @@ end
 
 @testset "All subs should be closed" begin
     nc = NATS.connect()
-    @test isempty(nc.handlers)
+    @test isempty(NATS.state.handlers)
     @test isempty(nc.unsubs)
 end
