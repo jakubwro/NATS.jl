@@ -23,6 +23,8 @@ include("pubsub.jl")
 include("reqreply.jl")
 include("jetstream.jl")
 
+include("jetstream/JetStream.jl")
+
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers
 
 end
