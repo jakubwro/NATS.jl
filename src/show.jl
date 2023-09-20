@@ -85,7 +85,9 @@ function show(io::IO, ::MIME_PROTOCOL, hpub::HPub)
     pbytes = sizeof(hpub.payload)
     nbytes = pbytes + hbytes
     reply_to = isnothing(hpub.reply_to) ? "" : " $(hpub.reply_to)"
-    write(io, "HPUB $(hpub.subject)$reply_to $hbytes $nbytes\r\n$(hpub.headers)$(hpub.payload)\r\n")
+    payload = isnothing(hpub.payload) ? "" : hpub.payload
+    headers = isnothing(hpub.headers) ? "" : hpub.headers
+    write(io, "HPUB $(hpub.subject)$reply_to $hbytes $nbytes\r\n$(hpub.headers)$(payload)\r\n")
 end
 
 function show(io::IO, ::MIME_PROTOCOL, sub::Sub)
