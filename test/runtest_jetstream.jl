@@ -18,5 +18,6 @@ sleep(5)
         "workqueue",
         "memory"
     )
-    stream_create(stream_configuration; connection)
+    did_create = stream_create(stream_configuration; connection)
+    @test did_create
 end

@@ -1,5 +1,5 @@
 import Base.convert
 
-function convert(::Type{StreamCreateResponse}, msg::NATS.Message)
-    JSON3.read(msg.payload, StreamCreateResponse)
+function convert(::Type{T}, msg::NATS.Message) where { T <: JetStreamResponse }
+    JSON3.read(msg.payload, T)
 end

@@ -25,7 +25,9 @@ struct ApiError
     err_code::Int64
 end
 
-struct StreamCreateResponse
+abstract type JetStreamResponse end
+
+struct StreamCreateResponse <: JetStreamResponse
     config::Union{StreamConfiguration, Nothing}
     created::Union{String, Nothing}
     did_create::Union{Bool, Nothing}
