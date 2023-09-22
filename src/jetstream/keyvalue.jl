@@ -1,8 +1,8 @@
-
-
-
-
 @enum KeyValueOperation NONE PUT DELETE PURGE
+
+const MAX_HISTORY    = 64
+const ALL_KEYS       = ">"
+const LATEST_REVISION = UInt(0)
 
 struct KeyValueEntry
     # Bucket is the bucket the data was loaded from.
@@ -22,26 +22,33 @@ struct KeyValueEntry
 end
 
 struct KeyValue <: AbstractDict{String, KeyValueEntry}
+    connection::NATS.Connection
 end
 
-function kv_store_create()
-
+function keyvalue_create(stream_config::StreamConfiguration; connection::NATS.Connection = NATS.default_connection(), timer = Timer(JS_TM_S))
+    res = request("\$JS.API.STREAM.DELETE.<stream>", stream_config;  connection)
+    if error
+        error("")
+    end
 end
 
-function kv_store_delete()
-
-end
-
-function kv_store_names()
-
-end
-
-function kv_store_list()
+function keyvalue_delete()
 
 end
 
+function keyvalue_names()
 
-function kv_get(; revision::UInt64 = nothing)
+end
+
+function keyvalue_list()
+
+end
+
+function keyvalue(; connection::NATS.Connection = NATS.default_connection())::KeyValue
+
+end
+
+function kv_get(; revision::UInt64 = LATST_REVISION)
 
 end
 
@@ -90,3 +97,16 @@ end
 
 # get!, get,  getindex, haskey, setindex!, pairs, keys, values, delete!
 # additionally: history(kventry::KeyValueEntry), get(; revision = nothing)
+
+
+default_options = (a = 2, b = 4)
+
+function _zxc(x; options...)
+    @show options
+end
+
+function zxc(x; options...)
+    @show setdiff(keys(options), keys(default_options))
+    # options = merge(options, default_options)
+    @show options
+end
