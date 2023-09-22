@@ -35,8 +35,8 @@ struct StreamCreateResponse <: JetStreamResponse
 end
 
 function stream_create(config::StreamConfiguration; connection::NATS.Connection)
-    resp = NATS.request(StreamCreateResponse, connection, "\$JS.API.STREAM.CREATE.$(config.name)", config)
-    !isnothing(resp.error) && error(resp.error.description)
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.CREATE.$(config.name)", config)
+    haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
     return resp.did_create
 end
 
@@ -44,9 +44,6 @@ function stream_update(config::StreamConfiguration)
 
 end
 
-function stream_name_by_subject()
-
-end
 
 function stream_delete()
 
@@ -56,6 +53,6 @@ function stream_list()
 
 end
 
-function stream_names()
+function stream_names(subject = nothing)
 
 end
