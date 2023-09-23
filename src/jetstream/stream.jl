@@ -40,6 +40,7 @@ end
 function stream_list(; connection::NATS.Connection)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.LIST")
     haskey(resp, :error) && error("Failed to get stream list: $(resp.error.description).")
+    #TODO: pagination
     resp
 end
 

@@ -21,7 +21,6 @@ include("show.jl")
 include("connect.jl")
 include("pubsub.jl")
 include("reqreply.jl")
-include("jetstream.jl")
 
 include("jetstream/JetStream.jl")
 

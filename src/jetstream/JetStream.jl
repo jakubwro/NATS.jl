@@ -2,6 +2,7 @@ module JetStream
 
 import ..NATS
 
+using Random
 using JSON3
 
 function validate_name(name::String)

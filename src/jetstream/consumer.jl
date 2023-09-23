@@ -2,6 +2,8 @@
 const ACK_WAIT_DEFAULT = 30000000
 
 struct ConsumerConfiguration
+    deliver_policy::String
+    durable_name::Union{String, Nothing}
     "A unique name for a durable consumer"
     name::Union{String, Nothing}
     "A short description of the purpose of this consumer"
@@ -37,16 +39,18 @@ struct ConsumerConfiguration
     mem_storage::Union{Bool, Nothing}
 end
 
-const DEFAULT_CUSTOMER_CONFIG = (
+const DEFAULT_CONSUMER_CONFIG = (
+    deliver_policy = "all",
+    durable_name = nothing,
     name = nothing,
     description = nothing,
     deliver_subject = nothing,
-    ack_policy = "asdf",
+    ack_policy = "all",
     ack_wait = ACK_WAIT_DEFAULT,
     max_deliver = 1000,
     filter_subject = nothing,
     filter_subjects = nothing,
-    replay_policy = "asdf",
+    replay_policy = "instant",
     sample_freq = nothing,
     max_ack_pending = 1000,
     flow_control = nothing,
@@ -61,62 +65,29 @@ struct Consumer
     connection::NATS.Connection
 end
 
-macro kwargs_from(type_symbol, defaults_symbol, fn)
-    config_type = eval(type_symbol)
-    defaults = eval(defaults_symbol)
+function consumer_create_or_update(stream::String, connection)
 
-    t_keys = fieldnames(config_type)
-    d_keys = keys(defaults)
+end
 
-    df = setdiff(d_keys, t_keys)
-    if !isempty(df)
-        error("Unexpected defaults: $df.")
+using StructTypes
+StructTypes.omitempties(::Type{ConsumerConfiguration}) = true
+
+function consumer_create(stream::String; connection::NATS.Connection, kwargs...)
+    haskey(kwargs, :durable_name) && error("`durable_name` is deprecated, use `name` or leave not set for empheral consumer.")
+    subject = if haskey(kwargs, :name)
+        # Creating durable consumer.
+        kwargs = merge((durable_name = get(kwargs, :name, nothing),), kwargs)
+        "\$JS.API.CONSUMER.DURABLE.CREATE.$(stream).$(get(kwargs, :name, nothing))"
+    else
+        # Creating empheral consumer.
+        kwargs = merge((name = randstring(connection.rng, 10),), kwargs)
+        "\$JS.API.CONSUMER.CREATE.$(stream).$(kwargs.name)"
     end
-
-    @show config_type
-    @show defaults
-    @show fn
-
-    n = fieldnames(ConsumerConfiguration)
-    t = fieldtypes(ConsumerConfiguration)
-
-    d = keys(DEFAULT_CUSTOMER_CONFIG)
-
-    exprs = []
-    for (aname, atype) in zip(n,t)
-        if haskey(DEFAULT_CUSTOMER_CONFIG, aname)
-            push!(exprs, :($aname::$atype = $(DEFAULT_CUSTOMER_CONFIG[aname])))
-        else
-            push!(exprs, :($aname::$atype))
-        end
-    end
-
-    # check no kw clash
-
-    # rewrite args to specify all from type
-
-    # reconstruct object
-
-    # config = ConsumerConfiguration(name, ...)
-end
-
-@generated sortkeys(nt::NamedTuple{KS}) where {KS} = :(NamedTuple{$(Tuple(sort(collect(KS))))}(nt))
-
-function create(stream::String; connection::NATS.Connection, kwargs...)
-    params = merge(DEFAULT_CUSTOMER_CONFIG, kwargs)
-    params = params[fieldnames(ConsumerConfiguration)]
-    config = ConsumerConfiguration(params...)
-    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.$(stream).CONSUMER.CREATE", config)
-    haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
-    resp.did_create
-end
-
-function consumer_create_or_update(stream::String, config::ConsumerConfiguration; connection)
-
-end
-
-function consumer_create(stream::String, config::ConsumerConfiguration; connection)
-
+    config = NATS.from_kwargs(ConsumerConfiguration, DEFAULT_CONSUMER_CONFIG, kwargs)
+    req = JSON3.write(Dict(:stream_name => stream, :config => config))
+    resp = NATS.request(JSON3.Object, connection, subject, req)
+    haskey(resp, :error) && error("Failed to create consumer: $(resp.error.description).")
+    resp.name
 end
 
 function consumer_update(stream::String, config::ConsumerConfiguration; connection)
@@ -140,8 +111,16 @@ function next(consumer::Consumer)
 end
 
 function next(stream::String, consumer::String; connection::NATS.Connection)
-    msg = request(nc, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer")
+    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer")
 end
 
 function fetch()
+end
+
+function ack(msg::NATS.Message; connection::NATS.Connection)
+    publish(nc, msg.reply_to)
+end
+
+function nak(msg::NATS.Message; connection::NATS.Connection)
+    publish(nc, msg.reply_to; payload = "-NAK")
 end
