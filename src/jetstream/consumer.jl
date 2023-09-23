@@ -1,5 +1,6 @@
 
 const ACK_WAIT_DEFAULT = 30000000
+const DEFAULT_NEXT_TIMEOUT_SECONDS = 60
 
 struct ConsumerConfiguration
     deliver_policy::String
@@ -106,12 +107,8 @@ function consumer()
     connection::NATS.connection
 end
 
-function next(consumer::Consumer)
-    msg = request(nc, "\$JS.API.CONSUMER.MSG.NEXT.$(conumer.stream).$(consumer.name)")
-end
-
-function next(stream::String, consumer::String; connection::NATS.Connection)
-    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer")
+function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEOUT_SECONDS), connection::NATS.Connection)
+    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; timer)
 end
 
 function fetch()
