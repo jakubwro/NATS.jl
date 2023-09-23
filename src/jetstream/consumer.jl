@@ -115,9 +115,9 @@ function fetch()
 end
 
 function ack(msg::NATS.Message; connection::NATS.Connection)
-    publish(connection, msg.reply_to)
+    NATS.publish(connection, msg.reply_to)
 end
 
 function nak(msg::NATS.Message; connection::NATS.Connection)
-    publish(connection, msg.reply_to; payload = "-NAK")
+    NATS.publish(connection, msg.reply_to; payload = "-NAK")
 end
