@@ -10,7 +10,7 @@ function publish(
     payload = nothing,
     headers::Union{Nothing, Headers} = nothing
 )
-    publish(nc, subject, (payload, headers), reply_to)
+    publish(nc, subject, (payload, headers); reply_to)
 end
 
 function publish(
