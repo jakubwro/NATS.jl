@@ -291,6 +291,10 @@ function process(nc::Connection, err::Err)
 end
 
 function drain(nc::Connection)
+    nc.status = CLOSING
+    close(nc.outbox)
+    sleep(3)
+    nc.status = CLOSED
     # TODO: set status DRAINING on connection 
     # stop all subs
     # wait all subs processed
@@ -301,7 +305,7 @@ end
 
 function drain()
     @info "Draining all connections."
-    drain.(CONNECTIONS)
+    drain.(state.connections)
     sleep(5) # simulate some work
     @info "All connections drained."
     nothing
