@@ -9,6 +9,46 @@ Benchmark after any changes to parsing, "4k requests" is a good test case.
 
 Avoid using regex, `split` is used to extract protocol data. Some performance might be squeezed by avoiding conversion from `SubString` to `String` but it will be observable only for huge payloads.
 
+### Validation
+
+Avoids regex as well if possible.
+
+Name regex: `^[^.*>]+$`
+
+```
+julia> function validate_name(name::String)
+           isempty(name) && error("Name is empty.")
+           for c in name
+               if c == '.' || c == '*' || c == '>'
+                   error("Name \"$name\" contains invalid character '$c'.")
+               end
+           end
+           true
+       end
+validate_name (generic function with 1 method)
+
+julia> function validate_name_regex(name::String)
+           m = match(r"^[^.*>]+$", name)
+           isnothing(m) && error("Invalid name.")
+           true
+       end
+validate_name_regex (generic function with 1 method)
+
+julia> using BenchmarkTools
+
+julia> name = "valid_name"
+"valid_name"
+
+julia> @btime validate_name(name)
+  9.593 ns (0 allocations: 0 bytes)
+true
+
+julia> @btime validate_name_regex(name)
+  114.174 ns (3 allocations: 176 bytes)
+true
+
+```
+
 
 ### Use strings not raw bytes
 

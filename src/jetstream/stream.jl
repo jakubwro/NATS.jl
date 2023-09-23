@@ -19,40 +19,36 @@ struct StreamConfiguration <: JetStreamPayload
     storage::String
 end
 
-struct ApiError
-    code::Int64
-    description::String
-    err_code::Int64
-end
-
-abstract type JetStreamResponse end
-
-struct StreamCreateResponse <: JetStreamResponse
-    config::Union{StreamConfiguration, Nothing}
-    created::Union{String, Nothing}
-    did_create::Union{Bool, Nothing}
-    error::Union{ApiError, Nothing}
-end
-
 function stream_create(config::StreamConfiguration; connection::NATS.Connection)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.CREATE.$(config.name)", config)
     haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
-    return resp.did_create
+    resp.did_create
 end
 
-function stream_update(config::StreamConfiguration)
-
+function stream_update(config::StreamConfiguration; connection::NATS.Connection)
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.UPDATE.$(config.name)", config)
+    haskey(resp, :error) && error("Failed to update stream \"$(config.name)\": $(resp.error.description).")
+    true
 end
 
-
-function stream_delete()
-
+function stream_delete(name::String; connection::NATS.Connection)
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.DELETE.$(name)")
+    haskey(resp, :error) && error("Failed to delete stream \"$(name)\": $(resp.error.description).")
+    resp.success
 end
 
-function stream_list()
-
+function stream_list(; connection::NATS.Connection)
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.LIST")
+    haskey(resp, :error) && error("Failed to get stream list: $(resp.error.description).")
+    resp
 end
 
-function stream_names(subject = nothing)
-
+function stream_names(subject = nothing; connection::NATS.Connection)
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", "{\"subject\": \"$subject\"}")
+    if haskey(resp, :error)
+        error("Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\""): $(resp.error.description).")
+    end
+    # total, offset, limit = resp.total, resp.offset, resp.limit
+    #TODO: pagination
+    resp.streams
 end

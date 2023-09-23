@@ -159,9 +159,9 @@ function connect(host::String = NATS_DEFAULT_HOST, port::Int = NATS_DEFAULT_PORT
         return first(state.connections)
     end
     nc = Connection()
-    con_msg = Connect(merge(DEFAULT_CONNECT_ARGS, kw)...)
-    send(nc, con_msg)
-    reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, con_msg) end end
+    connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
+    send(nc, connect_msg)
+    reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end
     errormonitor(reconnect_task)
 
     # TODO: refactor
