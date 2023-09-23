@@ -300,6 +300,9 @@ function drain(nc::Connection)
 end
 
 function drain()
+    @info "Draining all connections."
     drain.(CONNECTIONS)
+    sleep(5) # simulate some work
+    @info "All connections drained."
     nothing
 end
