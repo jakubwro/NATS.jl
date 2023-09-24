@@ -7,7 +7,7 @@ function trynext(stream, consumer; connection)
             break
         catch err
             @debug "Error on `next`" stream consumer err
-            wait(timer)
+            isopen(timer) && wait(timer) # TODO: this is not thread safe, timer can expire in beetwien `isopen` and `wait`
         end
     end
     msg
@@ -15,7 +15,7 @@ end
 
 function worker(f, stream::String, consumer::String; connection::NATS.Connection)
     while true # TODO: while connection is not dreained
-        msg = trynext(stream, consuler; connection)
+        msg = trynext(stream, consumer; connection)
         try
             result = f(msg)
             ack(msg; connection)
