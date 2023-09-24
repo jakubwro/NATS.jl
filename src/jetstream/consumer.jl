@@ -1,6 +1,6 @@
 
-const ACK_WAIT_DEFAULT = 30000000
-const DEFAULT_NEXT_TIMEOUT_SECONDS = 60
+const ACK_WAIT_DEFAULT = 30000000000
+const DEFAULT_NEXT_TIMEOUT_SECONDS = 5
 
 struct ConsumerConfiguration
     deliver_policy::String
@@ -13,7 +13,7 @@ struct ConsumerConfiguration
     deliver_subject::Union{String, Nothing}
     "Messages that are not acknowledged will be redelivered at a later time. 'none' means no acknowledgement is needed only 1 delivery ever, 'all' means acknowledging message 10 will also acknowledge 0-9 and 'explicit' means each has to be acknowledged specifically"
     ack_policy::String
-    "How long (in nanoseconds) to allow messages to remain un-acknowledged before attempting redelivery. Default is $(div(ACK_WAIT_DEFAULT, 1000*1000)) seconds."
+    "How long (in nanoseconds) to allow messages to remain un-acknowledged before attempting redelivery. Default is $(div(ACK_WAIT_DEFAULT, 10^9)) seconds."
     ack_wait::Int64
     "When this is -1 unlimited attempts to deliver an un acknowledged message is made, when this is >0 it will be maximum amount of times a message is delivered after which it is ignored."
     max_deliver::Int64

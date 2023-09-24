@@ -38,6 +38,24 @@ function request(
     request(default_connection(), subject, data; timer)
 end
 
+function has_error_status(msg::NATS.Message)
+    code = statuscode(msg)
+    return code >= 400
+end
+
+function throw_on_error(msg)
+    if has_error_status(msg)
+        code = statuscode(msg)
+        if code == 404 # TODO: move jetstream specific messages to jetstream.
+            error("No messages.")
+        elseif code == 503
+            error("No responders.")
+        else
+            error("Status $code returned.")
+        end
+    end
+end
+
 function request(
     nc::Connection,
     subject::String,
@@ -50,7 +68,7 @@ function request(
     replies = Channel(nreplies)
     sub = subscribe(nc, reply_to) do msg
         put!(replies, msg)
-        if Base.n_avail(replies) == nreplies || statuscode(msg) == 503
+        if Base.n_avail(replies) == nreplies || has_error_status(msg)
             close(replies)
         end
     end
@@ -66,9 +84,8 @@ function request(
         close(replies)
     end
     received = first(collect(replies), nreplies)
-    if length(received) == 1 && statuscode(only(received)) == 503
-        error("No responders.") 
-    end
+    length(received) == 1 && throw_on_error(only(received))
+    # TODO: handle case if some messages have status.
     received
 end
 
