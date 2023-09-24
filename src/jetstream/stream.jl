@@ -6,6 +6,9 @@ STREAM_MAX_BYTES_UNLIMITED = -1
 
 abstract type JetStreamPayload end
 
+@enum SteramRetentionPolicy limits interest workqueue
+@enum StreamStorage file memory
+
 struct StreamConfiguration <: JetStreamPayload
     "A unique name for the Stream, empty for Stream Templates."
     name::Union{String, Nothing}
@@ -14,24 +17,42 @@ struct StreamConfiguration <: JetStreamPayload
     "A list of subjects to consume, supports wildcards. Must be empty when a mirror is configured. May be empty when sources are configured."
     subjects::Union{Vector{String}, Nothing}
     "How messages are retained in the Stream, once this is exceeded old messages are removed."
-    retention::String
+    retention::SteramRetentionPolicy
     "The storage backend to use for the Stream."
-    storage::String
+    max_consumers::Int64
+    max_msgs::Int64
+    max_bytes::Int64
+    max_age::Int64
+    storage::StreamStorage
 end
 
-function stream_create(config::StreamConfiguration; connection::NATS.Connection)
+const DEFAULT_STREAM_CONFIGURATION = (
+    name = nothing,
+    description  = nothing,
+    subjects = nothing,
+    retention = limits,
+    max_consumers = -1,
+    max_msgs = -1,
+    max_bytes = -1,
+    max_age = 0,
+    storage = memory
+)
+
+function stream_create(; connection::NATS.Connection, kwargs...)
+    config = NATS.from_kwargs(StreamConfiguration, DEFAULT_STREAM_CONFIGURATION, kwargs)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.CREATE.$(config.name)", config)
     haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
     resp.did_create
 end
 
-function stream_update(config::StreamConfiguration; connection::NATS.Connection)
+function stream_update(; connection::NATS.Connection, kwargs...)
+    config = NATS.from_kwargs(StreamConfiguration, DEFAULT_STREAM_CONFIGURATION, kwargs)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.UPDATE.$(config.name)", config)
     haskey(resp, :error) && error("Failed to update stream \"$(config.name)\": $(resp.error.description).")
     true
 end
 
-function stream_delete(name::String; connection::NATS.Connection)
+function stream_delete(; connection::NATS.Connection, name::String)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.DELETE.$(name)")
     haskey(resp, :error) && error("Failed to delete stream \"$(name)\": $(resp.error.description).")
     resp.success
@@ -44,7 +65,7 @@ function stream_list(; connection::NATS.Connection)
     resp
 end
 
-function stream_names(subject = nothing; connection::NATS.Connection)
+function stream_names(; connection::NATS.Connection, subject = nothing)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", "{\"subject\": \"$subject\"}")
     if haskey(resp, :error)
         error("Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\""): $(resp.error.description).")

@@ -23,6 +23,6 @@ include("keyvalue.jl")
 include("show.jl")
 include("convert.jl")
 
-export StreamConfiguration, stream_create
+export StreamConfiguration, stream_create, limits, interest, workqueue, memory, file
 
 end
