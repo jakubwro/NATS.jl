@@ -78,7 +78,7 @@ function consumer_create(stream::String; connection::NATS.Connection, kwargs...)
     subject = if haskey(kwargs, :name)
         # Creating durable consumer.
         kwargs = merge((durable_name = get(kwargs, :name, nothing),), kwargs)
-        "\$JS.API.CONSUMER.DURABLE.CREATE.$(stream).$(get(kwargs, :name, nothing))"
+        "\$JS.API.CONSUMER.CREATE.$(stream).$(get(kwargs, :name, nothing))"
     else
         # Creating empheral consumer.
         kwargs = merge((name = randstring(connection.rng, 10),), kwargs)
@@ -108,16 +108,38 @@ function consumer()
 end
 
 function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEOUT_SECONDS), connection::NATS.Connection)
-    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; timer)
+    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}"; timer)
+    # if isnothing(timer)
+    #     NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}")
+    # else
+    #     NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; timer)
+    # end
 end
 
-function fetch()
+function next(n::Int64, stream::String, consumer::String; connection::NATS.Connection)
+    # TODO: n validation
+    msgs = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{ \"batch\": $n}", n)
+    msgs
 end
 
+"""
+Confirms message delivery to server.
+"""
 function ack(msg::NATS.Message; connection::NATS.Connection)
-    NATS.publish(connection, msg.reply_to)
+    if startswith(msg.reply_to, "\$JS.ACK")
+        NATS.publish(connection, msg.reply_to)
+    else
+        @warn "Tried to `ack` message that don't need acknowledge." 
+    end
 end
 
+"""
+Mark message as undelivered, what avoid waiting for timeout before redelivery.
+"""
 function nak(msg::NATS.Message; connection::NATS.Connection)
-    NATS.publish(connection, msg.reply_to; payload = "-NAK")
+    if startswith(msg.reply_to, "\$JS.ACK")
+        NATS.publish(connection, msg.reply_to; payload = "-NAK")
+    else
+        @warn "Tried to `ack` message that does not need acknowledge." 
+    end
 end

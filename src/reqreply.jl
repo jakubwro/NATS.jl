@@ -26,7 +26,9 @@ function request(
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     replies = request(nc, subject, data, 1; timer)
-    isempty(replies) && error("No replies received.") 
+    if isempty(replies) || all(has_error_status, replies)
+        error("No replies received.")
+    end
     first(replies)
 end
 
@@ -39,8 +41,7 @@ function request(
 end
 
 function has_error_status(msg::NATS.Message)
-    code = statuscode(msg)
-    return code >= 400
+    statuscode(msg) in 400:599
 end
 
 function throw_on_error(msg)
@@ -78,14 +79,15 @@ function request(
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
         # There is still small probablity than message will be delivered in between. In such
-        # case `-NAK`` will be sent to reply subject in `conncection.jl` for jetstream message.
+        # case `-NAK`` will be sent to reply subject in `connection.jl` for jetstream message.
         # TODO: allow for registering custom handler of such case.
         unsubscribe(nc, sub; max_msgs = 0)
         close(replies)
     end
     received = first(collect(replies), nreplies)
-    length(received) == 1 && throw_on_error(only(received))
-    # TODO: handle case if some messages have status.
+    # TODO: nak remaining messages? log warning?
+    @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
+    # length(received) == 1 && throw_on_error(only(received))
     received
 end
 
