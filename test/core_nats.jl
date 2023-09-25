@@ -42,7 +42,11 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request("SOME.REQUESTS")
+            msg =   if haskey(ENV, "CI")
+                        request("SOME.REQUESTS"; timer=Timer(15))
+                    else
+                        request("SOME.REQUESTS")
+                    end
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
