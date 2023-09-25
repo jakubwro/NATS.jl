@@ -44,19 +44,6 @@ function has_error_status(msg::NATS.Message)
     statuscode(msg) in 400:599
 end
 
-function throw_on_error(msg)
-    if has_error_status(msg)
-        code = statuscode(msg)
-        if code == 404 # TODO: move jetstream specific messages to jetstream.
-            error("No messages.")
-        elseif code == 503
-            error("No responders.")
-        else
-            error("Status $code returned.")
-        end
-    end
-end
-
 function request(
     nc::Connection,
     subject::String,
@@ -87,7 +74,6 @@ function request(
     received = first(collect(replies), nreplies)
     # TODO: nak remaining messages? log warning?
     @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
-    # length(received) == 1 && throw_on_error(only(received))
     received
 end
 
