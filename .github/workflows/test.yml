@@ -40,6 +40,7 @@ jobs:
           docker network ls
           name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
           container_id=`docker container start $name`
+          sleep 2
           docker logs $container_id
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
