@@ -27,6 +27,6 @@ end
 if have_nats()
     include("core_nats.jl")
     include("fallback_handler.jl")
-    include("jetstream.jl")
-    include("worker.jl")
+    # include("jetstream.jl")
+    # include("worker.jl")
 end
