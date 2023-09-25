@@ -7,6 +7,11 @@ Work in progress.
 
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/test.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions?query=workflow%3A%22Run+tests%22++)
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions?query=workflow%3ADocumentation)
+[![codecov](https://codecov.io/gh/jakubwro/NATS.jl/graph/badge.svg?token=8X0HPK1T8E)](https://codecov.io/gh/jakubwro/NATS.jl)
+
+![Coverage](https://codecov.io/gh/jakubwro/NATS.jl/graphs/sunburst.svg?token=8X0HPK1T8E)
+
+
 
 ## Documentation
 
