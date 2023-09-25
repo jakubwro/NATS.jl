@@ -23,8 +23,8 @@ jobs:
         image: nats:${{ matrix.nats-version }}
         ports:
           - 4222:4222
-        # options: >-
-        #   --jetstream
+        options: >-
+          --jetstream
 
     steps:
       - uses: actions/checkout@v2
