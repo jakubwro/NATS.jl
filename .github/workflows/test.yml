@@ -23,8 +23,10 @@ jobs:
         image: nats:${{ matrix.nats-version }}
         ports:
           - 4222:4222
-        options: >-
-          --jetstream
+        volumes:
+          - ${{ github.workspace }}/.github/nats-server.conf:nats-server.conf
+        # options: >-
+          # --jetstream
 
     steps:
       - uses: actions/checkout@v2
