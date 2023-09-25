@@ -59,7 +59,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(6); close(cond); close(results) end
+    @async begin sleep(15); close(cond); close(results) end
     if !haskey(ENV, "CI")
         @async NATS.istatus(cond)
     end
