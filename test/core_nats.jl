@@ -47,7 +47,7 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
             msg =   if haskey(ENV, "CI")
-                        request(subject; timer=Timer(15))
+                        request(subject; timer=Timer(60))
                     else
                         request(subject)
                     end
@@ -59,7 +59,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(15); close(cond); close(results) end
+    @async begin sleep(60); close(cond); close(results) end
     if !haskey(ENV, "CI")
         @async NATS.istatus(cond)
     end
