@@ -52,7 +52,9 @@ end
         errormonitor(t)
     end
     @async begin sleep(6); close(cond); close(results) end
-    # @async NATS.istatus(cond)
+    if !haskey(ENV, "CI")
+        @async NATS.istatus(cond)
+    end
     try take!(cond) catch end
     unsubscribe(sub)
     replies = collect(results)
