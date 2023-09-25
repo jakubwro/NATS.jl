@@ -28,7 +28,9 @@ jobs:
 
     steps:
       - name: "Enable jetstream"
-        run: docker ps
+        run: |
+          docker network list
+          # create --network github_network_c5870d73ee4e42fa803a58d5dfa1f713 --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream'.
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
