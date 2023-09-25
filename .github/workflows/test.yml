@@ -37,7 +37,7 @@ jobs:
         run: |
           docker ps
           docker network ls
-          docker run --rm   --network job-network --entrypoint nats synadia/nats-box:latest reply help.please 'OK, I CAN HELP!!!'
+          docker run --rm   --network job-network --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
