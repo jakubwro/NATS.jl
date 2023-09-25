@@ -95,7 +95,7 @@ end
                 end
             end
         end
-        @async begin sleep(6); close(cond); close(results) end
+        @async begin sleep(30); close(cond); close(results) end
         try take!(cond) catch end
         replies = collect(results)
     end
