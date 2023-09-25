@@ -29,6 +29,10 @@
 
     buffer = IOBuffer("-ERR 'Unknown Protocol Operation'\r\n")
     @test next_protocol_message(buffer) == Err("Unknown Protocol Operation")
+
+    buffer = IOBuffer("this is not expected\r\n")
+    @test_throws ErrorException next_protocol_message(buffer) 
+
 end
 
 @testset "Serializing client operations." begin
