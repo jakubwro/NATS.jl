@@ -41,7 +41,7 @@ end
     results = Channel(n)
     cond = Channel()
     for _ in 1:n
-        t = @async begin
+        t = Threads.@spawn :default begin
             msg = request("SOME.REQUESTS")
             put!(results, msg)
             if Base.n_avail(results) == n
