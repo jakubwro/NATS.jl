@@ -2,7 +2,6 @@ using NATS
 using Test
 using JSON3
 using Sockets
-using Coverage
 
 using NATS: next_protocol_message
 using NATS: Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HPub, Sub, Unsub, Connect
@@ -33,6 +32,3 @@ if have_nats()
     include("jetstream.jl")
     include("worker.jl")
 end
-
-coverage = process_folder("..")
-LCOV.writefile("coverage-lcov.info", coverage)
