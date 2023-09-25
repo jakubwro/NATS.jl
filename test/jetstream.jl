@@ -3,11 +3,6 @@ using NATS
 using NATS.JetStream
 using Random
 
-nc = NATS.connect()
-sleep(5)
-@assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_DEFAULT_HOST):$(NATS.NATS_DEFAULT_PORT)."
-
-
 @testset "Create stream" begin
     connection = NATS.connect()
     did_create = stream_create(;

@@ -2,10 +2,6 @@
 using Test
 using NATS
 
-nc = NATS.connect()
-sleep(5)
-@assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_DEFAULT_HOST):$(NATS.NATS_DEFAULT_PORT)."
-
 @testset "Publish subscribe" begin
     nc = NATS.connect()
     c = Channel()

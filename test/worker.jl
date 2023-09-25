@@ -3,17 +3,14 @@ using NATS
 using NATS.JetStream
 using Random
 
-nc = NATS.connect()
-sleep(5)
-@assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_DEFAULT_HOST):$(NATS.NATS_DEFAULT_PORT)."
-
-
 @testset "Work queue." begin
 
     connection = NATS.connect()
     
-    stream_name = randstring(10)
-    subject_prefix = randstring(4)
+    rng = MersenneTwister()
+
+    stream_name = randstring(rng, 10)
+    subject_prefix = randstring(rng, 4)
 
     did_create = stream_create(
         connection = connection,

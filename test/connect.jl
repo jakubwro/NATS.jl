@@ -31,7 +31,7 @@ end
 
 
 function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
-    @warn "Unexpected message delivered." msg
+    @warn "NATS_PORT." msg
 end
 
 const state = State(Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))

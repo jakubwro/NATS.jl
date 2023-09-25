@@ -108,7 +108,8 @@ function consumer()
 end
 
 function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEOUT_SECONDS), connection::NATS.Connection)
-    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}"; timer)
+    # "{\"no_wait\": true}"
+    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; timer)
     # if isnothing(timer)
     #     NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}")
     # else
