@@ -73,5 +73,5 @@ function stream_names(; connection::NATS.Connection, subject = nothing)
     end
     # total, offset, limit = resp.total, resp.offset, resp.limit
     #TODO: pagination
-    resp.streams
+    @something resp.streams String[]
 end
