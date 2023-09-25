@@ -33,9 +33,9 @@ jobs:
           docker container ls
           name=`docker create -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
           docker container start $name
-      - name: "Start reply service"
-        run: |
-          docker run --rm  --entrypoint nats synadia/nats-box:latest reply help.please 'OK, I CAN HELP!!!'
+      # - name: "Start reply service"
+      #   run: |
+      #     docker run --rm  --entrypoint nats synadia/nats-box:latest reply help.please 'OK, I CAN HELP!!!'
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
