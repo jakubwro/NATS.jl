@@ -65,9 +65,11 @@ end
     @test_throws ArgumentError header(hmsg, "C")
     @test header(hmsg, "A") == "B"
     @test String(repr(MIME_HEADERS(), headers(hmsg))) == hmsg.headers
+    @test isempty(headers(Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World")))
 
     no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", nothing)
     @test NATS.statuscode(no_responder_hmsg) == 503
+
 end
 
 @testset "Serializing typed handler results" begin
