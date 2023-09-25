@@ -34,5 +34,5 @@ if have_nats()
     include("worker.jl")
 end
 
-coverage = process_folder()
+coverage = process_folder("..")
 LCOV.writefile("coverage-lcov.info", coverage)
