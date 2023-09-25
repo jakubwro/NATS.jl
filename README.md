@@ -5,8 +5,8 @@ Work in progress.
 
 ## CI status
 
-![](https://github.com/jakubwro/NATS.jl/actions/workflows/test.yml/badge.svg)
-![](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml/badge.svg)
+[![](https://github.com/jakubwro/NATS.jl/actions/workflows/test.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions?query=workflow%3A%22Run+tests%22++)
+[![](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions?query=workflow%3ADocumentation)
 
 ## Documentation
 
