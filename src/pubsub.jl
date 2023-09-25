@@ -67,7 +67,7 @@ function subscribe(
     queue_group::Union{String, Nothing} = nothing
 )
     find_msg_conversion_or_throw(argtype(f))
-    sid = randstring(nc.rng, 20)
+    sid = @lock NATS.state.lock randstring(nc.rng, 20)
     sub = Sub(subject, queue_group, sid)
     lock(state.lock) do
         state.handlers[sid] = f

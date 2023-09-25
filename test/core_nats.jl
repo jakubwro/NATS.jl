@@ -37,7 +37,7 @@ end
     nc = NATS.connect()
     n = 4000
 
-    subject = randstring(MersenneTwister(), 20)
+    subject = @lock NATS.state.lock randstring(5)
 
     sub = reply(subject) do msg
         "This is a reply."

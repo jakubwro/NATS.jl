@@ -65,7 +65,7 @@ function request(
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
-    reply_to = randstring(nc.rng, 20)
+    reply_to = @lock NATS.state.lock randstring(nc.rng, 20)
     replies = Channel(nreplies)
     sub = subscribe(nc, reply_to) do msg
         put!(replies, msg)
