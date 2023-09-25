@@ -3,7 +3,15 @@
 
 Work in progress.
 
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
+## CI status
+
+![](https://github.com/jakubwro/NATS.jl/actions/workflows/test.yml/badge.svg)
+![](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml/badge.svg)
+
+## Documentation
+
+[![](https://img.shields.io/badge/NATS.jl%20docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
+
 
 ## Description
 
