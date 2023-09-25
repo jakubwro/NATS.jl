@@ -54,3 +54,6 @@ jobs:
           JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
         # with:
         #   annotate: true
+      - name: "Stop services"
+        run: |
+          docker kill $(docker ps -q )
