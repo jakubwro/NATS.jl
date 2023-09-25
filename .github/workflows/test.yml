@@ -22,7 +22,7 @@ jobs:
     
     # TODO: cannot enable jetstream this way, added "Start nats with jetstream step."
     services:
-      nats:
+      nats-unused:
         image: nats:${{ matrix.nats-version }}
         # ports:
           # - 4222:4222
@@ -39,7 +39,8 @@ jobs:
           docker ps
           docker network ls
           name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
-          docker container start $name
+          container_id=`docker container start $name`
+          docker logs $container_id
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
