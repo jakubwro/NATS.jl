@@ -24,7 +24,7 @@ jobs:
         ports:
           - 4222:4222
         volumes:
-          - ${{ github.workspace }}/.github/nats-server.conf:nats-server.conf
+          - ${{ github.workspace }}/.github/nats-server.conf:/nats-server.conf
         # options: >-
           # --jetstream
 
