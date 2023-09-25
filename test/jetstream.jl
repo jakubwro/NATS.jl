@@ -3,7 +3,7 @@ using NATS
 using NATS.JetStream
 using Random
 
-@testset "Create stream" begin
+@testset "Create stream and delete stream." begin
     connection = NATS.connect()
     did_create = stream_create(;
         name = "SOME_STREAM",
@@ -12,8 +12,13 @@ using Random
         retention = workqueue,
         storage = memory,
         connection = connection)
-
     @test did_create
+    names = NATS.JetStream.stream_names(; connection, subject = "SOME_STREAM.*")
+    @test "SOME_STREAM" in names
+    @test length(names) == 1
+    NATS.JetStream.stream_delete(; connection, name = "SOME_STREAM")
+    names = NATS.JetStream.stream_names(; connection)
+    @test !("SOME_STREAM" in names)
 end
 
 @testset "Create stream, publish and subscribe." begin

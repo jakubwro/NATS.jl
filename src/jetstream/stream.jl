@@ -62,11 +62,12 @@ function stream_list(; connection::NATS.Connection)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.LIST")
     haskey(resp, :error) && error("Failed to get stream list: $(resp.error.description).")
     #TODO: pagination
-    resp
+    resp.streams
 end
 
 function stream_names(; connection::NATS.Connection, subject = nothing)
-    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", "{\"subject\": \"$subject\"}")
+    req = isnothing(subject) ? nothing : "{\"subject\": \"$subject\"}"
+    resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", req)
     if haskey(resp, :error)
         error("Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\""): $(resp.error.description).")
     end
