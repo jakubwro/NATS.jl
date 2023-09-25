@@ -30,14 +30,13 @@ jobs:
     steps:
       - name: "Start nats with jetstream"
         run: |
-          net=`docker network create job-network`
-          name=`docker create --network job-network` --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
+          name=`docker create --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
           docker container start $name
       - name: "Start reply service"
         run: |
           docker ps
           docker network ls
-          docker run --rm   --network job-network --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'
+          docker run --rm --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
