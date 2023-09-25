@@ -74,16 +74,11 @@ using StructTypes
 StructTypes.omitempties(::Type{ConsumerConfiguration}) = true
 
 function consumer_create(stream::String; connection::NATS.Connection, kwargs...)
-    haskey(kwargs, :durable_name) && error("`durable_name` is deprecated, use `name` or leave not set for empheral consumer.")
-    subject = if haskey(kwargs, :name)
-        # Creating durable consumer.
-        kwargs = merge((durable_name = get(kwargs, :name, nothing),), kwargs)
-        "\$JS.API.CONSUMER.CREATE.$(stream).$(get(kwargs, :name, nothing))"
-    else
-        # Creating empheral consumer.
-        kwargs = merge((name = randstring(connection.rng, 10),), kwargs)
-        "\$JS.API.CONSUMER.CREATE.$(stream).$(kwargs.name)"
-    end
+    haskey(kwargs, :durable_name) && error("`durable_name` is deprecated, use `name`.")
+    # TODO: handling of unnamed empheral consumers. Not clear if this is really needed.
+    !haskey(kwargs, :name) && error("`name` is mandatory.")
+    kwargs = merge((durable_name = get(kwargs, :name, nothing),), kwargs)
+    subject = "\$JS.API.CONSUMER.CREATE.$(stream).$(kwargs[:name])"
     config = NATS.from_kwargs(ConsumerConfiguration, DEFAULT_CONSUMER_CONFIG, kwargs)
     req = JSON3.write(Dict(:stream_name => stream, :config => config))
     resp = NATS.request(JSON3.Object, connection, subject, req)
