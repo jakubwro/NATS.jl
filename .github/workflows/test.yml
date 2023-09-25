@@ -28,7 +28,7 @@ jobs:
       - name: "Start nats with jetstream"
         run: |
           # docker network list
-          name=`create --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
+          name=`docker create --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
           docker container start $name
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
