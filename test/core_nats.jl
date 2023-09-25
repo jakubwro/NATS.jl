@@ -52,7 +52,7 @@ end
         errormonitor(t)
     end
     @async begin sleep(6); close(cond); close(results) end
-    @async NATS.istatus(cond)
+    # @async NATS.istatus(cond)
     try take!(cond) catch end
     unsubscribe(sub)
     replies = collect(results)
