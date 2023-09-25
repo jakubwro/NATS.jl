@@ -24,8 +24,6 @@ jobs:
         image: nats:${{ matrix.nats-version }}
         ports:
           - 4222:4222
-        options: --jetstream
-
     steps:
       - name: "Enable jetstream"
         run: |
