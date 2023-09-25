@@ -16,6 +16,7 @@ jobs:
         julia-version: ['1.9.3']
         julia-arch: [x64]
         nats-version: ['2.10.1']
+        julia-num-threads: ['1', '1,1', '1,4', '4,4']
         os: [ubuntu-latest]
     
     
@@ -44,5 +45,7 @@ jobs:
           arch: ${{ matrix.julia-arch }}
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+        env:
+          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
         # with:
         #   annotate: true
