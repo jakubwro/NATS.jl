@@ -63,6 +63,14 @@ end
 
 @testset "4K requests external" begin
     nc = NATS.connect()
+    
+    try
+        request("help.please")
+    catch
+        @info "Skipping \"4K requests external\" testset. Ensure `nats reply help.please 'OK, I CAN HELP!!!'` is running."
+        return
+    end
+
     n = 4000
     results = Channel(n)
     cond = Channel()
