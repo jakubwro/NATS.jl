@@ -19,16 +19,17 @@ jobs:
         os: [ubuntu-latest]
     
     
-    services:
-      nats:
-        image: nats:${{ matrix.nats-version }}
-        ports:
-          - 4222:4222
+    # services:
+    #   nats:
+    #     image: nats:${{ matrix.nats-version }}
+    #     ports:
+    #       - 4222:4222
     steps:
-      - name: "Enable jetstream"
+      - name: "Start nats with jetstream"
         run: |
-          docker network list
-          # create --network github_network_c5870d73ee4e42fa803a58d5dfa1f713 --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream'.
+          # docker network list
+          name=`create --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
+          docker container start $name
       - uses: actions/checkout@v2
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
