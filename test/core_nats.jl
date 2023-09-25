@@ -3,6 +3,12 @@ using Test
 using NATS
 using Random
 
+@testset "Ping" begin
+    nc = NATS.connect()
+    ping(nc)
+    @test true # TODO: add pong count to connection stats
+end
+
 @testset "Publish subscribe" begin
     nc = NATS.connect()
     c = Channel()
