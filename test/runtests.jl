@@ -2,7 +2,6 @@ using NATS
 using Test
 using JSON3
 using Sockets
-using Threads
 
 using NATS: next_protocol_message
 using NATS: Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HPub, Sub, Unsub, Connect
