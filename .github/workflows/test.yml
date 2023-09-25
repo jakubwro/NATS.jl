@@ -1,0 +1,37 @@
+name: Run tests
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        julia-version: ['1.9.3']
+        julia-arch: [x64]
+        nats-version: ['2.10.1']
+        os: [ubuntu-latest]
+
+    services:
+      nats:
+        image: nats:${{ matrix.nats-version }}
+        ports:
+          - 4222:4222
+        options: >-
+          --jetstream
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+        # with:
+        #   annotate: true
