@@ -1,6 +1,7 @@
 
 using Test
 using NATS
+using Random
 
 @testset "Publish subscribe" begin
     nc = NATS.connect()
@@ -35,7 +36,10 @@ end
 @testset "4K requests" begin
     nc = NATS.connect()
     n = 4000
-    sub = reply("SOME.REQUESTS") do msg
+
+    subject = randstring(MersenneTwister(), 20)
+
+    sub = reply(subject) do msg
         "This is a reply."
     end
     results = Channel(n)
@@ -43,9 +47,9 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
             msg =   if haskey(ENV, "CI")
-                        request("SOME.REQUESTS"; timer=Timer(15))
+                        request(subject; timer=Timer(15))
                     else
-                        request("SOME.REQUESTS")
+                        request(subject)
                     end
             put!(results, msg)
             if Base.n_avail(results) == n
