@@ -1,6 +1,27 @@
 
-const ACK_WAIT_DEFAULT = 30000000000
 const DEFAULT_NEXT_TIMEOUT_SECONDS = 5
+
+const DEFAULT_CONSUMER_CONFIG = (
+    deliver_policy = "all",
+    durable_name = nothing,
+    name = nothing,
+    description = nothing,
+    deliver_subject = nothing,
+    ack_policy = "all",
+    ack_wait = 30000000000,
+    max_deliver = 1000,
+    filter_subject = nothing,
+    filter_subjects = nothing,
+    replay_policy = "instant",
+    sample_freq = nothing,
+    max_ack_pending = 1000,
+    flow_control = nothing,
+    direct = nothing,
+    headers_only = nothing,
+    max_batch = nothing,
+    backoff = nothing,
+    mem_storage = nothing
+)
 
 struct ConsumerConfiguration
     deliver_policy::String
@@ -13,7 +34,7 @@ struct ConsumerConfiguration
     deliver_subject::Union{String, Nothing}
     "Messages that are not acknowledged will be redelivered at a later time. 'none' means no acknowledgement is needed only 1 delivery ever, 'all' means acknowledging message 10 will also acknowledge 0-9 and 'explicit' means each has to be acknowledged specifically"
     ack_policy::String
-    "How long (in nanoseconds) to allow messages to remain un-acknowledged before attempting redelivery. Default is $(div(ACK_WAIT_DEFAULT, 10^9)) seconds."
+    "How long (in nanoseconds) to allow messages to remain un-acknowledged before attempting redelivery. Default is $(div(DEFAULT_CONSUMER_CONFIG.ack_wait, 10^9)) seconds."
     ack_wait::Int64
     "When this is -1 unlimited attempts to deliver an un acknowledged message is made, when this is >0 it will be maximum amount of times a message is delivered after which it is ignored."
     max_deliver::Int64
@@ -39,28 +60,6 @@ struct ConsumerConfiguration
     "Force the consumer state to be kept in memory rather than inherit the setting from the stream"
     mem_storage::Union{Bool, Nothing}
 end
-
-const DEFAULT_CONSUMER_CONFIG = (
-    deliver_policy = "all",
-    durable_name = nothing,
-    name = nothing,
-    description = nothing,
-    deliver_subject = nothing,
-    ack_policy = "all",
-    ack_wait = ACK_WAIT_DEFAULT,
-    max_deliver = 1000,
-    filter_subject = nothing,
-    filter_subjects = nothing,
-    replay_policy = "instant",
-    sample_freq = nothing,
-    max_ack_pending = 1000,
-    flow_control = nothing,
-    direct = nothing,
-    headers_only = nothing,
-    max_batch = nothing,
-    backoff = nothing,
-    mem_storage = nothing
-)
 
 struct Consumer
     connection::NATS.Connection
@@ -136,6 +135,6 @@ function nak(msg::NATS.Message; connection::NATS.Connection)
     if startswith(msg.reply_to, "\$JS.ACK")
         NATS.publish(connection, msg.reply_to; payload = "-NAK")
     else
-        @warn "Tried to `ack` message that does not need acknowledge." 
+        @warn "Tried to `nak` message that does not need acknowledge." 
     end
 end
