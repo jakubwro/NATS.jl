@@ -24,7 +24,7 @@ jobs:
         ports:
           - 4222:4222
         volumes:
-          - ${{ github.workspace }}/.github/etc/nats:/etc/nats
+          - ${{ github.workspace }}/.github/etc/nats/:/etc/nats/
 
     steps:
       - uses: actions/checkout@v2
