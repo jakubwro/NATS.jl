@@ -45,6 +45,6 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
-            JULIA_NUM_THREADS: 1,4
+            JULIA_NUM_THREADS: 1,1
         # with:
         #   annotate: true
