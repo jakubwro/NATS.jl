@@ -54,6 +54,10 @@ jobs:
           JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
         # with:
         #   annotate: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: "Stop services"
         run: |
           docker kill $(docker ps -q )
