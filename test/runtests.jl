@@ -48,9 +48,8 @@ if have_nats()
         
         nc = NATS.connect()
         restart_nats_server()
-        nc = NATS.connect()
         sleep(5)
-        @test nc.status == CONNECTED
+        @test nc.status == NATS.CONNECTED
         resp = request("help.please")
         @test resp isa NATS.Message
     end
