@@ -3,13 +3,13 @@ const SEPARATOR = ' '
 
 function next_protocol_message(io::IO)::ProtocolMessage
     headline = readuntil(io, CRLF)
-    if startswith(headline, "INFO")     parse_info(headline)
-    elseif startswith(headline, "PING") Ping()
-    elseif startswith(headline, "PONG") Pong()
-    elseif startswith(headline, "MSG")  parse_msg(headline, io)
+    if     startswith(headline, "MSG")  parse_msg(headline, io)
     elseif startswith(headline, "HMSG") parse_hmsg(headline, io)
     elseif startswith(headline, "+OK")  Ok()
+    elseif startswith(headline, "PING") Ping()
+    elseif startswith(headline, "PONG") Pong()
     elseif startswith(headline, "-ERR") parse_err(headline)
+    elseif startswith(headline, "INFO") parse_info(headline)
     else                                error("Unexpected protocol message: '$headline'")
     end
 end
@@ -29,7 +29,7 @@ function parse_msg(headline::String, io::IO)::Msg
             args[4], parse(Int64, args[5])
         end
     bytes = read(io, nbytes)
-    readuntil(io, CRLF)
+    read(io, length(CRLF))
     payload = String(bytes)
     @assert sizeof(payload) == nbytes "Unexpected payload length."
     Msg(subject, sid, replyto, nbytes, payload)
