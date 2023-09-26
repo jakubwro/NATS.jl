@@ -32,7 +32,7 @@ jobs:
         run: |
           docker network ls
           echo ${{ job.container.network }}
-          name=`docker create --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
+          name=`docker create --name nats --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
           docker container start $name
       - name: "Start reply service"
         run: |
