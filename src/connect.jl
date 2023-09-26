@@ -100,7 +100,8 @@ function sendloop(nc::Connection, io::IO)
     mime = MIME_PROTOCOL() 
     while true
         pending = Base.n_avail(nc.outbox)
-        if pending > 1 # TODO: add flag for batches enabled
+        BATCH_ENABLED = false # TODO: mutlithreading problem on CI when enabled.
+        if BATCH_ENABLED && pending > 1 # TODO: add flag for batches enabled
             batch = min(pending, 1000) # TODO: configure batch size
             msgs = [take!(nc.outbox) for _ in 1:batch]
             buf = IOBuffer()
