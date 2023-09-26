@@ -100,31 +100,17 @@ function sendloop(nc::Connection, io::IO)
     mime = MIME_PROTOCOL() 
     while true
         pending = Base.n_avail(nc.outbox)
-        BATCH_ENABLED = false # TODO: mutlithreading problem on CI when enabled.
-        if BATCH_ENABLED && pending > 1 # TODO: add flag for batches enabled
-            batch = min(pending, 1000) # TODO: configure batch size
-            msgs = [take!(nc.outbox) for _ in 1:batch]
-            buf = IOBuffer()
-            for m in msgs
-                show(buf, mime, m)
-            end
-            write(io, take!(buf))
-            filter!(m -> m isa Unsub, msgs)
-            @lock state.lock begin
-                for msg in msgs
-                    if !isnothing(msg.max_msgs) && msg.max_msgs > 0
-                        nc.unsubs[msg.sid] = msg.max_msgs
-                    end
-                end
-            end
-        else
-            msg = fetch(nc.outbox)
+        buf = IOBuffer()
+        batch = pending
+
+        for _ in 1:batch
+            msg = take!(nc.outbox)
             if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
                 @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
             end
-            show(io, mime, msg)
-            take!(nc.outbox)
+            show(buf, mime, msg)
         end
+        write(io, take!(buf))
     end
 end
 
