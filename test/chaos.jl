@@ -53,9 +53,10 @@ end
         sleep(1)
         restart_nats_server()
     end
-    resp = request(subject; timer = Timer(20))
+    rep = request(subject; timer = Timer(20))
+    @test payload(rep) == "This is a reply."
     @test nc.status == NATS.CONNECTED
-    rep = request(subject)
+    rep = request(subject; timer = Timer(20))
     @test payload(rep) == "This is a reply."
     @test t.result == 0
 end
