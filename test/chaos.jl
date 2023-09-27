@@ -76,9 +76,10 @@ end
     n = 4000
 
     subject = @lock NATS.state.lock randstring(5)
-
+    cnt = Threads.Atomic{Int64}(0)
     sub = reply(subject) do msg
         sleep(10 * rand())
+        Threads.atomic_add!(cnt, 1)
         "This is a reply."
     end
     results = Channel(n)
@@ -104,6 +105,7 @@ end
     try take!(cond) catch end
     unsubscribe(sub)
     replies = collect(results)
+    @info "Replies count is $(cnt.value)."
     @test length(replies) == n
     @test all(r -> r.payload == "This is a reply.", replies)
     NATS.status()
