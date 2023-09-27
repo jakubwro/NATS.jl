@@ -91,7 +91,7 @@ function send(nc::Connection, message::ProtocolMessage)
     if st in [CLOSED, FAILURE]
         error("Connection is broken.")
     elseif st != CONNECTED && st != CONNECTING
-        @warn "Connection status: $st"
+        @debug "Sening $message but connection status is $st."
     end
     put!(nc.outbox, message)
 end
