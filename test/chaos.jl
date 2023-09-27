@@ -123,7 +123,7 @@ end
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
     sub = reply(subject) do msg
-        sleep(10 * rand())
+        sleep(4 * rand())
         Threads.atomic_add!(cnt, 1)
         "This is a reply."
     end
@@ -132,7 +132,7 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
             delays = rand(0.01:0.01:0.3, 5) # retries
-            msg = retry(request, delays)(subject; timer=Timer(15))
+            msg = retry(request, delays)(subject; timer=Timer(5))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -141,8 +141,8 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(20); close(cond); close(results) end
-    sleep(5)
+    @async begin sleep(30); close(cond); close(results) end
+    sleep(2)
     @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
