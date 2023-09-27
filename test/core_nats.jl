@@ -39,6 +39,24 @@ end
     @test payload(result) == "This is a reply."
 end
 
+@testset "Request multiple replies." begin
+    nc = NATS.connect()
+    subject = randstring(10)
+    sub1 = reply(subject) do msg
+        "Reply from service 1."
+    end
+    sub2 = reply(subject) do msg
+        "Reply from service 2."
+    end
+    results = request(subject, "This is request payload", 2)
+    unsubscribe(sub1)
+    unsubscribe(sub2)
+    @test length(results) == 2
+    payloads = payload.(results)
+    @test "Reply from service 1." in payloads
+    @test "Reply from service 2." in payloads
+end
+
 @testset "4K requests" begin
     nc = NATS.connect()
     n = 4000
@@ -137,10 +155,10 @@ end
     sub = reply("SOME.REQUESTS") do msg::String
         "Received $msg"
     end
-    result = request("SOME.REQUESTS", "Hi!")
+    result = request(String, "SOME.REQUESTS", "Hi!")
     unsubscribe(sub)
-    @test result isa NATS.Msg
-    @test payload(result) == "Received Hi!"
+    @test result isa String
+    @test result == "Received Hi!"
 end
 
 @testset "Method error hints." begin

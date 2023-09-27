@@ -88,7 +88,7 @@ function request(
     nreplies;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(subject, data, nreplies; timer)
+    request(default_connection(), subject, data, nreplies; timer)
 end
 
 function request(
