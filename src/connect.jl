@@ -50,23 +50,6 @@ function status()
     println("==========================================")
 end
 
-function istatus(cond = nothing)
-    try
-        while true
-            status()
-            sleep(0.05)
-            if !isnothing(cond) && !isopen(cond)
-                return
-            end
-            write(stdout, "\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[A\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K\u1b[K")
-        end
-    catch e
-        if !(e isa InterruptException)
-            throw(e)
-        end
-    end
-end
-
 function default_connection()
     if isempty(state.connections)
         error("No connection availabe. Call `NATS.connect()` before.")
@@ -195,26 +178,6 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; kw...)
     # @info "Info: $connection_info."
     lock(state.lock) do; push!(state.connections, nc) end
     nc
-end
-
-function connect(x, host::String = NATS_HOST, port::Int = NATS_PORT; kw...)
-    nc = connect(host, port; kw...)
-    try
-        x(nc)
-    finally
-        close(nc)
-    end
-end
-
-function close(nc::Connection)
-    lock(state.lock) do; nc.status = CLOSING end
-    lock(state.lock) do
-        for (sid, sub) in nc.subs
-            unsubscribe(nc, sub)
-        end
-    end
-    try close(nc.outbox) catch end
-    lock(state.lock) do; nc.status = CLOSED end
 end
 
 function ping(nc)

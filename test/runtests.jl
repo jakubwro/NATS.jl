@@ -8,6 +8,8 @@ using NATS: Info, Msg, Ping, Pong, Ok, Err, HMsg, Pub, HPub, Sub, Unsub, Connect
 using NATS: Headers, headers, header
 using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
 
+include("util.jl")
+
 @info "Running with $(Threads.nthreads()) threads."
 
 include("protocol_parsing.jl")
