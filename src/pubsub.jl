@@ -44,7 +44,7 @@ function publish(
     payload = nothing,
     headers::Union{Nothing, Headers} = nothing
 )
-    publish(default_connection(), subject, (payload, headers); reply_to)
+    publish(subject, (payload, headers); reply_to)
 end
 
 function publish(
