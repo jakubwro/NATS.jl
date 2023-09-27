@@ -97,13 +97,12 @@ function sendloop(nc::Connection, io::IO)
     end
 end
 
-@mockable function mockable_socket_connect(port::Integer)
-    Pretend.activated() && @warn "Using mocked connection."
+function socket_connect(port::Integer)
     Sockets.connect(port)
 end
 
 function reconnect(nc::Connection, host, port, con_msg)
-    sock = retry(mockable_socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
+    sock = retry(socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
     lock(state.lock) do; nc.status = CONNECTED end
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
     # TODO: better monitoring of sender with `bind`.

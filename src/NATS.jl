@@ -1,7 +1,6 @@
 module NATS
 
 using Revise
-using Pretend
 using Random
 using Sockets
 using StructTypes
