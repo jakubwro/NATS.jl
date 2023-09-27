@@ -60,3 +60,42 @@ end
     @test payload(rep) == "This is a reply."
     @test t.result == 0
 end
+
+@testset "40K requests" begin
+    nc = NATS.connect()
+    @async interactive_status(tm)
+
+    n = 40000
+
+    subject = @lock NATS.state.lock randstring(5)
+
+    sub = reply(subject) do msg
+        sleep(5)
+        "This is a reply."
+    end
+    results = Channel(n)
+    cond = Channel()
+    for _ in 1:n
+        t = Threads.@spawn :default begin
+            msg = request(subject; timer=Timer(30))
+            put!(results, msg)
+            if Base.n_avail(results) == n
+                close(cond)
+                close(results)
+            end
+        end
+        errormonitor(t)
+    end
+    @async begin sleep(30); close(cond); close(results) end
+    sleep(0.5)
+    @test restart_nats_server() == 0
+    if !haskey(ENV, "CI")
+        @async interactive_status(cond)
+    end
+    try take!(cond) catch end
+    unsubscribe(sub)
+    replies = collect(results)
+    @test length(replies) == n
+    @test all(r -> r.payload == "This is a reply.", replies)
+    NATS.status()
+end
