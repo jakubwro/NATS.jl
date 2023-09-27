@@ -78,14 +78,14 @@ end
     subject = @lock NATS.state.lock randstring(5)
 
     sub = reply(subject) do msg
-        sleep(5 * rand())
+        sleep(10 * rand())
         "This is a reply."
     end
     results = Channel(n)
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request(subject; timer=Timer(30))
+            msg = request(subject; timer=Timer(60))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -94,8 +94,8 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(30); close(cond); close(results) end
-    sleep(1)
+    @async begin sleep(60); close(cond); close(results) end
+    sleep(5)
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
