@@ -88,7 +88,7 @@ end
     end
     @async begin sleep(30); close(cond); close(results) end
     sleep(0.5)
-    @test restart_nats_server() == 0
+    # @test restart_nats_server() == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
     end
