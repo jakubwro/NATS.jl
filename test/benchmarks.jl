@@ -67,7 +67,7 @@ end
         end
         unsubscribe(sub)
     end
-    @async NATS.istatus(tm)
+    @async interactive_status(tm)
     wait(t)
     received = Base.n_avail(c)
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."

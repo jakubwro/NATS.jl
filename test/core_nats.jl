@@ -85,7 +85,7 @@ end
     end
     @async begin sleep(20); close(cond); close(results) end
     if !haskey(ENV, "CI")
-        @async NATS.istatus(cond)
+        @async interactive_status(cond)
     end
     try take!(cond) catch end
     unsubscribe(sub)
