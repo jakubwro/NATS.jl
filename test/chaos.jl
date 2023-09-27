@@ -111,3 +111,49 @@ end
     @test all(r -> r.payload == "This is a reply.", replies)
     NATS.status()
 end
+
+@testset "4K requests with request retry." begin
+    nats_container_id = find_nats_container_id()
+    @info "NATS container is $nats_container_id"
+    nc = NATS.connect()
+    @async interactive_status(tm)
+
+    n = 4000
+
+    subject = @lock NATS.state.lock randstring(5)
+    cnt = Threads.Atomic{Int64}(0)
+    sub = reply(subject) do msg
+        sleep(10 * rand())
+        Threads.atomic_add!(cnt, 1)
+        "This is a reply."
+    end
+    results = Channel(n)
+    cond = Channel()
+    for _ in 1:n
+        t = Threads.@spawn :default begin
+            delays = rand(0.01:0.01:0.3, 5) # retries
+            msg = retry(request, delays)(subject; timer=Timer(15))
+            put!(results, msg)
+            if Base.n_avail(results) == n
+                close(cond)
+                close(results)
+            end
+        end
+        errormonitor(t)
+    end
+    @async begin sleep(20); close(cond); close(results) end
+    sleep(5)
+    @info "Received $(Base.n_avail(results)) / $n results after half of time. "
+    @test restart_nats_server(nats_container_id) == 0
+    if !haskey(ENV, "CI")
+        @async interactive_status(cond)
+    end
+    try take!(cond) catch end
+    unsubscribe(sub)
+    replies = collect(results)
+    # @info "Replies count is $(cnt.value)."
+    @info "Lost msgs: $(n - length(replies))."
+    @test length(replies) == n
+    @test all(r -> r.payload == "This is a reply.", replies)
+    NATS.status()
+end
