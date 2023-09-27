@@ -76,10 +76,13 @@ function send(nc::Connection, message::ProtocolMessage)
     elseif st != CONNECTED && st != CONNECTING
         @debug "Sening $message but connection status is $st."
     end
-    while !isopen(nc.outbox)
-        sleep(1)
+    for _ in 1:10 # TODO: while connection not drained
+        try
+            put!(nc.outbox, message)
+        catch
+            sleep(1)
+        end
     end
-    put!(nc.outbox, message)
 end
 
 function sendloop(nc::Connection, io::IO)

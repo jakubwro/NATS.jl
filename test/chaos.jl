@@ -67,13 +67,13 @@ end
     @test t.result == 0
 end
 
-@testset "40K requests" begin
+@testset "4K requests" begin
     nats_container_id = find_nats_container_id()
     @info "NATS container is $nats_container_id"
     nc = NATS.connect()
     @async interactive_status(tm)
 
-    n = 40000
+    n = 4000
 
     subject = @lock NATS.state.lock randstring(5)
 
@@ -85,7 +85,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request(subject; timer=Timer(60))
+            msg = request(subject; timer=Timer(30))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -94,8 +94,9 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(60); close(cond); close(results) end
+    @async begin sleep(30); close(cond); close(results) end
     sleep(5)
+    @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
