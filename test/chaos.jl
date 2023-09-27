@@ -78,7 +78,7 @@ end
     subject = @lock NATS.state.lock randstring(5)
 
     sub = reply(subject) do msg
-        sleep(5 * rand)
+        sleep(5 * rand())
         "This is a reply."
     end
     results = Channel(n)
