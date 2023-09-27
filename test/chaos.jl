@@ -78,7 +78,7 @@ end
     subject = @lock NATS.state.lock randstring(5)
 
     sub = reply(subject) do msg
-        sleep(5)
+        sleep(5 * rand)
         "This is a reply."
     end
     results = Channel(n)
@@ -95,7 +95,7 @@ end
         errormonitor(t)
     end
     @async begin sleep(30); close(cond); close(results) end
-    sleep(0.5)
+    sleep(1)
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
