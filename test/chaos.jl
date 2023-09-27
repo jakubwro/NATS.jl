@@ -34,6 +34,7 @@ end
         put!(c, msg)
     end
     @test restart_nats_server() == 0
+    sleep(5)
     @test nc.status == NATS.CONNECTED
     publish(subject; payload = "Hi!")
     @test Base.n_avail(c) == 1
