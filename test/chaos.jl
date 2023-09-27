@@ -68,6 +68,8 @@ end
 end
 
 @testset "40K requests" begin
+    nats_container_id = find_nats_container_id()
+    @info "NATS container is $nats_container_id"
     nc = NATS.connect()
     @async interactive_status(tm)
 
@@ -94,7 +96,7 @@ end
     end
     @async begin sleep(30); close(cond); close(results) end
     sleep(0.5)
-    @test restart_nats_server() == 0
+    @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
     end
