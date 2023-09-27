@@ -2,6 +2,8 @@ using Test
 using Random
 using NATS
 
+include("util.jl")
+
 @testset "Warmup" begin
     nc = NATS.connect()
     empty!(NATS.state.fallback_handlers)
