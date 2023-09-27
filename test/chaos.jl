@@ -2,11 +2,16 @@ using Test
 using NATS
 using Random
 
-function restart_nats_server()
+function find_nats_container_id()
     io = IOBuffer();
     run(pipeline(`docker ps -f name=nats -q`; stdout = io))
     output = String(take!(io))
+    @show output
     container_id = split(output, '\n')[1]
+    container_id
+end
+
+function restart_nats_server(container_id = find_nats_container_id())
     cmd = `docker container restart $container_id`
     @info "Cmd is $cmd"
     result = run(cmd)
