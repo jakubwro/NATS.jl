@@ -150,10 +150,22 @@ function reconnect(nc::Connection, host, port, con_msg)
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
     # TODO: restore old subs.
-    for msg in collect(nc.outbox)
-        # TODO: skip Connect, Ping, Pong
-        @show msg
+    
+    migrated = []
+    for (sid, sub) in pairs(nc.subs)
+        push!(migrated, sub)
+        if haskey(nc.unsubs, sid)
+            push!(migrated, Unsub(sid, nc.unsubs[sid]))
+        end
+    end
+    @info "Migratting $(length(migrated)) subs to a new connection."
+    for msg in migrated
         put!(new_outbox, msg)
+    end
+    for msg in collect(nc.outbox)
+        if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
+            put!(new_outbox, msg)
+        end
     end
     lock(state.lock) do; nc.status = RECONNECTING end
     lock(state.lock) do; nc.outbox = new_outbox end
