@@ -26,17 +26,19 @@ end
     @test resp isa NATS.Message
 end
 
-@testset "Subscribtions survive reconnect." begin
+@testset "Subscribtion survive reconnect." begin
     nc = NATS.connect()
     c = Channel(100)
     subject = randstring(5)
     sub = subscribe(subject) do msg
         put!(c, msg)
     end
+    sleep(0.5)
     @test restart_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.CONNECTED
     publish(subject; payload = "Hi!")
+    sleep(0.5)
     @test Base.n_avail(c) == 1
 end
 
