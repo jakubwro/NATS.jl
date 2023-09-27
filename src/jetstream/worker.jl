@@ -25,3 +25,5 @@ function worker(f, stream::String, consumer::String; connection::NATS.Connection
         end
     end
 end
+
+# TODO: draining of subs not implemented yet.
