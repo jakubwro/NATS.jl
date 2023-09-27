@@ -27,7 +27,7 @@ function from_kwargs(T::Type, defaults, kwargs)
     field_types = fieldtypes(T)
     for ((key, val), t) in zip(pairs(args), field_types)
         if !(val isa t)
-            error("Keyword argument `$key` expected to be `$t` but `$val` or type `$(typeof(val))` encountered.")
+            error("Keyword argument `$key` expected to be `$t` but `$val` of type `$(typeof(val))` encountered.")
         end
     end
     T(args...)

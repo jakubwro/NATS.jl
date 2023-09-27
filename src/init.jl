@@ -17,7 +17,7 @@ function __init__()
         elseif exc.f == show
             print(io, """
                        
-                       Object or type `$(argtypes[3])` cannot be serialized into payload.
+                       Object of type `$(argtypes[3])` cannot be serialized into payload.
                        ```
                        import Base: show
 
