@@ -108,8 +108,7 @@ function request(
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    result = request(default_connection(), subject, data; timer)
-    convert(T, result)
+    request(T, default_connection(), subject, data; timer)
 end
 
 
