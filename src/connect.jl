@@ -108,9 +108,19 @@ function reconnect(nc::Connection, host, port, con_msg)
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
     # TODO: better monitoring of sender with `bind`.
     # errormonitor(sender_task)
+    buffer = Base.BufferStream()
+    @async begin
+        while true
+            n_bytes = write(buffer, read(sock, 10000))
+            if n_bytes == 0
+                close(buffer)
+                break
+            end
+        end
+    end
     try
         while true
-            process(nc, next_protocol_message(sock))
+            process(nc, next_protocol_message(buffer))
         end
     catch err
         @error err
@@ -256,13 +266,13 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
             state.stats.msgs_not_handled = state.stats.msgs_not_handled + 1
         end
     else
-        handler_task = Threads.@spawn :default begin
-            # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
-                T = argtype(handler)
-                Base.invokelatest(handler, convert(T, msg))
-            # end
-        end
-        errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
+        # handler_task = Threads.@spawn :default begin
+        #     # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+ 
+        #     # end
+        # end
+        handler(msg)
+        # errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
         _cleanup_unsub_msg(nc, msg.sid)
     end
 end

@@ -2,24 +2,27 @@ using Test
 using Random
 using NATS
 
-@testset "Warmup" begin
-    nc = NATS.connect()
-    empty!(NATS.state.fallback_handlers)
-    c = Channel(1000000)
-    subject = "SOME_SUBJECT"
-    time_to_wait_s = 1.0
-    tm = Timer(time_to_wait_s)
-    sub = subscribe(subject) do msg
-        if isopen(tm)
-            try put!(c, msg) catch err @error err end
-        end
-    end
-    publish(subject; payload = "Hi!")
-    unsubscribe(sub)
-    sleep(2)
-    close(c)
-    NATS.status()
-end
+include("util.jl")
+
+# @testset "Warmup" begin
+#     c = Channel(1000000)
+#     time_to_wait_s = 1.0
+#     tm = Timer(time_to_wait_s)
+#     function handler(msg)
+#         if isopen(tm)
+#             try put!(c, msg) catch err @error err end
+#         end
+#     end
+#     nc = NATS.connect()
+#     empty!(NATS.state.fallback_handlers)
+#     subject = "SOME_SUBJECT"
+#     sub = subscribe(handler, subject)
+#     publish(subject; payload = "Hi!")
+#     unsubscribe(sub)
+#     sleep(2)
+#     close(c)
+#     NATS.status()
+# end
 
 # No sendloop batching.
 
@@ -44,17 +47,19 @@ end
 # ==========================================
 
 @testset "Msgs per second." begin
-    nc = NATS.connect()
-    empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
-    subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(subject) do msg
+    function handler(msg)
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
     end
+    nc = NATS.connect()
+    empty!(NATS.state.fallback_handlers)
+    subject = "SOME_SUBJECT"
+    errormonitor(@async interactive_status(tm))
+    sub = subscribe(handler, subject)
     t = Threads.@spawn :default begin
         n = 0
         while isopen(tm)
@@ -67,7 +72,6 @@ end
         end
         unsubscribe(sub)
     end
-    @async NATS.istatus(tm)
     wait(t)
     received = Base.n_avail(c)
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."

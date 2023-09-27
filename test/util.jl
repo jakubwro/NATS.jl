@@ -1,4 +1,4 @@
-function istatus(cond = nothing)
+function interactive_status(cond = nothing)
     try
         while true
             NATS.status()
