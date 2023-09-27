@@ -123,7 +123,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     sock = retry(mockable_socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
     lock(state.lock) do; nc.status = CONNECTED end
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
-    errormonitor(sender_task)
+    # TODO: better monitoring of sender with `bind`.
+    # errormonitor(sender_task)
     try
         while true
             process(nc, next_protocol_message(sock))

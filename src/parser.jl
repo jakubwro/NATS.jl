@@ -10,7 +10,7 @@ function next_protocol_message(io::IO)::ProtocolMessage
     elseif startswith(headline, "PONG") Pong()
     elseif startswith(headline, "-ERR") parse_err(headline)
     elseif startswith(headline, "INFO") parse_info(headline)
-    else                                error("Unexpected protocol message: '$headline'")
+    else                                error("Unexpected protocol message: '$headline'.")
     end
 end
 
