@@ -132,7 +132,7 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
             delays = rand(0.01:0.01:0.3, 5) # retries
-            msg = retry(request, delays)(subject; timer=Timer(5))
+            msg = retry(request; delays)(subject; timer=Timer(5))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
