@@ -141,6 +141,7 @@ function reconnect(nc::Connection, host, port, con_msg)
     catch err
         @debug "Sender task finished." err
     end
+    sleep(3) # TODO: remove this sleep, use `retry` on `Sockets.connect`.
     if nc.status in [CLOSING, CLOSED, FAILURE]
         # @info "Connection is closing."
         error("Connection closed.")
@@ -151,6 +152,7 @@ function reconnect(nc::Connection, host, port, con_msg)
     # TODO: restore old subs.
     for msg in collect(nc.outbox)
         # TODO: skip Connect, Ping, Pong
+        @show msg
         put!(new_outbox, msg)
     end
     lock(state.lock) do; nc.status = RECONNECTING end
