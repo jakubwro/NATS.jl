@@ -45,7 +45,7 @@ using Random
     end
     
     for i in 1:n_publications
-        publish(connection, "$subject_prefix.task", "Task $i")
+        publish("$subject_prefix.task", "Task $i"; connection)
     end
 
     try take!(cond) catch end

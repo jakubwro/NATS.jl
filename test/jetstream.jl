@@ -38,9 +38,9 @@ end
 
     @test did_create
 
-    publish(connection, "$subject_prefix.test", "Publication 1")
-    publish(connection, "$subject_prefix.test", "Publication 2")
-    publish(connection, "$subject_prefix.test", "Publication 3")
+    publish("$subject_prefix.test", "Publication 1"; connection)
+    publish("$subject_prefix.test", "Publication 2"; connection)
+    publish("$subject_prefix.test", "Publication 3"; connection)
 
     consumer = NATS.JetStream.consumer_create(
         stream_name;

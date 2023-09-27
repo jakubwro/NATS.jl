@@ -80,7 +80,7 @@ function consumer_create(stream::String; connection::NATS.Connection, kwargs...)
     subject = "\$JS.API.CONSUMER.CREATE.$(stream).$(kwargs[:name])"
     config = NATS.from_kwargs(ConsumerConfiguration, DEFAULT_CONSUMER_CONFIG, kwargs)
     req = JSON3.write(Dict(:stream_name => stream, :config => config))
-    resp = NATS.request(JSON3.Object, connection, subject, req)
+    resp = NATS.request(JSON3.Object, subject, req; connection)
     haskey(resp, :error) && error("Failed to create consumer: $(resp.error.description).")
     resp.name
 end
@@ -103,7 +103,7 @@ end
 
 function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEOUT_SECONDS), connection::NATS.Connection)
     # "{\"no_wait\": true}"
-    msg = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; timer)
+    msg = NATS.request("\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; connection, timer)
     # if isnothing(timer)
     #     NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}")
     # else
@@ -113,7 +113,7 @@ end
 
 function next(n::Int64, stream::String, consumer::String; connection::NATS.Connection)
     # TODO: n validation
-    msgs = NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{ \"batch\": $n}", n)
+    msgs = NATS.request("\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{ \"batch\": $n}", n; connection)
     msgs
 end
 
@@ -122,7 +122,7 @@ Confirms message delivery to server.
 """
 function ack(msg::NATS.Message; connection::NATS.Connection)
     if startswith(msg.reply_to, "\$JS.ACK")
-        NATS.publish(connection, msg.reply_to)
+        NATS.publish(msg.reply_to; connection)
     else
         @warn "Tried to `ack` message that don't need acknowledge." 
     end
@@ -133,7 +133,7 @@ Mark message as undelivered, what avoid waiting for timeout before redelivery.
 """
 function nak(msg::NATS.Message; connection::NATS.Connection)
     if startswith(msg.reply_to, "\$JS.ACK")
-        NATS.publish(connection, msg.reply_to; payload = "-NAK")
+        NATS.publish(msg.reply_to; connection, payload = "-NAK")
     else
         @warn "Tried to `nak` message that does not need acknowledge." 
     end
