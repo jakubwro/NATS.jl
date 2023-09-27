@@ -67,13 +67,13 @@ end
     @test t.result == 0
 end
 
-@testset "4K requests" begin
+@testset "40K requests" begin
     nats_container_id = find_nats_container_id()
     @info "NATS container is $nats_container_id"
     nc = NATS.connect()
     @async interactive_status(tm)
 
-    n = 4000
+    n = 40000
 
     subject = @lock NATS.state.lock randstring(5)
 
