@@ -12,6 +12,7 @@ include("util.jl")
 
 @info "Running with $(Threads.nthreads()) threads."
 
+include("utils.jl")
 include("protocol_parsing.jl")
 
 function have_nats()
