@@ -40,6 +40,7 @@ const DEFAULT_STREAM_CONFIGURATION = (
 
 function stream_create(; connection::NATS.Connection, kwargs...)
     config = NATS.from_kwargs(StreamConfiguration, DEFAULT_STREAM_CONFIGURATION, kwargs)
+    validate_name(config.stream)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.CREATE.$(config.name)", config)
     haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
     resp.did_create
@@ -47,12 +48,14 @@ end
 
 function stream_update(; connection::NATS.Connection, kwargs...)
     config = NATS.from_kwargs(StreamConfiguration, DEFAULT_STREAM_CONFIGURATION, kwargs)
+    validate_name(config.stream)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.UPDATE.$(config.name)", config)
     haskey(resp, :error) && error("Failed to update stream \"$(config.name)\": $(resp.error.description).")
     true
 end
 
 function stream_delete(; connection::NATS.Connection, name::String)
+    validate_name(name)
     resp = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.DELETE.$(name)")
     haskey(resp, :error) && error("Failed to delete stream \"$(name)\": $(resp.error.description).")
     resp.success
