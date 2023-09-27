@@ -8,6 +8,7 @@ function restart_nats_server()
     output = String(take!(io))
     container_id = split(output, '\n')[1]
     cmd = `docker container restart $container_id`
+    @info "Cmd is $cmd"
     result = run(cmd)
     if result.exitcode == 0
         @info "Restarted NATS server."
