@@ -20,7 +20,8 @@ mutable struct Connection
     end
 end
 
-struct State
+mutable struct State
+    default_connection::Union{Connection, Nothing}
     connections::Vector{Connection}
     handlers::Dict{String, Function}
     "Handlers of messages for which handler was not found."
@@ -34,13 +35,19 @@ function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
     @warn "Unexpected message delivered." msg
 end
 
-const state = State(Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))
+const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))
 
 function status()
     println("=== Connection status ====================")
     println("connections:    $(length(state.connections))        ")
+    if !isnothing(state.default_connection)
+        print("  [default]:  ")
+        nc = state.default_connection
+        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox             ")
+        println()
+    end
     for (i, nc) in enumerate(state.connections)
-        print("  [#$i]:  ")
+        print("       [#$i]:  ")
         print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox             ")
         println()
     end
@@ -51,12 +58,10 @@ function status()
 end
 
 function default_connection()
-    if isempty(state.connections)
-        error("No connection availabe. Call `NATS.connect()` before.")
+    if isnothing(state.default_connection)
+        error("No default connection availabe. Call `NATS.connect(default = true)` before.")
     end
-
-    # TODO: This is temporary workaround, find better way to handle multiple connections.
-    last(state.connections)
+    state.default_connection
 end
 
 info(nc::Connection) = fetch(nc.info)
@@ -161,9 +166,9 @@ end
 Initialize and return `Connection`.
 See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
-function connect(host::String = NATS_HOST, port::Int = NATS_PORT; kw...)
-    if !isempty(state.connections)
-        return first(state.connections)
+function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, kw...)
+    if default && !isnothing(state.default_connection)
+        return default_connection()
     end
     nc = Connection()
     connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
@@ -178,7 +183,11 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; kw...)
 
     # connection_info = fetch(nc.info)
     # @info "Info: $connection_info."
-    lock(state.lock) do; push!(state.connections, nc) end
+    if default
+        lock(state.lock) do; state.default_connection = nc end
+    else
+        lock(state.lock) do; push!(state.connections, nc) end
+    end
     nc
 end
 
@@ -292,6 +301,7 @@ end
 
 function drain()
     @info "Draining all connections."
+    isnothing(state.default_connection) || drain(state.default_connection)
     drain.(state.connections)
     sleep(5) # simulate some work
     @info "All connections drained."

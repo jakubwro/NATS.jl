@@ -24,7 +24,7 @@ function have_nats()
         @info "NATS avaliable, running connected tests."
         true
     catch err
-        @info "NATS unavailable, skipping connected tests." 
+        @info "NATS unavailable, skipping connected tests."  err
         false
     end
 end
