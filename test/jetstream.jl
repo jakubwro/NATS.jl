@@ -21,6 +21,10 @@ using Random
     @test !("SOME_STREAM" in names)
 end
 
+@testset "Stream names handling error." begin
+    @test_throws ErrorException NATS.JetStream.stream_names(; connection, timer = Timer(0))
+end
+
 @testset "Create stream, publish and subscribe." begin
 
     connection = NATS.connect()

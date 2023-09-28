@@ -1,9 +1,5 @@
 
 
-STREAM_MESSAGES_LIMIT_UNLIMITED = -1
-STREAM_MAX_BYTES_UNLIMITED = -1
-# max message size bytes
-
 abstract type JetStreamPayload end
 
 @enum SteramRetentionPolicy limits interest workqueue
@@ -31,10 +27,10 @@ const DEFAULT_STREAM_CONFIGURATION = (
     description  = nothing,
     subjects = nothing,
     retention = limits,
-    max_consumers = -1,
-    max_msgs = -1,
-    max_bytes = -1,
-    max_age = 0,
+    max_consumers = -1, # Unlimited.
+    max_msgs = -1, # Unlimited.
+    max_bytes = -1, # Unlimited.
+    max_age = 0, # Unlimited.
     storage = memory
 )
 
@@ -68,9 +64,9 @@ end
 #     resp.streams
 # end
 
-function stream_names(; connection::NATS.Connection, subject = nothing)
+function stream_names(; subject = nothing, connection::NATS.Connection, timer = Timer(5))
     req = isnothing(subject) ? nothing : "{\"subject\": \"$subject\"}"
-    resp = NATS.request(JSON3.Object, "\$JS.API.STREAM.NAMES", req; connection)
+    resp = NATS.request(JSON3.Object, "\$JS.API.STREAM.NAMES", req; connection, timer)
     if haskey(resp, :error)
         error("Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\""): $(resp.error.description).")
     end
