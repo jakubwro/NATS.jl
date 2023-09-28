@@ -22,7 +22,7 @@ jobs:
     
     # TODO: cannot enable jetstream this way, added "Start nats with jetstream step."
     services:
-      nats-unused:
+      nats:
         image: nats:${{ matrix.nats-version }}
         ports:
           - 4222:4222
