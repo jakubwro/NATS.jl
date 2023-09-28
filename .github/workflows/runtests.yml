@@ -22,18 +22,18 @@ jobs:
     
     # TODO: cannot enable jetstream this way, added "Start nats with jetstream step."
     services:
-      nats:
+      nats-unused:
         image: nats:${{ matrix.nats-version }}
         ports:
           - 4222:4222
 
     steps:
-      # - name: "Start nats with jetstream"
-      #   run: |
-      #     docker network ls
-      #     echo ${{ job.container.network }}
-      #     name=`docker create --name nats --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
-      #     docker container start $name
+      - name: "Start nats with jetstream"
+        run: |
+          docker network ls
+          echo ${{ job.container.network }}
+          name=`docker create --name nats --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
+          docker container start $name
       - name: "Start reply service"
         run: |
           docker ps
