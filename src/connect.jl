@@ -186,7 +186,11 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
     nc = Connection(async_handlers)
     connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
     send(nc, connect_msg)
-    reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end
+    reconnect_task = Base.Threads.Task(() ->  disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end)
+    # Setting sticky flag to false makes processing 10x slower when running with multiple threads.
+    # reconnect_task.sticky = false
+    Base.Threads._spawn_set_thrpool(reconnect_task, :default)
+    Base.Threads.schedule(reconnect_task)
     errormonitor(reconnect_task)
 
     # TODO: refactor
