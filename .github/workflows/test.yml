@@ -43,7 +43,6 @@ jobs:
           sleep 2
           docker logs $container_id
       - uses: actions/checkout@v2
-      - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}

@@ -47,8 +47,8 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
-      # - uses: julia-actions/julia-buildpkg@v1
-      - run: julia -e 'println("Hello, World!")'
+      - uses: julia-actions/julia-buildpkg@v1
+      - run: println("Hello, World!")
 
       - name: "Stop services"
         run: |
