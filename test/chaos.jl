@@ -32,6 +32,36 @@ end
     @test resp isa NATS.Message
 end
 
+# @testset "Close outbox when messages pending." begin
+#     nc = NATS.connect()
+#     c = Channel()
+#     subject = randstring(10)
+#     sub = subscribe(subject) do msg
+#         put!(c, msg)
+#     end
+#     publish("SOME.BAR"; payload = "Hi!")
+#     publish("SOME.BAR"; payload = "Hi!")
+#     publish("SOME.BAR"; payload = "Hi!")
+#     close(nc.outbox)
+#     sleep(5)
+#     result = take!(c)
+#     @test result isa NATS.Msg
+#     @test payload(result) == "Hi!"
+#     @test length(NATS.state.handlers) == 1
+#     unsubscribe(sub)
+#     sleep(0.1)
+#     @test length(NATS.state.handlers) == 0
+# end
+
+@testset "Reconnecting." begin
+    nc = NATS.connect()
+    @test restart_nats_server() == 0
+    sleep(5)
+    @test nc.status == NATS.CONNECTED
+    resp = request("help.please")
+    @test resp isa NATS.Message
+end
+
 @testset "Subscribtion survive reconnect." begin
     nc = NATS.connect()
     c = Channel(100)

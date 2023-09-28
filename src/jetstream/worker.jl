@@ -30,9 +30,9 @@ end
 
 const WORKER_METRICS = Dict{String, WorkerMetrics}()
 
-function worker_metrics()
+# function worker_metrics()
 
-end
+# end
 
 function worker(
     f,

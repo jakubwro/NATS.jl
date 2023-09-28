@@ -61,13 +61,9 @@ struct ConsumerConfiguration
     mem_storage::Union{Bool, Nothing}
 end
 
-struct Consumer
-    connection::NATS.Connection
-end
+# function consumer_create_or_update(stream::String, connection)
 
-function consumer_create_or_update(stream::String, connection)
-
-end
+# end
 
 using StructTypes
 StructTypes.omitempties(::Type{ConsumerConfiguration}) = true
@@ -85,24 +81,19 @@ function consumer_create(stream::String; connection::NATS.Connection, kwargs...)
     resp.name
 end
 
-function consumer_update(stream::String, config::ConsumerConfiguration; connection)
+# function consumer_update(stream::String, config::ConsumerConfiguration; connection)
 
-end
+# end
 
-function consumer_ordered(stream::String, name::String)
+# function consumer_ordered(stream::String, name::String)
 
-end
+# end
 
-function consumer_delete()
+# function consumer_delete()
 
-end
-
-function consumer()
-    connection::NATS.connection
-end
+# end
 
 function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEOUT_SECONDS), connection::NATS.Connection)
-    # "{\"no_wait\": true}"
     msg = NATS.request("\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer"; connection, timer)
     # if isnothing(timer)
     #     NATS.request(connection, "\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{\"no_wait\": true}")
@@ -111,11 +102,11 @@ function next(stream::String, consumer::String; timer = Timer(DEFAULT_NEXT_TIMEO
     # end
 end
 
-function next(n::Int64, stream::String, consumer::String; connection::NATS.Connection)
-    # TODO: n validation
-    msgs = NATS.request("\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{ \"batch\": $n}", n; connection)
-    msgs
-end
+# function next(n::Int64, stream::String, consumer::String; connection::NATS.Connection)
+#     # TODO: n validation
+#     msgs = NATS.request("\$JS.API.CONSUMER.MSG.NEXT.$stream.$consumer", "{ \"batch\": $n}", n; connection)
+#     msgs
+# end
 
 """
 Confirms message delivery to server.
