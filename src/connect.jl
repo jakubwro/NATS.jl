@@ -18,14 +18,15 @@ end
 
 mutable struct Connection
     status::ConnectionStatus
+    async_handlers::Bool
     info::Channel{Info}
     outbox::Channel{ProtocolMessage}
     subs::Dict{String, Sub}
     unsubs::Dict{String, Int64}
     stats::Stats
     rng::AbstractRNG
-    function Connection()
-        new(CONNECTING, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
+    function Connection(async_handlers::Bool)
+        new(CONNECTING, async_handlers, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
     end
 end
 
@@ -175,11 +176,11 @@ end
 Initialize and return `Connection`.
 See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
-function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, kw...)
+function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, async_handlers = true, kw...)
     if default && !isnothing(state.default_connection)
         return default_connection()
     end
-    nc = Connection()
+    nc = Connection(async_handlers)
     connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
     send(nc, connect_msg)
     reconnect_task = Threads.@spawn :default disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end
@@ -276,16 +277,24 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
             state.stats.msgs_not_handled = state.stats.msgs_not_handled + 1
         end
     else
-        handler_task = Threads.@spawn :default begin
-            # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+        if nc.async_handlers == true
+            handler_task = Threads.@spawn :default begin
+                # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+                if arg_t === Any || arg_t === NATS.Message
+                    Base.invokelatest(handler, msg)
+                else
+                    Base.invokelatest(handler, convert(arg_t, msg))
+                end
+                # end
+            end
+            errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
+        else
             if arg_t === Any || arg_t === NATS.Message
                 Base.invokelatest(handler, msg)
             else
                 Base.invokelatest(handler, convert(arg_t, msg))
             end
-            # end
         end
-        errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
         _cleanup_unsub_msg(nc, msg.sid)
     end
 end
