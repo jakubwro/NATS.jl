@@ -24,24 +24,10 @@ jobs:
     services:
       nats-unused:
         image: nats:${{ matrix.nats-version }}
-        # ports:
-          # - 4222:4222
+        ports:
+          - 4222:4222
 
     steps:
-      - name: "Start nats with jetstream"
-        run: |
-          docker network ls
-          echo ${{ job.container.network }}
-          name=`docker create --name nats --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
-          docker container start $name
-      - name: "Start reply service"
-        run: |
-          docker ps
-          docker network ls
-          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
-          container_id=`docker container start $name`
-          sleep 2
-          docker logs $container_id
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
@@ -50,6 +36,4 @@ jobs:
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
           JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --project test/benchmarks.jl
-      - name: "Stop services"
-        run: |
-          docker kill $(docker ps -q )
+
