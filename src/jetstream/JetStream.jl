@@ -5,6 +5,8 @@ import ..NATS
 using Random
 using JSON3
 
+using NATS: isdrained
+
 include("validate.jl")
 include("stream.jl")
 include("consumer.jl")

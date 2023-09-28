@@ -23,6 +23,6 @@ include("reqreply.jl")
 
 include("jetstream/JetStream.jl")
 
-export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers
+export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
 
 end

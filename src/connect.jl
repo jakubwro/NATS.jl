@@ -1,5 +1,14 @@
 
-@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING CLOSING CLOSED FAILURE
+"""
+digraph G {
+  connecting   -> connected
+  connected    -> reconnecting
+  reconnecting -> connected
+  connected    -> draining
+  draining     -> drained
+}
+"""
+@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING DRAINING DRAINED
 
 
 mutable struct Stats
@@ -76,8 +85,8 @@ Enqueue protocol message in `outbox` to be written to socket.
 """
 function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
-    if st in [CLOSED, FAILURE]
-        error("Connection is broken.")
+    if st in [DRAINING, DRAINED]
+        error("Connection is drained.")
     elseif st != CONNECTED && st != CONNECTING
         @debug "Sening $message but connection status is $st."
     end
@@ -132,10 +141,10 @@ function reconnect(nc::Connection, host, port, con_msg)
         @debug "Sender task finished." err
     end
     sleep(3) # TODO: remove this sleep, use `retry` on `Sockets.connect`.
-    if nc.status in [CLOSING, CLOSED, FAILURE]
+    # if nc.status in [CLOSING, CLOSED, FAILURE]
         # @info "Connection is closing."
-        error("Connection closed.")
-    end
+        # error("Connection closed.")
+    # end
     @info "Disconnected. Trying to reconnect."
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
     put!(new_outbox, con_msg)
@@ -284,6 +293,11 @@ end
 
 function process(nc::Connection, err::Err)
     @error "NATS protocol error!" err
+end
+
+function isdrained(connection::Connection)
+    st = status(connection)
+    status == DRAINING || status == DRAINED
 end
 
 function drain(nc::Connection)
