@@ -46,7 +46,7 @@ end
 # ==========================================
 
 @testset "Msgs per second." begin
-    nc = NATS.connect()
+    
     empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
     subject = "SOME_SUBJECT"
@@ -59,17 +59,22 @@ end
     end
     t = Threads.@spawn :default begin
         n = 0
+        # y = 0
+        # s = 0
         while isopen(tm)
             if Base.n_avail(c) < n - 5000
-                sleep(0.001)
+                # s = s + 1
+                sleep(0.005)
             else
+                # y = y + 1
                 publish(subject; payload = "Hi!")
                 n = n + 1
             end
         end
+        # @show y/5000 s
         unsubscribe(sub)
     end
-    @async interactive_status(tm)
+    # @async interactive_status(tm)
     wait(t)
     received = Base.n_avail(c)
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."

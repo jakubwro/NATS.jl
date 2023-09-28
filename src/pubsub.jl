@@ -45,11 +45,12 @@ function subscribe(
     connection::Connection = default_connection(),
     queue_group::Union{String, Nothing} = nothing
 )
-    find_msg_conversion_or_throw(argtype(f))
+    arg_t = argtype(f)
+    find_msg_conversion_or_throw(arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
     lock(state.lock) do
-        state.handlers[sid] = f
+        state.handlers[sid] = arg_t => f
         connection.subs[sid] = sub
     end
     send(connection, sub)

@@ -32,7 +32,7 @@ end
 mutable struct State
     default_connection::Union{Connection, Nothing}
     connections::Vector{Connection}
-    handlers::Dict{String, Function}
+    handlers::Dict{String, Pair{Type, Function}}
     "Handlers of messages for which handler was not found."
     fallback_handlers::Vector{Function}
     lock::ReentrantLock
@@ -256,13 +256,13 @@ end
 
 function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
-    handler = lock(state.lock) do
-        h = get(state.handlers, msg.sid, nothing)
+    arg_t, handler = lock(state.lock) do
+        a, h = get(state.handlers, msg.sid, (nothing, nothing))
         if !isnothing(h)
             nc.stats.msgs_handled = nc.stats.msgs_handled + 1
             state.stats.msgs_handled = state.stats.msgs_handled + 1
         end
-        h
+        a, h
     end
     if isnothing(handler)
         fallbacks = lock(state.lock) do
@@ -278,8 +278,11 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
     else
         handler_task = Threads.@spawn :default begin
             # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
-                T = argtype(handler)
-                Base.invokelatest(handler, convert(T, msg))
+            if arg_t === Any || arg_t === NATS.Message
+                Base.invokelatest(handler, msg)
+            else
+                Base.invokelatest(handler, convert(arg_t, msg))
+            end
             # end
         end
         errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
