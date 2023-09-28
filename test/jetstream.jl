@@ -39,7 +39,6 @@ end
 end
 
 @testset "Create stream, publish and subscribe." begin
-
     connection = NATS.connect()
     
     stream_name = randstring(10)
@@ -76,4 +75,25 @@ end
     @test msg isa NATS.Message
 
     @test_throws ErrorException NATS.JetStream.next(stream_name, consumer; connection)
+end
+
+@testset "Ack" begin
+    connection = NATS.connect()
+    no_reply_to_msg = NATS.Msg("FOO.BAR", "9", nothing, 11, "Hello World")
+    @test_throws ErrorException NATS.JetStream.ack(no_reply_to_msg; connection)
+    @test_throws ErrorException NATS.JetStream.nak(no_reply_to_msg; connection)
+
+    msg = NATS.Msg("FOO.BAR", "9", "ack_subject", 11, "Hello World")
+    c = Channel(10)
+    sub = subscribe("ack_subject") do msg
+        put!(c, msg)
+    end
+    NATS.JetStream.ack(msg; connection)
+    NATS.JetStream.nak(msg; connection)
+    sleep(0.5)
+    unsubscribe(sub)
+    close(c)
+    acks = collect(c)
+    @test length(acks) == 2
+    @test "-NAK" in payload.(acks)
 end

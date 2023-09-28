@@ -112,20 +112,16 @@ end
 Confirms message delivery to server.
 """
 function ack(msg::NATS.Message; connection::NATS.Connection)
-    if startswith(msg.reply_to, "\$JS.ACK")
-        NATS.publish(msg.reply_to; connection)
-    else
-        @warn "Tried to `ack` message that don't need acknowledge." 
-    end
+    isnothing(msg.reply_to) && error("No reply subject for msg $msg.")
+    !startswith(msg.reply_to, "\$JS.ACK") && @warn "`ack` sent for message that don't need acknowledgement." 
+    NATS.publish(msg.reply_to; connection)
 end
 
 """
 Mark message as undelivered, what avoid waiting for timeout before redelivery.
 """
 function nak(msg::NATS.Message; connection::NATS.Connection)
-    if startswith(msg.reply_to, "\$JS.ACK")
-        NATS.publish(msg.reply_to; connection, payload = "-NAK")
-    else
-        @warn "Tried to `nak` message that does not need acknowledge." 
-    end
+    isnothing(msg.reply_to) && error("No reply subject for msg $msg.")
+    !startswith(msg.reply_to, "\$JS.ACK") && @warn "`nak` sent for message that don't need acknowledgement." 
+    NATS.publish(msg.reply_to; connection, payload = "-NAK")
 end
