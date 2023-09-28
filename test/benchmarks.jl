@@ -5,19 +5,19 @@ using NATS
 include("util.jl")
 
 @testset "Warmup" begin
-    nc = NATS.connect()
+    connection = NATS.connect(default = false)
     empty!(NATS.state.fallback_handlers)
     c = Channel(1000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 1.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(subject) do msg
+    sub = subscribe(subject; connection) do msg
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
     end
-    publish(subject; payload = "Hi!")
-    unsubscribe(sub)
+    publish(subject; payload = "Hi!", connection)
+    unsubscribe(sub; connection)
     sleep(2)
     close(c)
     NATS.status()
@@ -102,7 +102,7 @@ end
         res = request(subject; connection)
         counter = counter + 1
     end
-    unsubscribe(sub)
+    unsubscribe(sub; connection)
     @info "$counter requests / second."
     NATS.status()
 end
@@ -120,7 +120,7 @@ end
         res = request(subject; connection)
         counter = counter + 1
     end
-    unsubscribe(sub)
+    unsubscribe(sub; connection)
     @info "$counter requests / second."
     NATS.status()
 end
