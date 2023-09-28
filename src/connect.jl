@@ -101,8 +101,7 @@ function sendloop(nc::Connection, io::IO)
     mime = MIME_PROTOCOL() 
     while true
         if !isopen(nc.outbox)
-            sleep(1) # TODO: find better way to wait for reconnect.
-            continue
+            error("Outbox is closed.")
         end
         pending = Base.n_avail(nc.outbox)
         buf = IOBuffer()
