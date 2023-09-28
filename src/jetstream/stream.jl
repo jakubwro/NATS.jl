@@ -34,11 +34,17 @@ const DEFAULT_STREAM_CONFIGURATION = (
     storage = memory
 )
 
+function throw_on_api_error(response::JSON3.Object, message::String)
+    if haskey(response, :error)
+        error("$message: $(response.error.description).")
+    end
+end
+
 function stream_create(; connection::NATS.Connection, kwargs...)
     config = NATS.from_kwargs(StreamConfiguration, DEFAULT_STREAM_CONFIGURATION, kwargs)
     validate_name(config.name)
     resp = NATS.request(JSON3.Object, "\$JS.API.STREAM.CREATE.$(config.name)", config; connection)
-    haskey(resp, :error) && error("Failed to create stream \"$(config.name)\": $(resp.error.description).")
+    throw_on_api_error(resp, "Failed to create stream \"$(config.name)\"")
     resp.did_create
 end
 
@@ -53,7 +59,7 @@ end
 function stream_delete(; connection::NATS.Connection, name::String)
     validate_name(name)
     resp = NATS.request(JSON3.Object, "\$JS.API.STREAM.DELETE.$(name)"; connection)
-    haskey(resp, :error) && error("Failed to delete stream \"$(name)\": $(resp.error.description).")
+    throw_on_api_error(resp, "Failed to delete stream \"$(name)\"")
     resp.success
 end
 
@@ -67,9 +73,7 @@ end
 function stream_names(; subject = nothing, connection::NATS.Connection, timer = Timer(5))
     req = isnothing(subject) ? nothing : "{\"subject\": \"$subject\"}"
     resp = NATS.request(JSON3.Object, "\$JS.API.STREAM.NAMES", req; connection, timer)
-    if haskey(resp, :error)
-        error("Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\""): $(resp.error.description).")
-    end
+    throw_on_api_error(resp, "Failed to get stream names$(isnothing(subject) ? "" : " for subject \"$subject\"")")
     # total, offset, limit = resp.total, resp.offset, resp.limit
     #TODO: pagination
     @something resp.streams String[]
