@@ -25,6 +25,14 @@ end
     @test_throws ErrorException NATS.JetStream.stream_names(; connection, timer = Timer(0))
 end
 
+@testet "Invalid stream name." begin
+    @test_throws ErrorException NATS.JetStream.stream_create(;
+        name = "SOME*STREAM",
+        description = "Stream with invalid name",
+        subjects = ["SOME_STREAM.*"],
+        connection = connection)
+end
+
 @testset "Create stream, publish and subscribe." begin
 
     connection = NATS.connect()
