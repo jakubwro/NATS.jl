@@ -22,10 +22,12 @@ using Random
 end
 
 @testset "Stream names handling error." begin
+    connection = NATS.connect()
     @test_throws ErrorException NATS.JetStream.stream_names(; connection, timer = Timer(0))
 end
 
 @testset "Invalid stream name." begin
+    connection = NATS.connect()
     @test_throws ErrorException NATS.JetStream.stream_create(;
         name = "SOME*STREAM",
         description = "Stream with invalid name",
