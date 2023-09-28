@@ -24,8 +24,8 @@ jobs:
     services:
       nats-unused:
         image: nats:${{ matrix.nats-version }}
-        ports:
-          - 4222:4222
+        # ports:
+        #   - 4222:4222
 
     steps:
       - name: "Start nats with jetstream"
