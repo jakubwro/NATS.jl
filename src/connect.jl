@@ -106,7 +106,7 @@ function sendloop(nc::Connection, io::IO)
         end
         pending = Base.n_avail(nc.outbox)
         buf = IOBuffer()
-        batch = pending
+        batch = min(pending, 500)
 
         for _ in 1:batch
             msg = take!(nc.outbox)
