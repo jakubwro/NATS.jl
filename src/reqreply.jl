@@ -54,7 +54,7 @@ function request(
     end
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
-    @async begin 
+    Threads.@spawn :default begin 
         wait(timer)
         # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
         # There is still small probablity than message will be delivered in between. In such
