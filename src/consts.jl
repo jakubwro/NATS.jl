@@ -21,7 +21,7 @@ const DEFAULT_CONNECT_ARGS = (
     headers = true,
     nkey = nothing
 )
-const OUTBOX_SIZE = 1000000
+const OUTBOX_SIZE = 10000000
 const SOCKET_CONNECT_DELAYS = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
 const SUBSCRIPTION_CHANNEL_SIZE = 10000
 

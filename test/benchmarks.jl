@@ -124,3 +124,20 @@ end
     @info "$counter requests / second."
     NATS.status()
 end
+
+@testset "Publisher benchmark." begin
+    connection = NATS.connect(async_handlers = false, default = false)
+
+    tm = Timer(1.0)
+    counter = 0
+    while isopen(tm)
+        if Base.n_avail(connection.outbox) > 5000
+            sleep(0.001)
+            continue
+        end
+        publish("zxc"; payload = "Hello world!!!!!", connection)
+        counter = counter + 1
+    end
+
+    @info "Published $counter messages."
+end
