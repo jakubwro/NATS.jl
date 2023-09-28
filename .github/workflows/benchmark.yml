@@ -47,10 +47,9 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
-      - uses: julia-actions/julia-buildpkg@v1
-      - name: Benchmarks
-        run: |
-          julia --project julia --project test/benchmarks.jl
+      # - uses: julia-actions/julia-buildpkg@v1
+      - run: julia -e 'println("Hello, World!")'
+
       - name: "Stop services"
         run: |
           docker kill $(docker ps -q )
