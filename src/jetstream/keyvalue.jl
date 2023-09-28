@@ -1,3 +1,5 @@
+
+#=
 @enum KeyValueOperation NONE PUT DELETE PURGE
 
 const MAX_HISTORY    = 64
@@ -110,3 +112,4 @@ function zxc(x; options...)
     # options = merge(options, default_options)
     @show options
 end
+=#
