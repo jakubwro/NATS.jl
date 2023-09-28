@@ -43,7 +43,6 @@ jobs:
           sleep 2
           docker logs $container_id
       - uses: actions/checkout@v2
-      - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
@@ -51,7 +50,7 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - name: Benchmarks
         run: |
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --project julia --project test/benchmarks.jl
+          julia --project julia --project test/benchmarks.jl
       - name: "Stop services"
         run: |
           docker kill $(docker ps -q )
