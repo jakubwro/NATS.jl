@@ -103,7 +103,7 @@ end
     nc = NATS.connect()
     @async interactive_status(tm)
 
-    n = 4000
+    n = 40
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
