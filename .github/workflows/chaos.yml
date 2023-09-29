@@ -23,6 +23,7 @@ jobs:
     services:
       nats:
         image: nats:${{ matrix.nats-version }}
+        options: --name nats
         ports:
           - 4222:4222
 
