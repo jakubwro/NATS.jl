@@ -161,7 +161,7 @@ function reconnect(nc::Connection, host, port, con_msg)
             push!(migrated, Unsub(sid, nc.unsubs[sid]))
         end
     end
-    @info "Migratting $(length(migrated)) subs to a new connection."
+    @info "Migrating $(length(migrated)) subs to a new connection."
     for msg in migrated
         put!(new_outbox, msg)
     end
