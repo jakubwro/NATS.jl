@@ -19,21 +19,14 @@ jobs:
         julia-num-threads: ['1'] # TODO: add ['1,4', '4,4'], but it require large runner, default there are only 2 cores. 
         os: [ubuntu-latest]
     
-    
     # TODO: cannot enable jetstream this way, added "Start nats with jetstream step."
     services:
-      nats-unused:
+      nats:
         image: nats:${{ matrix.nats-version }}
-        # ports:
-        #   - 4222:4222
+        ports:
+          - 4222:4222
 
     steps:
-      - name: "Start nats with jetstream"
-        run: |
-          docker network ls
-          echo ${{ job.container.network }}
-          name=`docker create --name nats --network ${{ job.container.network }} --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:2.10.1 --jetstream`
-          docker container start $name
       - name: "Start reply service"
         run: |
           docker ps

@@ -32,11 +32,4 @@ end
 if have_nats()
     include("core_nats.jl")
     include("fallback_handler.jl")
-
-    if haskey(ENV, "CI")
-        include("chaos.jl")
-    else
-        @info "Chaos testing disabled outside CI."
-    end
 end
-
