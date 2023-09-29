@@ -19,7 +19,6 @@ jobs:
         julia-num-threads: ['1'] # TODO: add ['1,4', '4,4'], but it require large runner, default there are only 2 cores. 
         os: [ubuntu-latest]
     
-    # TODO: cannot enable jetstream this way, added "Start nats with jetstream step."
     services:
       nats:
         image: nats:${{ matrix.nats-version }}
