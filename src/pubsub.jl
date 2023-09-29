@@ -77,8 +77,10 @@ function subscribe(
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
     c = _start_handler(arg_t, f)
-    state.handlers[sid] = c
-    connection.subs[sid] = sub
+    @lock NATS.state.lock begin
+        state.handlers[sid] = c
+        connection.subs[sid] = sub
+    end
     send(connection, sub)
     sub
 end
