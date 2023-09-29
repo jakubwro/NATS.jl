@@ -88,7 +88,7 @@ function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
     # if st in [DRAINING, DRAINED]
     #     error("Connection is drained.")
-    elseif st != CONNECTED && st != CONNECTING
+    if st != CONNECTED && st != CONNECTING
         @debug "Sening $message but connection status is $st."
     end
     while !isopen(nc.outbox) # TODO: this check is not threadsafe, use try catch.
