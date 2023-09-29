@@ -200,11 +200,11 @@ end
 
     pub_task = Threads.@spawn begin
         for i in 1:100
-            timer = Timer(0.1)
-            for _ in 1:1000
+            timer = Timer(0.001)
+            for _ in 1:10
                 publish(subject; payload = "Hi!")
             end
-            Threads.atomic_add!(published_count, 1000)
+            Threads.atomic_add!(published_count, 10)
             wait(timer)
         end
         @info "Publisher finished."
