@@ -30,8 +30,8 @@ jobs:
     steps:
       - name: Benchmark NATS with CLI
         run: |
-          docker run --network ${{ job.container.network }} --entrypoint nats -it synadia/nats-box:latest bench foo --pub 1 --size 16
-          docker run --network ${{ job.container.network }} --entrypoint nats -it synadia/nats-box:latest bench foo --pub 1 -sub 1 --size 16
+          docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest bench foo --pub 1 --size 16
+          docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest bench foo --pub 1 -sub 1 --size 16
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
