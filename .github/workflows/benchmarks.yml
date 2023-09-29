@@ -28,12 +28,10 @@ jobs:
           - 4222:4222
 
     steps:
-      - name: Benchmark pub NATS with CLI
+      - name: Benchmark NATS with CLI
         run: |
           docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16
-      - name: Benchmark pub sub NATS with CLI
-        run: |
-          docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 -sub 1 --size 16
+          docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --sub 1 --size 16
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
