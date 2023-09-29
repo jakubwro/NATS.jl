@@ -231,6 +231,45 @@ end
     @test headers(result) == ["A" => "B"]
 end
 
+@testset "Handler error throttling." begin
+    nc = NATS.connect()
+    subject = randstring(8)
+    sub = subscribe(subject) do msg
+        error("Just testing...")
+    end
+
+    tm = Timer(15)
+    while isopen(tm)
+        publish(subject, payload = "Hi!")
+        sleep(0.1)
+    end
+
+    unsubscribe(sub)
+end
+
+@testset "Subscription without argument" begin
+    nc = NATS.connect()
+    subject = randstring(8)
+    was_delivered = false
+    sub = subscribe(subject) do
+        was_delivered = true
+        "nothing to do"
+    end
+    publish(subject, payload = "Hi!")
+    sleep(0.1)
+    unsubscribe(sub)
+    @test was_delivered
+end
+
+@testset "Subscription with multiple arguments" begin
+    nc = NATS.connect()
+    subject = randstring(8)
+    # TODO: test if error message is clear.
+    @test_throws MethodError subscribe(subject) do x, y, z
+        "nothing to do"
+    end
+end
+
 @testset "All subs should be closed" begin
     nc = NATS.connect()
     @test isempty(NATS.state.handlers)

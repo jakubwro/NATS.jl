@@ -4,7 +4,16 @@ const Message = Union{Msg, HMsg}
 payload(msg::Msg) = msg.payload
 payload(hmsg::HMsg) = hmsg.payload
 
-argtype(handler) = first(methods(handler)).sig.parameters[2] # TODO: handle multi methods.
+function argtype(handler)
+    signature = first(methods(handler)).sig # TODO: handle multi methods.
+    if length(signature.parameters) == 1
+        Nothing
+    elseif length(signature.parameters) == 2
+        signature.parameters[2]
+    else
+        Tuple{signature.parameters[2:end]...}
+    end
+end
 
 function find_msg_conversion_or_throw(T::Type)
     if T != Any && !hasmethod(Base.convert, (Type{T}, Msg))
