@@ -105,19 +105,15 @@ function reply(
     f,
     subject::String;
     connection::Connection = default_connection(),
-    queue_group::Union{Nothing, String} = nothing,
-    info = false
+    queue_group::Union{Nothing, String} = nothing
 )
     T = argtype(f)
     find_msg_conversion_or_throw(T)
-    req_count = Threads.Atomic{Int}(1)
     fast_f = _fast_call(f, T)
     subscribe(subject; connection, queue_group) do msg
-        if info
-            cnt = Threads.atomic_add!(req_count, 1)
-            @info "[#$(cnt)] received on subject $(msg.subject), replying on subject $(msg.reply_to)."
+        Threads.@spawn :default begin
+            data = fast_f(msg)
+            publish(msg.reply_to, data; connection)
         end
-        data = fast_f(msg)
-        publish(msg.reply_to, data; connection)
     end
 end
