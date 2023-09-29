@@ -53,49 +53,49 @@ end
 #     @test length(NATS.state.handlers) == 0
 # end
 
-# @testset "Reconnecting." begin
-#     nc = NATS.connect()
-#     @test restart_nats_server() == 0
-#     sleep(5)
-#     @test nc.status == NATS.CONNECTED
-#     resp = request("help.please")
-#     @test resp isa NATS.Message
-# end
+@testset "Reconnecting." begin
+    nc = NATS.connect()
+    @test restart_nats_server() == 0
+    sleep(5)
+    @test nc.status == NATS.CONNECTED
+    resp = request("help.please")
+    @test resp isa NATS.Message
+end
 
-# @testset "Subscribtion survive reconnect." begin
-#     nc = NATS.connect()
-#     c = Channel(100)
-#     subject = randstring(5)
-#     sub = subscribe(subject) do msg
-#         put!(c, msg)
-#     end
-#     sleep(0.5)
-#     @test restart_nats_server() == 0
-#     sleep(5)
-#     @test nc.status == NATS.CONNECTED
-#     publish(subject; payload = "Hi!")
-#     sleep(0.5)
-#     @test Base.n_avail(c) == 1
-# end
+@testset "Subscribtion survive reconnect." begin
+    nc = NATS.connect()
+    c = Channel(100)
+    subject = randstring(5)
+    sub = subscribe(subject) do msg
+        put!(c, msg)
+    end
+    sleep(0.5)
+    @test restart_nats_server() == 0
+    sleep(5)
+    @test nc.status == NATS.CONNECTED
+    publish(subject; payload = "Hi!")
+    sleep(0.5)
+    @test Base.n_avail(c) == 1
+end
 
-# @testset "Reconnect during request." begin
-#     nc = NATS.connect()
-#     subject = randstring(5)
-#     sub = reply(subject) do msg
-#         sleep(5)
-#         "This is a reply."
-#     end
-#     t = @async begin
-#         sleep(1)
-#         restart_nats_server()
-#     end
-#     rep = request(subject; timer = Timer(20))
-#     @test payload(rep) == "This is a reply."
-#     @test nc.status == NATS.CONNECTED
-#     rep = request(subject; timer = Timer(20))
-#     @test payload(rep) == "This is a reply."
-#     @test t.result == 0
-# end
+@testset "Reconnect during request." begin
+    nc = NATS.connect()
+    subject = randstring(5)
+    sub = reply(subject) do msg
+        sleep(5)
+        "This is a reply."
+    end
+    t = @async begin
+        sleep(1)
+        restart_nats_server()
+    end
+    rep = request(subject; timer = Timer(20))
+    @test payload(rep) == "This is a reply."
+    @test nc.status == NATS.CONNECTED
+    rep = request(subject; timer = Timer(20))
+    @test payload(rep) == "This is a reply."
+    @test t.result == 0
+end
 
 # @testset "4K requests" begin
 #     nats_container_id = find_nats_container_id()
