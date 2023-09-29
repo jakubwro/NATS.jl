@@ -187,3 +187,34 @@ end
     @test all(r -> r.payload == "This is a reply.", replies)
     NATS.status()
 end
+
+@testset "Disconnects during heavy publications." begin
+    nc = NATS.connect()
+    received_count = Threads.Atomic{Int64}(0)
+    published_count = Threads.Atomic{Int64}(0)
+    subject = randstring(5)
+    sub = subscribe(subject) do msg
+        Threads.atomic_add!(received_count, 1)
+    end
+    sleep(0.5)
+
+    pub_task = Threads.@spawn begin
+        for i in 1:100
+            timer = Timer(0.1)
+            for _ in 1:1000
+                publish(subject; payload = "Hi!")
+            end
+            Threads.atomic_add!(published_count, 1000)
+            wait(timer)
+        end
+        @info "Publisher finished."
+    end
+    sleep(2)
+    @test restart_nats_server() == 0
+    sleep(2)
+    @test restart_nats_server() == 0
+    sleep(2)
+    @test restart_nats_server() == 0
+    wait(pub_task)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
+end
