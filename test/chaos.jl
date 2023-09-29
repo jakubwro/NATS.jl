@@ -106,7 +106,7 @@ end
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
-    sub = reply(subject) do msg
+    sub = reply(subject, async_handlers = true) do msg
         sleep(10 * rand())
         Threads.atomic_add!(cnt, 1)
         "This is a reply."
@@ -151,7 +151,7 @@ end
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
-    sub = reply(subject) do msg
+    sub = reply(subject, async_handlers = true) do msg
         sleep(4 * rand())
         Threads.atomic_add!(cnt, 1)
         "This is a reply."

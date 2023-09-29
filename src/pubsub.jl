@@ -33,8 +33,7 @@ function publish(
     end
 end
 
-function _start_handler(arg_t::Type, f::Function, subject::String)
-    fast_f = _fast_call(f, arg_t)
+function _start_handler(f::Function, subject::String)
     ch = Channel(10000000) # TODO: move to const
     Threads.@spawn begin 
         last_error_time = time()
@@ -43,7 +42,7 @@ function _start_handler(arg_t::Type, f::Function, subject::String)
         while true
             try
                 msg = take!(ch)
-                fast_f(msg)
+                f(msg)
             catch err
                 if err isa InvalidStateException
                     break
@@ -66,9 +65,7 @@ function _start_handler(arg_t::Type, f::Function, subject::String)
     ch
 end
 
-function _start_async_handler(arg_t::Type, f::Function)
-    fast_f = _fast_call(f, arg_t)
-
+function _start_async_handler(f::Function, subject::String)
     error_ch = Channel(100000)
 
     ch = Channel(10000000, spawn = true) do ch # TODO: move to const
@@ -76,7 +73,7 @@ function _start_async_handler(arg_t::Type, f::Function)
             while true
                 msg = take!(ch)
                 Threads.@spawn :default try
-                    fast_f(msg)
+                    f(msg)
                 catch err
                     put!(error_ch, err)
                 end
@@ -85,18 +82,16 @@ function _start_async_handler(arg_t::Type, f::Function)
             close(error_ch)
         end
     end
-
     Threads.@spawn :default begin
         while true
             sleep(5)
             avail = Base.n_avail(error_ch)
             errors = [ take!(error_ch) for _ in 1:avail ]
             if !isempty(errors)
-                @error "$(length(errors)) handler errors in last 5 s. Last one:" last(errors)
+                @error "$(length(errors)) handler errors on \"$subject\" in last 5 s. Last one:" last(errors)
             end
         end
     end
-
     ch
 end
 
@@ -117,9 +112,9 @@ function subscribe(
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
     c = if async_handlers
-            _start_async_handler(arg_t, f)
+            _start_async_handler(_fast_call(f, arg_t), subject)
         else
-            _start_handler(arg_t, f, subject)
+            _start_handler(_fast_call(f, arg_t), subject)
         end
     @lock NATS.state.lock begin
         state.handlers[sid] = c

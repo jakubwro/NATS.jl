@@ -105,15 +105,14 @@ function reply(
     f,
     subject::String;
     connection::Connection = default_connection(),
-    queue_group::Union{Nothing, String} = nothing
+    queue_group::Union{Nothing, String} = nothing,
+    async_handlers = false
 )
     T = argtype(f)
     find_msg_conversion_or_throw(T)
     fast_f = _fast_call(f, T)
-    subscribe(subject; connection, queue_group) do msg
-        Threads.@spawn :default begin
-            data = fast_f(msg)
-            publish(msg.reply_to, data; connection)
-        end
+    subscribe(subject; connection, queue_group, async_handlers) do msg
+        data = fast_f(msg)
+        publish(msg.reply_to, data; connection)
     end
 end
