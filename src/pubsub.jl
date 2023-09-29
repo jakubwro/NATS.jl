@@ -34,7 +34,6 @@ function publish(
 end
 
 function _start_handler(arg_t::Type, f::Function)
-    # TODO: try set sitcky flag
     fast_f = _fast_call(f, arg_t)
     Channel(10000000, spawn = true) do ch # TODO: move to const
         last_error_time = 0.0
@@ -44,16 +43,12 @@ function _start_handler(arg_t::Type, f::Function)
             try
                 fast_f(msg)
             catch err
+                errors_since_last_log = errors_since_last_log + 1
                 now = time()
                 if last_error_time < now - 5.0
                     last_error_time = now
-                    @error "Subscription handler error." err
-                    if errors_since_last_log > 0
-                        @error "... and $errors_since_last_log more errors in last 5 seconds."
-                        errors_since_last_log = 0
-                    end
-                else
-                    errors_since_last_log = errors_since_last_log + 1
+                    @error "$errors_since_last_log handler errors in last 5 s. Last one:" err
+                    errors_since_last_log = 0
                 end
             end
         end
