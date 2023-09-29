@@ -199,7 +199,7 @@ end
     sleep(0.5)
 
     pub_task = Threads.@spawn begin
-        for i in 1:100
+        for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:10
                 publish(subject; payload = "Hi!")
