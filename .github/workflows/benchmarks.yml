@@ -37,5 +37,5 @@ jobs:
           arch: ${{ matrix.julia-arch }}
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --project test/benchmarks.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --project test/benchmarks.jl
 
