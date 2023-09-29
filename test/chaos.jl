@@ -6,7 +6,6 @@ function find_nats_container_id()
     io = IOBuffer();
     run(pipeline(`docker ps -f name=nats -q`; stdout = io))
     output = String(take!(io))
-    @show output
     container_id = split(output, '\n')[1]
     container_id
 end

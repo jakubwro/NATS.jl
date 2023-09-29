@@ -33,27 +33,69 @@ function publish(
     end
 end
 
-function _start_handler(arg_t::Type, f::Function)
+function _start_handler(arg_t::Type, f::Function, subject::String)
     fast_f = _fast_call(f, arg_t)
-    Channel(10000000, spawn = true) do ch # TODO: move to const
-        last_error_time = 0.0
+    ch = Channel(10000000) # TODO: move to const
+    Threads.@spawn begin 
+        last_error_time = time()
         errors_since_last_log = 0
-        while true
-            msg = take!(ch)
+        last_error = nothing
+        while isopen(ch)
             try
+                msg = take!(ch)
                 fast_f(msg)
             catch err
+                if err isa InvalidStateException
+                    break
+                end
+                last_error = err
                 errors_since_last_log = errors_since_last_log + 1
                 now = time()
+                time_diff = now - last_error_time
                 if last_error_time < now - 5.0
                     last_error_time = now
-                    @error "$errors_since_last_log handler errors in last 5 s. Last one:" err
+                    @error "$errors_since_last_log handler errors on \"$subject\" in last $(round(time_diff, digits = 2)) s. Last one:" err
                     errors_since_last_log = 0
                 end
             end
         end
+        if errors_since_last_log > 0
+            @error "$errors_since_last_log handler errors on \"$subject\"in last $(round(time() - last_error_time, digits = 2)) s. Last one:" last_error
+        end
     end
+    ch
 end
+
+# function _start_async_handler(arg_t::Type, f::Function)
+#     fast_f = _fast_call(f, arg_t)
+
+#     error_ch = Channel(100000)
+
+#     ch = Channel(10000000, spawn = true) do ch # TODO: move to const
+#         while true
+#             msg = take!(ch)
+#             Threads.@spawn :default try
+#                 fast_f(msg)
+#             catch err
+#                 put!(error_ch, err)
+#             end
+#         end
+#     end
+
+#     Threads.@spawn :default do
+#         while isopen(ch)
+#             sleep(5)
+#             avail = Base.n_avail(error_ch)
+#             errors = [ take!(error_ch) for _ in 1:avail ]
+#             if !isempty(errors)
+#                 @error "$(length(errors)) handler errors in last 5 s. Last one:" last(errors)
+#             end
+#         end
+#     end
+
+
+#     ch
+# end
 
 """
 $(SIGNATURES)
@@ -70,7 +112,7 @@ function subscribe(
     find_msg_conversion_or_throw(arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
-    c = _start_handler(arg_t, f)
+    c = _start_handler(arg_t, f, subject)
     @lock NATS.state.lock begin
         state.handlers[sid] = c
         connection.subs[sid] = sub

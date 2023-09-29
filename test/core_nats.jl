@@ -80,6 +80,7 @@ end
     results = request(subject, "This is request payload", 2)
     unsubscribe(sub1)
     unsubscribe(sub2)
+    sleep(0.1)
     @test length(results) == 2
     payloads = payload.(results)
     @test "Reply from service 1." in payloads
@@ -243,8 +244,10 @@ end
         publish(subject, payload = "Hi!")
         sleep(0.1)
     end
+    sleep(5) # wait for all errors.
 
     unsubscribe(sub)
+    sleep(0.1)
 end
 
 @testset "Subscription without argument" begin

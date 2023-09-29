@@ -210,6 +210,8 @@ Cleanup subscription data when no more messages are expected.
 """
 function _cleanup_sub(nc::Connection, sid::String)
     lock(state.lock) do
+        ch = get(state.handlers, sid, nothing)
+        !isnothing(ch) && close(ch)
         delete!(state.handlers, sid)
         delete!(nc.subs, sid)
         delete!(nc.unsubs, sid)
