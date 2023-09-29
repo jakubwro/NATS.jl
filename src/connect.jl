@@ -84,11 +84,6 @@ Enqueue protocol message in `outbox` to be written to socket.
 """
 function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
-    # if st in [DRAINING, DRAINED]
-    #     error("Connection is drained.")
-    if st != CONNECTED && st != CONNECTING
-        @debug "Sening $message but connection status is $st."
-    end
     while !isopen(nc.outbox) # TODO: this check is not threadsafe, use try catch.
         sleep(1)
     end
