@@ -33,6 +33,33 @@ function publish(
     end
 end
 
+function _fast_call(f::Function, arg_t::Type)
+    if arg_t === Any || arg_t === NATS.Message
+        f
+    else
+        msg -> f(convert(arg_t, msg))
+    end
+end
+
+function _start_handler(arg_t::Type, f::Function)
+    # TODO: try set sitcky flag
+    fast_f = _fast_call(f, arg_t)
+    Channel(10000000, spawn = true) do ch
+        last_error_time = 0.0
+        while true
+            msg = take!(ch)
+            try
+                fast_f(msg)
+            catch err
+                now = time()
+                if last_error_time < now - 5.0
+                    last_error_time = now
+                    @error err
+                end
+            end
+        end
+    end
+end
 
 """
 $(SIGNATURES)
@@ -49,10 +76,9 @@ function subscribe(
     find_msg_conversion_or_throw(arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
-    lock(state.lock) do
-        state.handlers[sid] = arg_t => f
-        connection.subs[sid] = sub
-    end
+    c = _start_handler(arg_t, f)
+    state.handlers[sid] = c
+    connection.subs[sid] = sub
     send(connection, sub)
     sub
 end

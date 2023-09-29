@@ -30,7 +30,7 @@ end
 end
 
 @testset "Publish subscribe with sync handlers" begin
-    connection = NATS.connect(default = false, async_handlers = false)
+    connection = NATS.connect(default = false)
     c = Channel()
     sub = subscribe("SOME.BAR"; connection) do msg
         put!(c, msg)

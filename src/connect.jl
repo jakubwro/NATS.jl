@@ -10,7 +10,6 @@ digraph G {
 """
 @enum ConnectionStatus CONNECTING CONNECTED RECONNECTING DRAINING DRAINED
 
-
 mutable struct Stats
     msgs_handled::Int64
     msgs_not_handled::Int64
@@ -18,22 +17,21 @@ end
 
 mutable struct Connection
     status::ConnectionStatus
-    async_handlers::Bool
     info::Channel{Info}
     outbox::Channel{ProtocolMessage}
     subs::Dict{String, Sub}
     unsubs::Dict{String, Int64}
     stats::Stats
     rng::AbstractRNG
-    function Connection(async_handlers::Bool)
-        new(CONNECTING, async_handlers, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
+    function Connection()
+        new(CONNECTING, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
     end
 end
 
 mutable struct State
     default_connection::Union{Connection, Nothing}
     connections::Vector{Connection}
-    handlers::Dict{String, Pair{Type, Function}}
+    handlers::Dict{String, Channel}
     "Handlers of messages for which handler was not found."
     fallback_handlers::Vector{Function}
     lock::ReentrantLock
@@ -179,11 +177,11 @@ end
 Initialize and return `Connection`.
 See [`Connect protocol message`](../protocol/#NATS.Connect).
 """
-function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, async_handlers = true, kw...)
+function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, kw...)
     if default && !isnothing(state.default_connection)
         return default_connection()
     end
-    nc = Connection(async_handlers)
+    nc = Connection()
     connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
     send(nc, connect_msg)
     reconnect_task = Base.Threads.Task(() ->  disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end)
@@ -260,15 +258,15 @@ end
 
 function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
-    arg_t, handler = lock(state.lock) do
-        a, h = get(state.handlers, msg.sid, (nothing, nothing))
-        if !isnothing(h)
+    ch = lock(state.lock) do
+        c = get(state.handlers, msg.sid, nothing)
+        if !isnothing(c)
             nc.stats.msgs_handled = nc.stats.msgs_handled + 1
             state.stats.msgs_handled = state.stats.msgs_handled + 1
         end
-        a, h
+        c
     end
-    if isnothing(handler)
+    if isnothing(ch)
         fallbacks = lock(state.lock) do
             collect(state.fallback_handlers)
         end
@@ -280,24 +278,21 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
             state.stats.msgs_not_handled = state.stats.msgs_not_handled + 1
         end
     else
-        if nc.async_handlers == true
-            handler_task = Threads.@spawn :default begin
-                # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
-                if arg_t === Any || arg_t === NATS.Message
-                    Base.invokelatest(handler, msg)
-                else
-                    Base.invokelatest(handler, convert(arg_t, msg))
-                end
-                # end
-            end
-            errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
+        if Base.n_avail(ch) == ch.sz_max
+            # TODO: drop old msgs?
         else
-            if arg_t === Any || arg_t === NATS.Message
-                Base.invokelatest(handler, msg)
-            else
-                Base.invokelatest(handler, convert(arg_t, msg))
-            end
+            put!(ch, msg)
         end
+        # handler_task = Threads.@spawn :default begin
+        #     # lock(state.lock) do # TODO: rethink locking of handlers execution. Probably not very useful.
+        #     if arg_t === Any || arg_t === NATS.Message
+        #         Base.invokelatest(handler, msg)
+        #     else
+        #         Base.invokelatest(handler, convert(arg_t, msg))
+        #     end
+        #     # end
+        # end
+        # errormonitor(handler_task) # TODO: find nicer way to debug handler failures.
         _cleanup_unsub_msg(nc, msg.sid)
     end
 end

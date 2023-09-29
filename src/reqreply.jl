@@ -111,11 +111,13 @@ function reply(
     T = argtype(f)
     find_msg_conversion_or_throw(T)
     req_count = Threads.Atomic{Int}(1)
+    fast_f = _fast_call(f, T)
     subscribe(subject; connection, queue_group) do msg
-        cnt = Threads.atomic_add!(req_count, 1)
-        info && @info "[#$(cnt)] received on subject $(msg.subject)"
-        data = f(convert(T, msg))
-        info && @info "[#$(cnt)] replying on subject $(msg.reply_to)"
+        if info
+            cnt = Threads.atomic_add!(req_count, 1)
+            @info "[#$(cnt)] received on subject $(msg.subject), replying on subject $(msg.reply_to)."
+        end
+        data = fast_f(msg)
         publish(msg.reply_to, data; connection)
     end
 end

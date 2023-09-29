@@ -80,36 +80,15 @@ function msgs_per_second(connection::NATS.Connection)
     NATS.status()
 end
 
-@testset "Msgs per second with async handlers." begin
-    connection = NATS.connect(async_handlers = true, default = false)
+@testset "Msgs per second." begin
+    connection = NATS.connect(default = false)
     msgs_per_second(connection)
 end
 
-@testset "Msgs per second with sync handlers." begin
-    connection = NATS.connect(async_handlers = false, default = false)
-    msgs_per_second(connection)
-end
-
-@testset "Requests per second with async handlers." begin
-    connection = NATS.connect(async_handlers = true, default = false)
-    subject = randstring(5)
-    sub = reply(subject; connection) do msg
-        "This is a reply."
-    end
-    counter = 0
-    tm = Timer(1.0)
-    while isopen(tm)
-        res = request(subject; connection)
-        counter = counter + 1
-    end
-    unsubscribe(sub; connection)
-    @info "$counter requests / second."
-    NATS.status()
-end
 
 
 @testset "Requests per second with sync handlers." begin
-    connection = NATS.connect(async_handlers = false, default = false)
+    connection = NATS.connect(default = false)
     subject = randstring(5)
     sub = reply(subject; connection) do msg
         "This is a reply."
@@ -126,7 +105,7 @@ end
 end
 
 @testset "Publisher benchmark." begin
-    connection = NATS.connect(async_handlers = false, default = false)
+    connection = NATS.connect(default = false)
 
     tm = Timer(1.0)
     counter = 0
