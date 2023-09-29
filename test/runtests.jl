@@ -18,7 +18,7 @@ include("protocol_parsing.jl")
 function have_nats()
     try
         Sockets.getaddrinfo(NATS.NATS_HOST)
-        nc = NATS.connect()
+        nc = NATS.connect(default = false)
         sleep(2)
         @assert nc.status == NATS.CONNECTED
         @info "NATS avaliable, running connected tests."

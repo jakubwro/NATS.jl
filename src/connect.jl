@@ -74,12 +74,12 @@ function default_connection()
     state.default_connection
 end
 
-info(nc::Connection) = fetch(nc.info)
+# info(nc::Connection) = fetch(nc.info)
 status(nc::Connection) = @lock state.lock nc.status
 outbox(nc::Connection) = @lock state.lock nc.outbox
 
-show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
+# show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
+#     status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 """
 Enqueue protocol message in `outbox` to be written to socket.
@@ -314,29 +314,29 @@ function process(nc::Connection, err::Err)
     @error "NATS protocol error!" err
 end
 
-function isdrained(connection::Connection)
-    st = status(connection)
-    status == DRAINING || status == DRAINED
-end
+# function isdrained(connection::Connection)
+#     st = status(connection)
+#     status == DRAINING || status == DRAINED
+# end
 
-function drain(nc::Connection)
-    nc.status = CLOSING
-    close(nc.outbox)
-    sleep(3)
-    nc.status = CLOSED
-    # TODO: set status DRAINING on connection 
-    # stop all subs
-    # wait all subs processed
-    # wait all messages send
-    # remove connection from CONNECTIONS
-    # close connection
-end
+# function drain(nc::Connection)
+#     nc.status = CLOSING
+#     close(nc.outbox)
+#     sleep(3)
+#     nc.status = CLOSED
+#     # TODO: set status DRAINING on connection 
+#     # stop all subs
+#     # wait all subs processed
+#     # wait all messages send
+#     # remove connection from CONNECTIONS
+#     # close connection
+# end
 
-function drain()
-    @info "Draining all connections."
-    isnothing(state.default_connection) || drain(state.default_connection)
-    drain.(state.connections)
-    sleep(5) # simulate some work
-    @info "All connections drained."
-    nothing
-end
+# function drain()
+#     @info "Draining all connections."
+#     isnothing(state.default_connection) || drain(state.default_connection)
+#     drain.(state.connections)
+#     sleep(5) # simulate some work
+#     @info "All connections drained."
+#     nothing
+# end

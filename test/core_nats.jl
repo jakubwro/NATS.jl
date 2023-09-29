@@ -3,6 +3,10 @@ using Test
 using NATS
 using Random
 
+@testset "Should error when no default connection." begin
+    @test_throws ErrorException publish("SOME_SUBJECT"; payload = "Hi!")
+end
+
 @testset "Ping" begin
     nc = NATS.connect()
     ping(nc)
