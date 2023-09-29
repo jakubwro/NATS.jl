@@ -40,7 +40,7 @@ function _start_handler(arg_t::Type, f::Function, subject::String)
         last_error_time = time()
         errors_since_last_log = 0
         last_error = nothing
-        while isopen(ch)
+        while true
             try
                 msg = take!(ch)
                 fast_f(msg)
