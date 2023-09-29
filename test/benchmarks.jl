@@ -45,13 +45,13 @@ end
 # msgs_unhandled: 3002        
 # ==========================================
 
-function msgs_per_second(connection::NATS.Connection)
+function msgs_per_second(connection::NATS.Connection, async_handlers = false)
     empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(subject; connection) do msg
+    sub = subscribe(subject; connection, async_handlers) do msg
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
@@ -85,7 +85,10 @@ end
     msgs_per_second(connection)
 end
 
-
+@testset "Msgs per second with async handlers." begin
+    connection = NATS.connect(default = false)
+    msgs_per_second(connection, true)
+end
 
 @testset "Requests per second with sync handlers." begin
     connection = NATS.connect(default = false)

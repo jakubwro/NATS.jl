@@ -66,36 +66,39 @@ function _start_handler(arg_t::Type, f::Function, subject::String)
     ch
 end
 
-# function _start_async_handler(arg_t::Type, f::Function)
-#     fast_f = _fast_call(f, arg_t)
+function _start_async_handler(arg_t::Type, f::Function)
+    fast_f = _fast_call(f, arg_t)
 
-#     error_ch = Channel(100000)
+    error_ch = Channel(100000)
 
-#     ch = Channel(10000000, spawn = true) do ch # TODO: move to const
-#         while true
-#             msg = take!(ch)
-#             Threads.@spawn :default try
-#                 fast_f(msg)
-#             catch err
-#                 put!(error_ch, err)
-#             end
-#         end
-#     end
+    ch = Channel(10000000, spawn = true) do ch # TODO: move to const
+        try
+            while true
+                msg = take!(ch)
+                Threads.@spawn :default try
+                    fast_f(msg)
+                catch err
+                    put!(error_ch, err)
+                end
+            end
+        catch
+            close(error_ch)
+        end
+    end
 
-#     Threads.@spawn :default do
-#         while isopen(ch)
-#             sleep(5)
-#             avail = Base.n_avail(error_ch)
-#             errors = [ take!(error_ch) for _ in 1:avail ]
-#             if !isempty(errors)
-#                 @error "$(length(errors)) handler errors in last 5 s. Last one:" last(errors)
-#             end
-#         end
-#     end
+    Threads.@spawn :default begin
+        while true
+            sleep(5)
+            avail = Base.n_avail(error_ch)
+            errors = [ take!(error_ch) for _ in 1:avail ]
+            if !isempty(errors)
+                @error "$(length(errors)) handler errors in last 5 s. Last one:" last(errors)
+            end
+        end
+    end
 
-
-#     ch
-# end
+    ch
+end
 
 """
 $(SIGNATURES)
@@ -106,13 +109,18 @@ function subscribe(
     f,
     subject::String;
     connection::Connection = default_connection(),
-    queue_group::Union{String, Nothing} = nothing
+    queue_group::Union{String, Nothing} = nothing,
+    async_handlers = false
 )
     arg_t = argtype(f)
     find_msg_conversion_or_throw(arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
-    c = _start_handler(arg_t, f, subject)
+    c = if async_handlers
+            _start_async_handler(arg_t, f)
+        else
+            _start_handler(arg_t, f, subject)
+        end
     @lock NATS.state.lock begin
         state.handlers[sid] = c
         connection.subs[sid] = sub

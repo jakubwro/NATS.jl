@@ -250,6 +250,24 @@ end
     sleep(0.1)
 end
 
+@testset "Handler error throttling async." begin
+    nc = NATS.connect()
+    subject = randstring(8)
+    sub = subscribe(subject, async_handlers = true) do msg
+        error("Just testing...")
+    end
+
+    tm = Timer(15)
+    while isopen(tm)
+        publish(subject, payload = "Hi!")
+        sleep(0.1)
+    end
+    sleep(5) # wait for all errors.
+
+    unsubscribe(sub)
+    sleep(0.1)
+end
+
 @testset "Subscription without argument" begin
     nc = NATS.connect()
     subject = randstring(8)
