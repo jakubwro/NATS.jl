@@ -192,7 +192,7 @@ end
     nc = NATS.connect()
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
-    subject = randstring(5)
+    subject = "pub_subject"
     sub = subscribe(subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
@@ -219,5 +219,6 @@ end
     @info "Published: $(published_count.value), received: $(received_count.value)."
     @test restart_nats_server() == 0
     wait(pub_task)
+    unsubscribe(sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 end
