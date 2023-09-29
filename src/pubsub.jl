@@ -33,16 +33,6 @@ function publish(
     end
 end
 
-function _fast_call(f::Function, arg_t::Type)
-    if arg_t === Any || arg_t === NATS.Message
-        f
-    elseif arg_t == Nothing
-        _ -> f()
-    else
-        msg -> f(convert(arg_t, msg))
-    end
-end
-
 function _start_handler(arg_t::Type, f::Function)
     # TODO: try set sitcky flag
     fast_f = _fast_call(f, arg_t)
