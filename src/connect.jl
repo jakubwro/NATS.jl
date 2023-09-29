@@ -86,8 +86,8 @@ Enqueue protocol message in `outbox` to be written to socket.
 """
 function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
-    if st in [DRAINING, DRAINED]
-        error("Connection is drained.")
+    # if st in [DRAINING, DRAINED]
+    #     error("Connection is drained.")
     elseif st != CONNECTED && st != CONNECTING
         @debug "Sening $message but connection status is $st."
     end
@@ -238,10 +238,6 @@ function _cleanup_unsub_msg(nc::Connection, sid::String)
             end
         end
     end
-end
-
-function process(nc::Connection, msg::ProtocolMessage)
-    @error "Unexpected protocol message $msg."
 end
 
 function process(nc::Connection, info::Info)

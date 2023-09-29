@@ -29,6 +29,22 @@ end
     @test length(NATS.state.handlers) == 0
 end
 
+@testset "Publish subscribe with sync handlers" begin
+    connection = NATS.connect(default = false, async_handlers = false)
+    c = Channel()
+    sub = subscribe("SOME.BAR"; connection) do msg
+        put!(c, msg)
+    end
+    publish("SOME.BAR"; payload = "Hi!", connection)
+    result = take!(c)
+    @test result isa NATS.Msg
+    @test payload(result) == "Hi!"
+    @test length(NATS.state.handlers) == 1
+    unsubscribe(sub; connection)
+    sleep(0.1)
+    @test length(NATS.state.handlers) == 0
+end
+
 @testset "Request reply" begin
     nc = NATS.connect()
     sub = reply("SOME.REQUESTS") do msg
