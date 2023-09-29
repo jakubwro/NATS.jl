@@ -43,6 +43,15 @@ end
     unsubscribe(sub; connection)
     sleep(0.1)
     @test length(NATS.state.handlers) == 0
+
+    c = Channel()
+    sub = subscribe("SOME.BAR"; connection) do msg::String
+        put!(c, msg)
+    end
+    publish("SOME.BAR"; payload = "Hi!", connection)
+    result = take!(c)
+    unsubscribe(sub; connection)
+    @test result == "Hi!"
 end
 
 @testset "Request reply" begin
