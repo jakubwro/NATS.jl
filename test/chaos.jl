@@ -210,10 +210,13 @@ end
         @info "Publisher finished."
     end
     sleep(2)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
     @test restart_nats_server() == 0
     sleep(2)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
     @test restart_nats_server() == 0
     sleep(2)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
     @test restart_nats_server() == 0
     wait(pub_task)
     @info "Published: $(published_count.value), received: $(received_count.value)."
