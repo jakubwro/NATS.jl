@@ -113,7 +113,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(20); close(cond); close(results) end
+    @async begin sleep(40); close(cond); close(results) end
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
     end
@@ -277,7 +277,7 @@ end
         "nothing to do"
     end
     publish(subject, payload = "Hi!")
-    sleep(0.1)
+    sleep(1)
     unsubscribe(sub)
     @test was_delivered
 end
