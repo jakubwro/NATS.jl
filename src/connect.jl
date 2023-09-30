@@ -1,13 +1,13 @@
 
-"""
-digraph G {
-  connecting   -> connected
-  connected    -> reconnecting
-  reconnecting -> connected
-  connected    -> draining
-  draining     -> drained
-}
-"""
+# """
+# digraph G {
+#   connecting   -> connected
+#   connected    -> reconnecting
+#   reconnecting -> connected
+#   connected    -> draining
+#   draining     -> drained
+# }
+# """
 @enum ConnectionStatus CONNECTING CONNECTED RECONNECTING DRAINING DRAINED
 
 mutable struct Stats
@@ -79,9 +79,9 @@ outbox(nc::Connection) = @lock state.lock nc.outbox
 # show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
 #     status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
-"""
-Enqueue protocol message in `outbox` to be written to socket.
-"""
+# """
+# Enqueue protocol message in `outbox` to be written to socket.
+# """
 function send(nc::Connection, message::ProtocolMessage)
     st = status(nc::Connection)
     while !isopen(nc.outbox) # TODO: this check is not threadsafe, use try catch.
@@ -205,9 +205,9 @@ function ping(nc)
     send(nc, Ping())
 end
 
-"""
-Cleanup subscription data when no more messages are expected.
-"""
+# """
+# Cleanup subscription data when no more messages are expected.
+# """
 function _cleanup_sub(nc::Connection, sid::String)
     lock(state.lock) do
         ch = get(state.handlers, sid, nothing)
@@ -218,9 +218,9 @@ function _cleanup_sub(nc::Connection, sid::String)
     end
 end
 
-"""
-Cleanup subscription data when no more messages are expected.
-"""
+# """
+# Cleanup subscription data when no more messages are expected.
+# """
 function _cleanup_unsub_msg(nc::Connection, sid::String)
     lock(state.lock) do
         count = get(nc.unsubs, sid, nothing)

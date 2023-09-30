@@ -21,10 +21,10 @@ function find_msg_conversion_or_throw(T::Type)
     end
 end
 
-"""
-Return lambda that avoids type conversions for certain types.
-Also allows for use of parameterless handlers for subs that do not need look into msg payload. 
-"""
+# """
+# Return lambda that avoids type conversions for certain types.
+# Also allows for use of parameterless handlers for subs that do not need look into msg payload. 
+# """
 function _fast_call(f::Function, arg_t::Type)
     if arg_t === Any || arg_t === NATS.Message || arg_t == NATS.Msg || arg_t == NATS.HMsg
         f
@@ -35,9 +35,9 @@ function _fast_call(f::Function, arg_t::Type)
     end
 end
 
-"""
-Alternative for `@kwdef` that works better for NATS case. 
-"""
+# """
+# Alternative for `@kwdef` that works better for NATS case. 
+# """
 function from_kwargs(T::Type, defaults, kwargs)
     # TODO: instead of this write a macro that attaches struct fields as kwargs of a function.
     args = merge(defaults, kwargs)
