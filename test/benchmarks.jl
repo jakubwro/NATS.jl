@@ -23,28 +23,6 @@ include("util.jl")
     NATS.status()
 end
 
-# No sendloop batching.
-
-# [ Info: Received 208059 messages in 10.0 s, 20805.9 msgs / s.
-# === Connection status ====================
-# connections:    1        
-#   [#1]:  CONNECTED, 0 subs, 0 unsubs, 9619 outbox             
-# subscriptions:  0           
-# msgs_handled:   208059         
-# msgs_unhandled: 113        
-# ==========================================
-
-# With sendloop batching.
-
-# [ Info: Received 1596763 messages in 10.0 s, 159676.3 msgs / s.
-# === Connection status ====================
-# connections:    1        
-#   [#1]:  CONNECTED, 0 subs, 0 unsubs, 0 outbox             
-# subscriptions:  0           
-# msgs_handled:   1598763         
-# msgs_unhandled: 3002        
-# ==========================================
-
 function msgs_per_second(connection::NATS.Connection, async_handlers = false)
     empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
@@ -103,7 +81,36 @@ end
         counter = counter + 1
     end
     unsubscribe(sub; connection)
-    @info "$counter requests / second."
+    @info "Sync handlers: $counter requests / second."
+    NATS.status()
+end
+
+@testset "Requests per second with async handlers." begin
+    connection = NATS.connect(default = false)
+    subject = randstring(5)
+    sub = reply(subject; connection, async_handlers = true) do msg
+        "This is a reply."
+    end
+    counter = 0
+    tm = Timer(1.0)
+    while isopen(tm)
+        res = request(subject; connection)
+        counter = counter + 1
+    end
+    unsubscribe(sub; connection)
+    @info "Async handlers: $counter requests / second."
+    NATS.status()
+end
+
+@testset "External requests per second." begin
+    connection = NATS.connect(default = false)
+    counter = 0
+    tm = Timer(1.0)
+    while isopen(tm)
+        res = request("help.please"; connection)
+        counter = counter + 1
+    end
+    @info "Exteranal service: $counter requests / second."
     NATS.status()
 end
 
