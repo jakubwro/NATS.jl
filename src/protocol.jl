@@ -64,7 +64,8 @@ The CONNECT message is the client version of the `INFO` message. Once the client
 $(TYPEDFIELDS)
 """
 struct Connect <: ProtocolMessage
-    "Turns on [`+OK`](./#NATS.Ok) protocol acknowledgements."
+    # TODO: restore link #NATS.Ok
+    "Turns on `+OK` protocol acknowledgements."
     verbose::Bool
     "Turns on additional strict format checking, e.g. for properly formed subjects."
     pedantic::Bool
@@ -82,7 +83,8 @@ struct Connect <: ProtocolMessage
     lang::String
     "The version of the client."
     version::String
-    "Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving [`INFO`](./#NATS.Info) messages with known servers it can reconnect to."
+    # TODO: restore link ./#NATS.Info
+    "Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving `INFO` messages with known servers it can reconnect to."
     protocol::Union{Int, Nothing}
     "If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`."
     echo::Union{Bool, Nothing}

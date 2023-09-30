@@ -167,10 +167,11 @@ function reconnect(nc::Connection, host, port, con_msg)
     lock(state.lock) do; nc.outbox = new_outbox end
 end
 
+#TODO: restore link #NATS.Connect
 """
     connect([host, port; kw...])
 Initialize and return `Connection`.
-See [`Connect protocol message`](../protocol/#NATS.Connect).
+See `Connect protocol message`.
 """
 function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, kw...)
     if default && !isnothing(state.default_connection)
