@@ -239,7 +239,7 @@ end
 function process(nc::Connection, info::Info)
     @debug "New INFO received."
     put!(nc.info, info)
-    while nc.info.n_avail_items > 1
+    while Base.n_avail(nc.info) > 1
         @debug "Dropping old info"
         take!(nc.info)
     end
