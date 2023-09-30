@@ -26,6 +26,13 @@ jobs:
           - 4222:4222
 
     steps:
+      - name: "Start reply service"
+        run: |
+          docker ps
+          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
+          container_id=`docker container start $name`
+          sleep 2
+          docker logs $container_id
       - name: Benchmark NATS with CLI
         run: |
           docker run --network ${{ job.container.network }} --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16
@@ -38,4 +45,7 @@ jobs:
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
           JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --project test/benchmarks.jl
+      - name: "Stop services"
+        run: |
+          docker kill $(docker ps -q )
 
