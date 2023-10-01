@@ -226,6 +226,6 @@ end
     nc = NATS.connect()
     con_msg = NATS.from_kwargs(NATS.Connect, NATS.DEFAULT_CONNECT_ARGS, (protocol=100,))
     NATS.send(nc, con_msg)
-    sleep(10)
+    sleep(5)
     @test nc.status == NATS.CONNECTED
 end
