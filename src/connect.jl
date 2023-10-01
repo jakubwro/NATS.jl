@@ -97,7 +97,7 @@ function sendloop(nc::Connection, io::IO)
             error("Outbox is closed.")
         end
         pending = Base.n_avail(nc.outbox)
-        buf = IOBuffer()
+        buf = IOBuffer() # TODO: maybe this buffering is not necessary.
         batch = min(max(1, pending), 5000)
 
         for _ in 1:batch
@@ -107,10 +107,8 @@ function sendloop(nc::Connection, io::IO)
             end
             show(buf, mime, msg)
         end
-        begin
-            write(io, take!(buf))
-            flush(io)
-        end
+        write(io, take!(buf))
+        flush(io)
     end
 end
 
