@@ -98,7 +98,7 @@ function sendloop(nc::Connection, io::IO)
         end
         pending = Base.n_avail(nc.outbox)
         buf = IOBuffer()
-        batch = min(pending, 5000)
+        batch = min(max(1, pending), 5000)
 
         for _ in 1:batch
             msg = take!(nc.outbox)
@@ -107,7 +107,10 @@ function sendloop(nc::Connection, io::IO)
             end
             show(buf, mime, msg)
         end
-        write(io, take!(buf))
+        begin
+            write(io, take!(buf))
+            flush(io)
+        end
     end
 end
 
@@ -117,13 +120,24 @@ end
 
 function reconnect(nc::Connection, host, port, con_msg)
     sock = retry(socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
+    
+    info = next_protocol_message(sock)
+    read_stream = sock
+    write_stream = sock
+
+    # @show fetch(nc.info)
+    if !isnothing(info.tls_required) && info.tls_required
+        (read_stream, write_stream) = upgrade_to_tls(sock)
+        @info "Socket upgraded"
+    end
+    send(nc, con_msg)
     lock(state.lock) do; nc.status = CONNECTED end
-    sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, sock) end
+    sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, write_stream) end
     # TODO: better monitoring of sender with `bind`.
-    # errormonitor(sender_task)
+    errormonitor(sender_task)
     try
         while true
-            process(nc, next_protocol_message(sock))
+            process(nc, next_protocol_message(read_stream))
         end
     catch err
         @error err
@@ -144,7 +158,6 @@ function reconnect(nc::Connection, host, port, con_msg)
     # end
     @info "Disconnected. Trying to reconnect."
     new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
-    put!(new_outbox, con_msg)
     # TODO: restore old subs.
     
     migrated = []
@@ -179,7 +192,6 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
     end
     nc = Connection()
     connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, kw)
-    send(nc, connect_msg)
     reconnect_task = Base.Threads.Task(() ->  disable_sigint() do; while true reconnect(nc, host, port, connect_msg) end end)
     # Setting sticky flag to false makes processing 10x slower when running with multiple threads.
     # reconnect_task.sticky = false

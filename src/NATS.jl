@@ -5,7 +5,9 @@ using Random
 using Sockets
 using StructTypes
 using JSON3
+using OpenSSL
 using DocStringExtensions
+using BufferedStreams
 
 import Base: show, convert, close
 
@@ -17,6 +19,7 @@ include("parser.jl")
 include("headers.jl")
 include("convert.jl")
 include("show.jl")
+include("tls.jl")
 include("connect.jl")
 include("pubsub.jl")
 include("reqreply.jl")

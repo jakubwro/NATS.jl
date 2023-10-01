@@ -4,8 +4,11 @@ authors = ["Jakub Wronowski <jakubwro@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+BufferedStreams = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
+OpenSSL = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"

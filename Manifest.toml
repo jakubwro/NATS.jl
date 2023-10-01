@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "352650bd4f0389ee46982e3bfc1a025aced6d1d6"
+project_hash = "0c06cded154436e2dcd9351df09b689302fdcbb2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -13,6 +13,16 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[deps.BitFlags]]
+git-tree-sha1 = "43b1a4a8f797c1cddadf60499a8a077d4af2cd2d"
+uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
+version = "0.1.7"
+
+[[deps.BufferedStreams]]
+git-tree-sha1 = "4ae47f9a4b1dc19897d3743ff13685925c5202ec"
+uuid = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
+version = "1.2.1"
 
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
@@ -45,6 +55,12 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+
+[[deps.JLLWrappers]]
+deps = ["Artifacts", "Preferences"]
+git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
+uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
+version = "1.5.0"
 
 [[deps.JSON3]]
 deps = ["Dates", "Mmap", "Parsers", "PrecompileTools", "StructTypes", "UUIDs"]
@@ -93,6 +109,12 @@ version = "2.3.0"
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
+[[deps.MbedTLS]]
+deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "Random", "Sockets"]
+git-tree-sha1 = "03a9b9718f5682ecb107ac9f7308991db4ce395b"
+uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
+version = "1.1.7"
+
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
@@ -108,6 +130,18 @@ version = "2022.10.11"
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
+
+[[deps.OpenSSL]]
+deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
+git-tree-sha1 = "51901a49222b09e3743c65b8847687ae5fc78eb2"
+uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
+version = "1.4.1"
+
+[[deps.OpenSSL_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "ceeda72c9fd6bbebc4f4f598560789145a8b6c4c"
+uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
+version = "3.0.11+0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "2e73fe17cac3c62ad1aebe70d44c963c3cfdc3e3"
