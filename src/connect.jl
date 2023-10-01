@@ -119,24 +119,35 @@ end
 function reconnect(nc::Connection, host, port, con_msg)
     sock = retry(socket_connect, delays=SOCKET_CONNECT_DELAYS)(port)
     
-    info = next_protocol_message(sock)
     read_stream = sock
     write_stream = sock
 
+    process(nc, next_protocol_message(read_stream))
+    info = fetch(nc.info)
+    send(nc, con_msg)
+    
     # @show fetch(nc.info)
     if !isnothing(info.tls_required) && info.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
         @info "Socket upgraded"
     end
-    send(nc, con_msg)
+
     lock(state.lock) do; nc.status = CONNECTED end
+
+    receiver_task = Threads.Task(() -> begin
+        while true
+            process(nc, next_protocol_message(read_stream))
+        end
+    end)
+    Base.Threads._spawn_set_thrpool(receiver_task, :default)
+    Base.Threads.schedule(receiver_task)
+    errormonitor(receiver_task)
+
     sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, write_stream) end
     # TODO: better monitoring of sender with `bind`.
     errormonitor(sender_task)
     try
-        while true
-            process(nc, next_protocol_message(read_stream))
-        end
+        wait(receiver_task)
     catch err
         @error err
         close(nc.outbox)
