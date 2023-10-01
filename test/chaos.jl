@@ -204,7 +204,7 @@ end
                 publish(subject; payload = "Hi!")
             end
             Threads.atomic_add!(published_count, 10)
-            wait(timer)
+            try wait(timer) catch end
         end
         @info "Publisher finished."
     end
