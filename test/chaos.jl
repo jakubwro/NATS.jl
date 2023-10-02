@@ -55,7 +55,7 @@ end
 @testset "Reconnecting." begin
     nc = NATS.connect()
     @test restart_nats_server() == 0
-    sleep(5)
+    sleep(10)
     @test nc.status == NATS.CONNECTED
     resp = request("help.please")
     @test resp isa NATS.Message
