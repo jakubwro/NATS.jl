@@ -40,7 +40,7 @@ function reconnect(nc::Connection, host, port, con_msg)
         istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
         istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
         close(nc.outbox)
-        close(sock)
+        # close(sock) # TODO
     end
     try wait(sender_task) catch end
     try wait(receiver_task) catch end
