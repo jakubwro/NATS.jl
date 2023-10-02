@@ -5,26 +5,21 @@ function socket_reconnect(nc::Connection, host, port)
     info_msg = next_protocol_message(sock)
     info_msg isa Info || error("Expected INFO, received $info_msg")
     process(nc, info_msg)
-    sock
-end
-
-function reconnect(nc::Connection, host, port, con_msg)
-    @info "Trying to connect nats://$host:$port"
-    start_time = time()
-    sock = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
-    @info "Connected after $(time() - start_time) s."
-
-    read_stream = sock
-    write_stream = sock
-
-    info_msg = fetch(nc.info)
-    
     @info "Server info" info_msg
     # @show fetch(nc.info)
     if !isnothing(info_msg.tls_required) && info_msg.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
         @info "Socket upgraded"
     end
+    read_stream, write_stream
+end
+
+function reconnect(nc::Connection, host, port, con_msg)
+    @info "Trying to connect nats://$host:$port"
+    start_time = time()
+    read_stream, write_stream = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
+    @info "Connected after $(time() - start_time) s."
+
     send(nc, con_msg)
 
     lock(state.lock) do; nc.status = CONNECTED end
