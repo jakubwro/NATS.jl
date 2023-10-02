@@ -2,6 +2,7 @@
 
 function reconnect(nc::Connection, host, port, con_msg)
     @info "Trying to connect nats://$host:$port"
+    start_time = time()
     sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
     @info "Connected after $(time() - start_time) s."
 
