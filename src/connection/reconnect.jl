@@ -7,6 +7,7 @@ function socket_reconnect(nc::Connection, host, port)
     process(nc, info_msg)
     @info "Server info" info_msg
     # @show fetch(nc.info)
+    read_stream, write_stream = sock, sock
     if !isnothing(info_msg.tls_required) && info_msg.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
         @info "Socket upgraded"
