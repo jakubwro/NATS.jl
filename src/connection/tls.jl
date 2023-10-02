@@ -10,11 +10,14 @@ end
 function get_tls_input_buffered(ssl::SSLStream)
     io = Base.BufferStream()
     t = Threads.@spawn :default begin # TODO: make it sticky.
-        while !eof(ssl)
-            av = readavailable(ssl)
-            write(io, av)
+        try
+            while !eof(ssl)
+                av = readavailable(ssl)
+                write(io, av)
+            end
+        finally
+            close(io)
         end
-        @info "TLS connection EOF."
     end
     errormonitor(t)
     BufferedInputStream(io, 1)
