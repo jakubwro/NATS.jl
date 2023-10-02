@@ -9,10 +9,13 @@ function reconnect(nc::Connection, host, port, con_msg)
     read_stream = sock
     write_stream = sock
 
-    process(nc, next_protocol_message(read_stream))
+    
+    process(nc, @show next_protocol_message(read_stream))
+    
+    @info "Waiting for info"
     info = fetch(nc.info)
     send(nc, con_msg)
-    
+    @info "Connect message sent"
     # @show fetch(nc.info)
     if !isnothing(info.tls_required) && info.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
@@ -20,7 +23,7 @@ function reconnect(nc::Connection, host, port, con_msg)
     end
 
     lock(state.lock) do; nc.status = CONNECTED end
-
+    @info "Status is CONNECTED"
     receiver_task = Threads.Task(() -> begin
         while !eof(read_stream)
             process(nc, next_protocol_message(read_stream))
