@@ -25,7 +25,7 @@ end
 @testset "Reconnecting." begin
     nc = NATS.connect()
     @test restart_nats_server() == 0
-    sleep(5)
+    sleep(10)
     @test nc.status == NATS.CONNECTED
     resp = request("help.please")
     @test resp isa NATS.Message
@@ -51,15 +51,6 @@ end
 #     sleep(0.1)
 #     @test length(NATS.state.handlers) == 0
 # end
-
-@testset "Reconnecting." begin
-    nc = NATS.connect()
-    @test restart_nats_server() == 0
-    sleep(10)
-    @test nc.status == NATS.CONNECTED
-    resp = request("help.please")
-    @test resp isa NATS.Message
-end
 
 @testset "Subscribtion survive reconnect." begin
     nc = NATS.connect()
