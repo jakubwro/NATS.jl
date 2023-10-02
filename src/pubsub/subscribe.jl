@@ -15,12 +15,13 @@ function subscribe(
 )
     arg_t = argtype(f)
     find_msg_conversion_or_throw(arg_t)
+    f_typed = _fast_call(f, arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20)
     sub = Sub(subject, queue_group, sid)
     c = if async_handlers
-            _start_async_handler(_fast_call(f, arg_t), subject)
+            _start_async_handler(f_typed, subject)
         else
-            _start_handler(_fast_call(f, arg_t), subject)
+            _start_handler(f_typed, subject)
         end
     @lock NATS.state.lock begin
         state.handlers[sid] = c
