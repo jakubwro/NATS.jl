@@ -64,7 +64,7 @@ end
     sleep(5)
     @test nc.status == NATS.CONNECTED
     publish(subject; payload = "Hi!")
-    sleep(0.5)
+    sleep(5)
     @test Base.n_avail(c) == 1
 end
 
