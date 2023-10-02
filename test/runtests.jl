@@ -13,7 +13,7 @@ include("util.jl")
 @info "Running with $(Threads.nthreads()) threads."
 
 include("utils.jl")
-include("protocol_parsing.jl")
+include("protocol.jl")
 
 function have_nats()
     try
@@ -30,6 +30,16 @@ function have_nats()
 end
 
 if have_nats()
-    include("core_nats.jl")
+    include("connection.jl")
+    include("pubsub.jl")
+    include("reqreply.jl")
     include("fallback_handler.jl")
+
+    @testset "All default connection subs should be closed" begin
+        nc = NATS.connect()
+        @test isempty(NATS.state.handlers)
+        @test isempty(nc.unsubs)
+    end
+
+    NATS.status()
 end
