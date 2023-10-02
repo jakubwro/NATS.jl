@@ -15,7 +15,7 @@ include("util.jl")
 include("utils.jl")
 include("protocol.jl")
 
-function have_nats()
+function is_nats_available()
     try
         Sockets.getaddrinfo(NATS.NATS_HOST)
         nc = NATS.connect(default = false)
@@ -29,7 +29,13 @@ function have_nats()
     end
 end
 
-if have_nats()
+have_nats = is_nats_available()
+
+@testset "Shuold run connected tests" begin
+    @test have_nats
+end
+
+if have_nats
     include("connection.jl")
     include("pubsub.jl")
     include("reqreply.jl")
