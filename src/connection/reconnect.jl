@@ -1,27 +1,27 @@
 # Stuff for gracefuly handling reconnects, especially restoring subscriptions.
 
+function socket_reconnect(nc::Connection, host, port)
+    sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
+    info_msg = next_protocol_message(sock)
+    if !(info_msg isa Info)
+        error("Expected INFO, received $info_msg")
+    end
+    process(nc, info_msg)
+    sock
+end
+
 function reconnect(nc::Connection, host, port, con_msg)
     @info "Trying to connect nats://$host:$port"
     start_time = time()
-    sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
+    sock = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
     @info "Connected after $(time() - start_time) s."
 
     read_stream = sock
     write_stream = sock
 
-    info_msg = nothing
-    while true
-        try
-            info_msg = next_protocol_message(read_stream)
-        catch err
-            @error err
-        end
-    end
-    @show info_msg
+    info_msg = fetch(nc.info)
     
-    
-    @info "Waiting for info"
-    @info "Connect message sent"
+    @info "Server info" info_msg
     # @show fetch(nc.info)
     if !isnothing(info_msg.tls_required) && info_msg.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
