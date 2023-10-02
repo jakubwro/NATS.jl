@@ -5,7 +5,7 @@ using Random
 using Sockets
 using StructTypes
 using JSON3
-using OpenSSL
+using MbedTLS
 using DocStringExtensions
 using BufferedStreams
 
@@ -14,7 +14,7 @@ import Base: show, convert, close
 const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"
 const NATS_HOST = get(ENV, "NATS_HOST", "localhost")
-const NATS_PORT = parse(Int, get(ENV, "NATS_PORT", "4222"))
+const NATS_PORT = parse(Int, get(ENV, "NATS_PORT", "4223"))
 const ERROR_THROTTLING_SECONDS = 5
 const DEFAULT_CONNECT_ARGS = (
     verbose= false,
