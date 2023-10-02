@@ -22,6 +22,9 @@ function sendloop(nc::Connection, io::IO)
         buf = IOBuffer() # TODO: maybe this buffering is not necessary.
         batch = min(max(1, pending), 5000)
 
+        for msg in buffer
+            show(buf, mime, msg)
+        end
         # send_buf = []
         for _ in 1:batch
             msg = take!(nc.outbox)
