@@ -1,3 +1,5 @@
+# Read next protocol message from input stream.
+
 const CRLF = "\r\n"
 const SEPARATOR = ' '
 

@@ -1,8 +1,4 @@
 
-const Message = Union{Msg, HMsg}
-
-payload(msg::Msg) = msg.payload
-payload(hmsg::HMsg) = hmsg.payload
 
 function argtype(handler)
     signature = first(methods(handler)).sig # TODO: handle multi methods.

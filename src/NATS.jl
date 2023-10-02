@@ -13,14 +13,8 @@ import Base: show, convert, close
 
 include("init.jl")
 include("consts.jl")
-include("protocol.jl")
-include("utils.jl")
-include("parser.jl")
-include("headers.jl")
-include("convert.jl")
-include("show.jl")
-include("tls.jl")
-include("connect.jl")
+include("protocol/protocol.jl")
+include("connection/connection.jl")
 include("pubsub.jl")
 include("reqreply.jl")
 

@@ -1,3 +1,5 @@
+# Headers parsig and serializing. Headers are represented as vector of paris of strings.
+
 const Header = Pair{String, String}
 const Headers = Vector{Header}
 
