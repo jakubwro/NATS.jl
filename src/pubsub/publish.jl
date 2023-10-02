@@ -7,12 +7,17 @@ function publish(
     subject::String;
     connection::Connection = default_connection(),
     reply_to::Union{String, Nothing} = nothing,
-    payload = nothing,
+    payload::Union{String, Nothing} = nothing,
     headers::Union{Nothing, Headers} = nothing
 )
     publish(subject, (payload, headers); connection, reply_to)
 end
 
+"""
+$(SIGNATURES)
+
+Publish message to a subject.
+"""
 function publish(
     subject::String,
     data;
