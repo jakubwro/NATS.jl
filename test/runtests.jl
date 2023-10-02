@@ -35,10 +35,20 @@ if have_nats()
     include("reqreply.jl")
     include("fallback_handler.jl")
 
-    @testset "All default connection subs should be closed" begin
-        nc = NATS.connect()
+    @testset "All subs should be closed" begin
         @test isempty(NATS.state.handlers)
-        @test isempty(nc.unsubs)
+
+        connections = NATS.Connection[]
+        if !isnothing(NATS.state.default_connection)
+            push!(connections, NATS.state.default_connection)
+        end
+        append!(connections, NATS.state.connections)
+
+        for nc in connections
+            @test isempty(nc.subs)
+            @test isempty(nc.unsubs)
+            @test Base.n_avail(nc.outbox) == 0
+        end
     end
 
     NATS.status()

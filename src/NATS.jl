@@ -15,8 +15,8 @@ include("init.jl")
 include("consts.jl")
 include("protocol/protocol.jl")
 include("connection/connection.jl")
-include("pubsub.jl")
-include("reqreply.jl")
+include("pubsub/pubsub.jl")
+include("reqreply/reqreply.jl")
 
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
 
