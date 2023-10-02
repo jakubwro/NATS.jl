@@ -25,7 +25,9 @@ function reconnect(nc::Connection, host, port, con_msg)
     end)
     Base.Threads._spawn_set_thrpool(receiver_task, :default)
     Base.Threads.schedule(receiver_task)
-    sender_task = Threads.@spawn :default disable_sigint() do; sendloop(nc, write_stream) end
+    sender_task = Threads.Task(() -> sendloop(nc, write_stream))
+    Base.Threads._spawn_set_thrpool(sender_task, :default)
+    Base.Threads.schedule(sender_task)
 
     c = Channel()
     bind(c, receiver_task)
