@@ -54,9 +54,12 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       # TODO: chaos is broken for TLS connections
-      # - run: |
-      #     julia --project -e 'using Pkg; Pkg.instantiate()'
-      #     JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --code-coverage=user --project test/chaos.jl
+      - run: |
+          julia --project -e 'using Pkg; Pkg.instantiate()'
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --code-coverage=user --project test/benchmarks.jl
+      - run: |
+          julia --project -e 'using Pkg; Pkg.instantiate()'
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --code-coverage=user --project test/chaos.jl
       - name: "Stop services"
         run: |
           docker kill $(docker ps -q )
