@@ -31,17 +31,12 @@ function reconnect(nc::Connection, host, port, con_msg)
 
     lock(state.lock) do; nc.status = CONNECTED end
     @info "Status is CONNECTED"
-    receiver_task = Threads.Task(() -> begin
+    receiver_task = spawn_sticky_task(() -> begin
         while !eof(read_stream)
             process(nc, next_protocol_message(read_stream))
         end
     end)
-    Base.Threads._spawn_set_thrpool(receiver_task, :default)
-    Base.Threads.schedule(receiver_task)
-    sender_task = Threads.Task(() -> sendloop(nc, write_stream))
-    Base.Threads._spawn_set_thrpool(sender_task, :default)
-    Base.Threads.schedule(sender_task)
-
+    sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream))
     c = Channel()
     bind(c, receiver_task)
     bind(c, sender_task)

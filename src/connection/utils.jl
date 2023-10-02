@@ -55,3 +55,13 @@ function from_kwargs(T::Type, defaults, kwargs)
     end
     T(args...)
 end
+
+function spawn_sticky_task(f)
+    t = Threads.Task(f)
+    # Setting sticky flag to false makes processing 10x slower when running with multiple threads.
+    t.sticky = true
+    Base.Threads._spawn_set_thrpool(t, :default)
+    Base.Threads.schedule(t)
+    errormonitor(t)
+    t
+end
