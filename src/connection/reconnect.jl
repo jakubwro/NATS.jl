@@ -3,9 +3,7 @@
 function socket_reconnect(nc::Connection, host, port)
     sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
     info_msg = next_protocol_message(sock)
-    if !(info_msg isa Info)
-        error("Expected INFO, received $info_msg")
-    end
+    info_msg isa Info || error("Expected INFO, received $info_msg")
     process(nc, info_msg)
     sock
 end
@@ -43,13 +41,8 @@ function reconnect(nc::Connection, host, port, con_msg)
     try
         wait(c)
     catch err
-        if istaskfailed(receiver_task)
-            @error "Receiver task failed:" receiver_task.result
-        end
-        if istaskfailed(sender_task)
-            @error "Sender task failed:" sender_task.result
-        end
-
+        taskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
+        istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
         close(nc.outbox)
         close(sock)
     end
