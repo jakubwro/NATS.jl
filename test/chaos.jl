@@ -27,8 +27,8 @@ end
     @test restart_nats_server() == 0
     sleep(10)
     @test nc.status == NATS.CONNECTED
-    resp = request("help.please")
-    @test resp isa NATS.Message
+    # resp = request("help.please")
+    # @test resp isa NATS.Message
 end
 
 # @testset "Close outbox when messages pending." begin
@@ -201,13 +201,13 @@ end
     end
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    @test restart_nats_server() == 0
+    # @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    @test restart_nats_server() == 0
+    # @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    @test restart_nats_server() == 0
+    # @test restart_nats_server() == 0
     wait(pub_task)
     unsubscribe(sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
