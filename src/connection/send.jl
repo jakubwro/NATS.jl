@@ -1,5 +1,5 @@
 function send(nc::Connection, message::ProtocolMessage)
-    # When connection is lost outbox might be closed. Retry until reconnected.
+    # When connection is lost outbox might be closed. Retry until new outbox is there.
     delays = vcat(0.001, 0.01, repeat([0.1], 100))
     retry(put!; delays)(outbox(nc), message)
 end
