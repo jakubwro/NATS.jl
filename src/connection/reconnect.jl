@@ -12,13 +12,13 @@ function socket_reconnect(nc::Connection, host, port)
         (read_stream, write_stream) = upgrade_to_tls(sock)
         @info "Socket upgraded"
     end
-    read_stream, write_stream
+    sock, read_stream, write_stream
 end
 
 function reconnect(nc::Connection, host, port, con_msg)
     @info "Trying to connect nats://$host:$port"
     start_time = time()
-    read_stream, write_stream = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
+    sock, read_stream, write_stream = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
     @info "Connected after $(time() - start_time) s."
 
     send(nc, con_msg)
@@ -40,7 +40,7 @@ function reconnect(nc::Connection, host, port, con_msg)
         istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
         istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
         close(nc.outbox)
-        # close(sock) # TODO
+        close(sock) # TODO
     end
     try wait(sender_task) catch end
     try wait(receiver_task) catch end
