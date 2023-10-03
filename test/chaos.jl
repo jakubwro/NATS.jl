@@ -106,7 +106,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request(subject; timer=Timer(60))
+            msg = request(subject; timer=Timer(20))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -115,7 +115,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(120); close(cond); close(results) end
+    @async begin sleep(40); close(cond); close(results) end
     sleep(5)
     @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
@@ -151,7 +151,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            delays = rand(0.01:0.01:0.3, 15) # retries
+            delays = rand(0.01:0.01:0.3, 5) # retries
             msg = retry(request; delays)(subject; timer=Timer(10))
             put!(results, msg)
             if Base.n_avail(results) == n
@@ -161,7 +161,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(120); close(cond); close(results) end
+    @async begin sleep(50); close(cond); close(results) end
     sleep(2)
     @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
