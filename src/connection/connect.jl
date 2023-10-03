@@ -43,7 +43,60 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
 
     nc = Connection(info_msg)
     # TODO: upgrade TLS here, to not catch timeout.
-    spawn_sticky_task(() ->  while true reconnect(nc, host, port, connect_msg; sock, read_stream, write_stream) end)
+    spawn_sticky_task(() ->
+        begin
+            while true # TODO: While is drained.
+                receiver_task = spawn_sticky_task(() -> while !eof(read_stream) process(nc, next_protocol_message(read_stream)) end)
+                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream)) #TODO: while !eof
+
+                err_channel = Channel()
+                bind(err_channel, receiver_task)
+                bind(err_channel, sender_task)
+
+                send(nc, connect_msg)
+                status(nc, CONNECTED)
+                
+                try
+                    wait(err_channel)
+                catch err
+                    istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
+                    istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
+                    close(nc.outbox)
+                    close(sock)
+                end
+                try wait(sender_task) catch end
+                try wait(receiver_task) catch end
+                @info "Disconnected. Trying to reconnect."
+                status(nc, RECONNECTING)
+
+                new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
+                # TODO: restore old subs.
+                
+                migrated = []
+                for (sid, sub) in pairs(nc.subs)
+                    push!(migrated, sub)
+                    if haskey(nc.unsubs, sid)
+                        push!(migrated, Unsub(sid, nc.unsubs[sid]))
+                    end
+                end
+                @info "Migrating $(length(migrated)) subs to a new connection."
+                for msg in migrated
+                    put!(new_outbox, msg)
+                end
+                for msg in collect(nc.outbox)
+                    if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
+                        put!(new_outbox, msg)
+                    end
+                end
+                lock(state.lock) do; nc.outbox = new_outbox end
+                
+                @info "Trying to connect nats://$host:$port"
+                start_time = time()
+                sock, read_stream, write_stream, info_msg = retry(init_streams, delays=SOCKET_CONNECT_DELAYS)(host, port, options)
+                info(nc, info_msg)
+                @info "Connected after $(time() - start_time) s."
+            end
+        end)
 
     if default
         lock(state.lock) do; state.default_connection = nc end
