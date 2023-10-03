@@ -11,35 +11,40 @@ function validate_connect_options(server_info::Info, options)
 end
 
 function init_streams(host, port, options)
-    sock = Sockets.connect(port) # TODO: retry logic.
-    info_msg = next_protocol_message(sock)
-    info_msg isa Info || error("Expected INFO, received $info_msg")
-    validate_connect_options(info_msg, options)
-    # @show fetch(nc.info)
-    read_stream, write_stream = sock, sock
-    if !isnothing(info_msg.tls_required) && info_msg.tls_required
-        (read_stream, write_stream) = upgrade_to_tls(sock)
-        @info "Socket upgraded"
+    sock = Sockets.connect(port)
+    try
+        info_msg = next_protocol_message(sock)
+        info_msg isa Info || error("Expected INFO, received $info_msg")
+        validate_connect_options(info_msg, options)
+        # @show fetch(nc.info)
+        read_stream, write_stream = sock, sock
+        if !isnothing(info_msg.tls_required) && info_msg.tls_required
+            (read_stream, write_stream) = upgrade_to_tls(sock)
+            @info "Socket upgraded"
+        end
+
+        # TODO: sign nonce here.
+        connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, options)
+        show(write_stream, MIME_PROTOCOL(), connect_msg)
+        flush(write_stream)
+
+        show(write_stream, MIME_PROTOCOL(), Ping())
+        flush(write_stream)
+
+        msg = next_protocol_message(read_stream)
+        msg isa Union{Ok, Err, Pong} || error("Expected +OK, -ERR or PONG , received $msg")
+        if msg isa Err
+            error(msg.message)
+        elseif msg isa Ok
+            # Clinet opted for a verbose connection, consume PONG to not mess logs.
+            next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
+        end
+
+        sock, read_stream, write_stream, info_msg
+    catch
+        close(sock)
+        rethrow()
     end
-
-    # TODO: sign nonce here.
-    connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, options)
-    show(write_stream, MIME_PROTOCOL(), connect_msg)
-    flush(write_stream)
-
-    show(write_stream, MIME_PROTOCOL(), Ping())
-    flush(write_stream)
-
-    msg = next_protocol_message(read_stream)
-    msg isa Union{Ok, Err, Pong} || error("Expected +OK, -ERR or PONG , received $msg")
-    if msg isa Err
-        error(msg.message)
-    elseif msg isa Ok
-        # Clinet opted for a verbose connection, consume PONG to not mess logs.
-        next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
-    end
-
-    sock, read_stream, write_stream, info_msg
 end
 
 function reopen_outbox(nc::Connection)
