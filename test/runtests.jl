@@ -44,13 +44,7 @@ if have_nats
     @testset "All subs should be closed" begin
         @test isempty(NATS.state.handlers)
 
-        connections = NATS.Connection[]
-        if !isnothing(NATS.state.default_connection)
-            push!(connections, NATS.state.default_connection)
-        end
-        append!(connections, NATS.state.connections)
-
-        for nc in connections
+        for nc in NATS.state.connections
             @test isempty(nc.subs)
             @test isempty(nc.unsubs)
             @test Base.n_avail(nc.outbox) == 0
