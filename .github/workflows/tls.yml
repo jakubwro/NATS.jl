@@ -1,5 +1,5 @@
 
-name: Secure connection tests
+name: TLS tests
 
 on: 
   push:
