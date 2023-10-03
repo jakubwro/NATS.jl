@@ -35,6 +35,7 @@ status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 info(c::Connection)::Info = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
 outbox(c::Connection) = @lock c.lock c.outbox
+outbox(c::Connection, ch::Channel{ProtocolMessage}) = @lock c.lock c.outbox = ch
 
 mutable struct State
     default_connection::Union{Connection, Nothing}
