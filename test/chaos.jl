@@ -27,8 +27,8 @@ end
     @test restart_nats_server() == 0
     sleep(10)
     @test nc.status == NATS.CONNECTED
-    # resp = request("help.please")
-    # @test resp isa NATS.Message
+    resp = request("help.please")
+    @test resp isa NATS.Message
 end
 
 # @testset "Close outbox when messages pending." begin

@@ -102,17 +102,17 @@ end
     NATS.status()
 end
 
-# @testset "External requests per second." begin
-#     connection = NATS.connect(default = false)
-#     counter = 0
-#     tm = Timer(1.0)
-#     while isopen(tm)
-#         res = request("help.please"; connection)
-#         counter = counter + 1
-#     end
-#     @info "Exteranal service: $counter requests / second."
-#     NATS.status()
-# end
+@testset "External requests per second." begin
+    connection = NATS.connect(default = false)
+    counter = 0
+    tm = Timer(1.0)
+    while isopen(tm)
+        res = request("help.please"; connection)
+        counter = counter + 1
+    end
+    @info "Exteranal service: $counter requests / second."
+    NATS.status()
+end
 
 @testset "Publisher benchmark." begin
     connection = NATS.connect(default = false)

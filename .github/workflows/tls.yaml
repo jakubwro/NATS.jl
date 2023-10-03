@@ -36,7 +36,7 @@ jobs:
       - name: "Start reply service"
         run: |
           docker ps
-          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
+          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 --tlsca test/certs/nats.crt reply help.please 'OK, I CAN HELP!!!'`
           container_id=`docker container start $name`
           sleep 2
           docker logs $container_id
