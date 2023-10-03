@@ -1,10 +1,7 @@
 function send(nc::Connection, message::ProtocolMessage)
-    while !isopen(nc.outbox) # TODO: this check is not threadsafe, use try catch.
-        sleep(1)
-    end
     # When connection is lost outbox might be closed. Retry until reconnected.
-    #retry(put!)(nc.outbox, message)
-    put!(nc.outbox, message)
+    delays = vcat(0.001, 0.01, repeat([0.1], 100))
+    retry(put!; delays)(outbox(nc), message)
 end
 
 const buffer = ProtocolMessage[]
