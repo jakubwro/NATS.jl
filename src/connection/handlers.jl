@@ -5,12 +5,8 @@ function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
 end
 
 function process(nc::Connection, info::Info)
-    @debug "New INFO received."
-    put!(nc.info, info)
-    while Base.n_avail(nc.info) > 1
-        @debug "Dropping old info"
-        take!(nc.info)
-    end
+    @info "New INFO received: ." info
+    info(nc, info)
 end
 
 function process(nc::Connection, ping::Ping)

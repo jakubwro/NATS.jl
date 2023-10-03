@@ -18,16 +18,23 @@ end
 
 mutable struct Connection
     status::ConnectionStatus
-    info::Channel{Info}
+    info::Info
     outbox::Channel{ProtocolMessage}
     subs::Dict{String, Sub}
     unsubs::Dict{String, Int64}
     stats::Stats
     rng::AbstractRNG
-    function Connection()
-        new(CONNECTING, Channel{Info}(10), Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister())
+    lock::ReentrantLock
+    function Connection(info::Info)
+        new(CONNECTING, info, Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister(), ReentrantLock())
     end
 end
+
+status(c::Connection)::ConnectionStatus = @lock c.lock c.status
+status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
+info(c::Connection)::Info = @lock c.lock c.info
+info(c::Connection, info::Info) = @lock c.lock c.info = info
+outbox(c::Connection) = @lock c.lock c.outbox
 
 mutable struct State
     default_connection::Union{Connection, Nothing}
@@ -74,10 +81,6 @@ function default_connection()
     end
     state.default_connection
 end
-
-# info(nc::Connection) = fetch(nc.info)
-status(nc::Connection) = @lock state.lock nc.status
-outbox(nc::Connection) = @lock state.lock nc.outbox
 
 # show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
 #     status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")

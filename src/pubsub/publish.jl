@@ -29,6 +29,7 @@ function publish(
     headers_bytes = repr(MIME_HEADERS(), data)
     headers = isempty(headers_bytes) ? nothing : String(headers_bytes)
 
+    # TODO: validate with connection.info.max_payload
     if isnothing(headers)
         send(connection, Pub(subject, reply_to, sizeof(payload), payload))
     else

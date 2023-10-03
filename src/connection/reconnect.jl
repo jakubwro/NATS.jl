@@ -1,12 +1,11 @@
 # Stuff for gracefuly handling reconnects, especially restoring subscriptions.
 
-function socket_reconnect(nc::Connection, host, port)
-    sock = retry(Sockets.connect, delays=SOCKET_CONNECT_DELAYS)(port)
+function socket_reconnect(nc::Connection, host, port, con_msg)
+    sock = Sockets.connect(port)
     info_msg = next_protocol_message(sock)
     info_msg isa Info || error("Expected INFO, received $info_msg")
-    process(nc, info_msg)
+    # process(nc, info_msg)
     @info "Server info" info_msg
-    # @show fetch(nc.info)
     read_stream, write_stream = sock, sock
     if !isnothing(info_msg.tls_required) && info_msg.tls_required
         (read_stream, write_stream) = upgrade_to_tls(sock)
@@ -15,16 +14,13 @@ function socket_reconnect(nc::Connection, host, port)
     sock, read_stream, write_stream
 end
 
-function reconnect(nc::Connection, host, port, con_msg)
-    @info "Trying to connect nats://$host:$port"
-    start_time = time()
-    sock, read_stream, write_stream = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port)
-    @info "Connected after $(time() - start_time) s."
-
-    send(nc, con_msg)
-
-    lock(state.lock) do; nc.status = CONNECTED end
-    @info "Status is CONNECTED"
+function reconnect(nc::Connection, host, port, con_msg; sock, read_stream, write_stream)
+    if isnothing(sock) || !isopen(sock)
+        @info "Trying to connect nats://$host:$port"
+        start_time = time()
+        sock, read_stream, write_stream = retry(socket_reconnect, delays=SOCKET_CONNECT_DELAYS)(nc::Connection, host, port, con_msg)
+        @info "Connected after $(time() - start_time) s."
+    end
     receiver_task = spawn_sticky_task(() -> begin
         while !eof(read_stream)
             process(nc, next_protocol_message(read_stream))
@@ -34,13 +30,15 @@ function reconnect(nc::Connection, host, port, con_msg)
     c = Channel()
     bind(c, receiver_task)
     bind(c, sender_task)
+    send(nc, con_msg)
+    status(nc, CONNECTED)
     try
         wait(c)
     catch err
         istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
         istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
         close(nc.outbox)
-        close(sock) # TODO
+        close(sock)
     end
     try wait(sender_task) catch end
     try wait(receiver_task) catch end
