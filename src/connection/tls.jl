@@ -10,11 +10,11 @@ function upgrade_to_tls(sock::Sockets.TCPSocket)
     # MbedTLS.authmode!(conf, MbedTLS.MBEDTLS_SSL_VERIFY_REQUIRED)
     MbedTLS.rng!(conf, rng)
 
-    function show_debug(level, filename, number, msg)
-        @show level, filename, number, msg
-    end
+    # function show_debug(level, filename, number, msg)
+    #     @show level, filename, number, msg
+    # end
     
-    MbedTLS.dbg!(conf, show_debug)
+    # MbedTLS.dbg!(conf, show_debug)
     
     MbedTLS.ca_chain!(conf, MbedTLS.crt_parse_file("test/certs/nats.crt"))
     
