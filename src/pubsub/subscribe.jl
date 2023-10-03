@@ -9,7 +9,7 @@ Subscribe to a subject.
 function subscribe(
     f,
     subject::String;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     queue_group::Union{String, Nothing} = nothing,
     async_handlers = false
 )

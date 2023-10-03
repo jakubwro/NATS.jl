@@ -30,10 +30,10 @@ mutable struct Connection
     end
 end
 
-status(c::Connection)::ConnectionStatus = @lock c.lock c.status
-status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 info(c::Connection)::Info = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
+status(c::Connection)::ConnectionStatus = @lock c.lock c.status
+status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 outbox(c::Connection) = @lock c.lock c.outbox
 outbox(c::Connection, ch::Channel{ProtocolMessage}) = @lock c.lock c.outbox = ch
 
@@ -45,6 +45,32 @@ mutable struct State
     fallback_handlers::Vector{Function}
     lock::ReentrantLock
     stats::Stats
+end
+
+function connection(id::Symbol)
+    if id === :default
+        nc = @lock state.lock state.default_connection
+        isnothing(nc) && error("No default connection availabe. Call `NATS.connect(default = true)` before.")
+        nc
+    else
+        error("Connection `:$id` does not exits.")
+    end
+end
+
+function connection(id::Symbol, nc::Connection)
+    if id === :default
+        @lock state.lock state.default_connection = nc
+    else
+        error("Cannot set connection `:$id`, expected `:default`.")
+    end
+end
+
+function connection(id::Integer)
+    if id in 1:length(state.connections)
+        state.connections[id]
+    else
+        error("Connection #$id does not exists.")
+    end
 end
 
 include("utils.jl")
@@ -73,13 +99,6 @@ function status()
     println("msgs_handled:   $(state.stats.msgs_handled)         ")
     println("msgs_unhandled: $(state.stats.msgs_not_handled)        ")
     println("==========================================")
-end
-
-function default_connection()
-    if isnothing(state.default_connection)
-        error("No default connection availabe. Call `NATS.connect(default = true)` before.")
-    end
-    state.default_connection
 end
 
 # show(io::IO, nc::Connection) = print(io, typeof(nc), "(",

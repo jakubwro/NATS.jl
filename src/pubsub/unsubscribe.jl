@@ -19,7 +19,7 @@ Unsubscrible from a subject.
 """
 function unsubscribe(
     sub::Sub;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     max_msgs::Union{Int, Nothing} = nothing
 )
     unsubscribe(sub.sid; connection, max_msgs)

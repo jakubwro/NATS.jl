@@ -22,7 +22,7 @@ NATS.Msg[]
 function request(
     subject::String,
     data = nothing;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     replies = request(subject, data, 1; connection, timer)
@@ -40,7 +40,7 @@ function request(
     subject::String,
     data,
     nreplies::Integer;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
@@ -73,7 +73,7 @@ function request(
     T::Type,
     subject::String,
     data = nothing;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     result = request(subject, data; connection, timer)

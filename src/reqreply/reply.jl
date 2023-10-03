@@ -23,7 +23,7 @@ julia> unsubscribe(sub)
 function reply(
     f,
     subject::String;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     queue_group::Union{Nothing, String} = nothing,
     async_handlers = false
 )

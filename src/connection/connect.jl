@@ -36,7 +36,7 @@ function init_streams(host, port, options)
         if msg isa Err
             error(msg.message)
         elseif msg isa Ok
-            # Clinet opted for a verbose connection, consume PONG to not mess logs.
+            # Client opted for a verbose connection, consume PONG to not mess logs.
             next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
         end
 
@@ -74,7 +74,7 @@ See `Connect protocol message`.
 """
 function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, cert_file = nothing, key_file = nothing, kw...)
     if default && !isnothing(state.default_connection)
-        return default_connection() # report error instead
+        return connection(:default) # report error instead
     end
 
     options = merge(DEFAULT_CONNECT_ARGS, kw)
@@ -116,9 +116,8 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
         end)
 
     if default
-        lock(state.lock) do; state.default_connection = nc end
-    else
-        lock(state.lock) do; push!(state.connections, nc) end
+        connection(:default, nc)
     end
+    @lock state.lock push!(state.connections, nc)
     nc
 end

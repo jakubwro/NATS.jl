@@ -5,7 +5,7 @@ Publish message to a subject.
 """
 function publish(
     subject::String;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     reply_to::Union{String, Nothing} = nothing,
     payload::Union{String, Nothing} = nothing,
     headers::Union{Nothing, Headers} = nothing
@@ -21,7 +21,7 @@ Publish message to a subject.
 function publish(
     subject::String,
     data;
-    connection::Connection = default_connection(),
+    connection::Connection = connection(:default),
     reply_to::Union{String, Nothing} = nothing
 )
     payload_bytes = repr(MIME_PAYLOAD(), data)
