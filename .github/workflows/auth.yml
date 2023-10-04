@@ -36,7 +36,7 @@ jobs:
       - name: "Start NATS server with nkey authentication."
         run: |
           echo $PWD
-          name=`docker create -v  -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf --network ${{ job.container.network }} --name nats --network-alias nats -p 4224:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
+          name=`docker create -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf --network ${{ job.container.network }} --name nats --network-alias nats -p 4224:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
           docker container start $name
           sleep 2
           docker logs $name
