@@ -89,3 +89,11 @@ end
     NATS.drain(nc) # Draining drained connectin is noop.
     @test NATS.status(nc) == NATS.DRAINED
 end
+
+@testset "Connections API" begin
+    @test NATS.connection(:default) isa NATS.Connection
+    @test NATS.connection(1) isa NATS.Connection
+
+    @test_throws ErrorException NATS.connection(:something)
+    @test_throws ErrorException NATS.connection(10000000)
+end
