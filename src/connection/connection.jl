@@ -77,6 +77,7 @@ include("utils.jl")
 include("tls.jl")
 include("send.jl")
 include("handlers.jl")
+include("drain.jl")
 include("connect.jl")
 
 const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))

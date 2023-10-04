@@ -102,8 +102,12 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
                     close(sock)
                 end
                 try wait(sender_task) catch end
-                reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
+                !isdrained(nc) && reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
                 try wait(receiver_task) catch end
+                if isdrained(nc)
+                    @warn "Drained, no reconnect."
+                    break
+                end
                 @warn "Reconnecting..."
                 status(nc, RECONNECTING)
                 start_time = time()

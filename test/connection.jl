@@ -75,3 +75,15 @@ end
     sleep(5)
     @test nc.status == NATS.CONNECTED
 end
+
+@testset "Draining connection." begin
+    nc = NATS.connect(default = false)
+    subject = "DRAIN_TEST"
+    sub = subscribe("DRAIN_TEST"; connection = nc) do msg end
+    @test length(nc.subs) == 1
+    NATS.drain(nc)
+    @test isempty(nc.subs)
+    @test_throws ErrorException publish("DRAIN_TEST")
+    @test_throws ErrorException ping(nc)
+    @test NATS.status(nc) == NATS.DRAINED
+end
