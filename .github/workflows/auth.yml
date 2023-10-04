@@ -48,7 +48,7 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         env:
           JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
-          NATS_TOKEN: "s3cr3t"
+          NATS_AUTH_TOKEN: "s3cr3t"
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov
