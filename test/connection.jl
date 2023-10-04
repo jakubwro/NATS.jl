@@ -48,12 +48,12 @@ end
         error("Just testing...")
     end
 
-    tm = Timer(15)
+    tm = Timer(7)
     while isopen(tm)
         publish(subject, payload = "Hi!")
         sleep(0.1)
     end
-    sleep(5) # wait for all errors.
+    sleep(1) # wait for all errors.
 
     unsubscribe(sub)
     sleep(0.1)
@@ -71,7 +71,7 @@ end
         publish(subject, payload = "Hi!")
         sleep(0.1)
     end
-    sleep(5) # wait for all errors.
+    sleep(1) # wait for all errors.
 
     unsubscribe(sub)
     sleep(0.1)
