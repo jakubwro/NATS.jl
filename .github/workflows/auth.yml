@@ -1,0 +1,60 @@
+
+name: Auth tests
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        julia-version: ['1.9.3']
+        julia-arch: [x64]
+        nats-version: ['2.10.1']
+        julia-num-threads: ['1', '1,1', '1,2', '1,4']
+        os: [ubuntu-latest]
+    
+    services:
+      nats-no-tls:
+        image: nats:${{ matrix.nats-version }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Start NATS server with token authentication."
+        run: |
+          echo $PWD
+          name=`docker create --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t`
+          docker container start $name
+          sleep 2
+          docker logs $name
+      - name: "Start reply service"
+        run: |
+          docker ps
+          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats://s3cr3t@nats:4222 reply help.please 'OK, I CAN HELP!!!'`
+          container_id=`docker container start $name`
+          sleep 2
+          docker logs $container_id
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+        env:
+          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
+          NATS_TOKEN: "s3cr3t"
+      - uses: julia-actions/julia-processcoverage@v1
+        #   annotate: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Stop services"
+        run: |
+          docker kill $(docker ps -q )
