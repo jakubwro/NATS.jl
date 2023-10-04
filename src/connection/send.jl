@@ -14,19 +14,18 @@ function sendloop(nc::Connection, io::IO)
             if !isempty(buffer)
                 @warn "Buffer has $(length(buffer)) messages."
             end
-            if !isopen(nc.outbox)
-                error("Outbox is closed.")
-            end
-            pending = Base.n_avail(nc.outbox)
-            buf = IOBuffer() # TODO: maybe this buffering is not necessary.
-            batch = min(max(1, pending), 5000)
-
+            outbox_channel = outbox(nc)
+            fetch(outbox_channel) # Wait untill some messages are there.
+            buf = IOBuffer() # Buffer write to avoid often task yield.
+            pending = Base.n_avail(outbox_channel)
+            batch = min(pending, 5000)
+            @assert batch > 0
             for msg in buffer
                 show(buf, mime, msg)
             end
             # send_buf = []
             for _ in 1:batch
-                msg = take!(nc.outbox)
+                msg = take!(outbox_channel)
                 push!(buffer, msg)
                 # push!(send_buf, msg)
                 if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
