@@ -24,8 +24,8 @@ const NATS_TLS_KEY_PATH = get(ENV, "NATS_TLS_KEY_PATH", nothing)
 
 const ERROR_THROTTLING_SECONDS = 5
 const DEFAULT_CONNECT_OPTIONS = (
-    verbose= false,
-    pedantic = false,
+    verbose= parse(Bool, get(ENV, "NATS_VERBOSE", "false")),
+    pedantic = parse(Bool, get(ENV, "NATS_PEDANTIC", "false")),
     tls_required = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false")),
     auth_token = get(ENV, "NATS_AUTH_TOKEN", nothing),
     user = get(ENV, "NATS_USER", nothing),
