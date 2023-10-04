@@ -43,6 +43,7 @@ function request(
     connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
+    find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = @lock NATS.state.lock randstring(connection.rng, 20)
     replies = Channel(nreplies)

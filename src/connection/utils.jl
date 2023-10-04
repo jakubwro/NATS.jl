@@ -17,6 +17,12 @@ function find_msg_conversion_or_throw(T::Type)
     end
 end
 
+function find_data_conversion_or_throw(T::Type)
+    if T != Any && !hasmethod(Base.show, (IO, NATS.MIME_PAYLOAD, T))
+        throw(MethodError(Base.show, (IO, NATS.MIME_PAYLOAD, T)))
+    end
+end
+
 # """
 # Return lambda that avoids type conversions for certain types.
 # Also allows for use of parameterless handlers for subs that do not need look into msg payload. 

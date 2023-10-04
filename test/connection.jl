@@ -24,9 +24,7 @@ end
     #             # Implement conversion logic here.
     #         end
     #         """
-    @test_throws MethodError subscribe("SOME.THING") do msg::Float64
-        put!(c, msg)
-    end
+    @test_throws MethodError subscribe("SOME.THING") do msg::Float64 end
     @test_throws MethodError request("SOME.REQUESTS"; payload = 4)
     # hint = """Object of type `Int64` cannot be serialized into payload."""
     @test_throws MethodError request("SOME.REQUESTS", 4) # TODO: in this case there should be rather warning about missing payload.
@@ -68,7 +66,7 @@ end
         error("Just testing...")
     end
 
-    tm = Timer(15)
+    tm = Timer(7)
     while isopen(tm)
         publish(subject, payload = "Hi!")
         sleep(0.1)
@@ -106,6 +104,9 @@ end
     @test NATS.status(nc) == NATS.DRAINED
     NATS.drain(nc) # Draining drained connectin is noop.
     @test NATS.status(nc) == NATS.DRAINED
+
+    @test isempty(nc.subs)
+    @test isempty(NATS.state.handlers)
 end
 
 @testset "Connections API" begin
