@@ -114,6 +114,8 @@ end
     @test NATS.connection(1) isa NATS.Connection
 
     @test_throws ErrorException NATS.connection(:something)
+    nc = NATS.connection(:default)
+    @test_throws ErrorException NATS.connection(:something, nc)
     @test_throws ErrorException NATS.connection(10000000)
 end
 
