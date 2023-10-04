@@ -82,12 +82,12 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
-    # TODO: task monitoring, warn about broken connectin after n reconnects.
+    # TODO: task monitoring, warn about broken connection after n reconnects.
     spawn_sticky_task(() ->
         begin
             while true # TODO: While is drained.
                 receiver_task = spawn_sticky_task(() -> while !eof(read_stream) process(nc, next_protocol_message(read_stream)) end)
-                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream)) #TODO: while !eof
+                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream))
 
                 err_channel = Channel()
                 bind(err_channel, receiver_task)
