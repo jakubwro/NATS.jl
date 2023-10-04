@@ -26,10 +26,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: "Start NATS server with token authentication."
+      - name: "Start NATS server with token and basic authentication."
         run: |
           echo $PWD
           name=`docker create --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t --user jakub --pass passw0rd`
+          docker container start $name
+          sleep 2
+          docker logs $name
+      - name: "Start NATS server with nkey authentication."
+        run: |
+          echo $PWD
+          name=`docker create -v  -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf --network ${{ job.container.network }} --name nats --network-alias nats -p 4224:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
           docker container start $name
           sleep 2
           docker logs $name
