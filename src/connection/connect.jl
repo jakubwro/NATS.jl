@@ -101,20 +101,23 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
                     close(nc.outbox)
                     close(sock)
                 end
-                try wait(sender_task) catch end
-                !isdrained(nc) && reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
-                try wait(receiver_task) catch end
                 if isdrained(nc)
                     @warn "Drained, no reconnect."
                     break
                 end
+                try wait(sender_task) catch end
+                reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
+                try wait(receiver_task) catch end
+
                 @warn "Reconnecting..."
-                status(nc, RECONNECTING)
+                status(nc, CONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
                 sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=SOCKET_CONNECT_DELAYS)(host, port, options)
                 info(nc, info_msg)
                 status(nc, CONNECTED)
+                @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
+                @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
                 @info "Reconnected after $(time() - start_time) s."
             end
         end)

@@ -3,17 +3,17 @@
 # """
 # digraph G {
 #   connecting   -> connected
-#   connected    -> reconnecting
-#   reconnecting -> connected
+#   connected    -> connecting
 #   connected    -> draining
 #   draining     -> drained
 # }
 # """
-@enum ConnectionStatus CONNECTING CONNECTED RECONNECTING DRAINING DRAINED
+@enum ConnectionStatus CONNECTING CONNECTED DRAINING DRAINED
 
-mutable struct Stats
-    msgs_handled::Int64
-    msgs_not_handled::Int64
+@kwdef mutable struct Stats
+    msgs_handled::Int64 = 0
+    msgs_not_handled::Int64 = 0
+    reconnections::Int64 = 0
 end
 
 mutable struct Connection
@@ -26,7 +26,7 @@ mutable struct Connection
     rng::AbstractRNG
     lock::ReentrantLock
     function Connection(info::Info)
-        new(CONNECTING, info, Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(0, 0), MersenneTwister(), ReentrantLock())
+        new(CONNECTING, info, Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(), MersenneTwister(), ReentrantLock())
     end
 end
 
@@ -80,7 +80,7 @@ include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
 
-const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(0, 0))
+const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats())
 
 function status()
     println("=== Connection status ====================")
