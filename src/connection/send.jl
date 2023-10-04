@@ -1,6 +1,6 @@
 function send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
-        if message isa Unsub
+        if message isa Unsub || message isa Pong
             status(nc) == DRAINED && error("Connection is drained.")
         else
             error("Connection is drained.")
