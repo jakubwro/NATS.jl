@@ -26,6 +26,7 @@ end
         "Reply from service 2."
     end
     results = request(subject, "This is request payload", 2)
+    sleep(1)
     unsubscribe(sub1)
     unsubscribe(sub2)
     sleep(0.1)
