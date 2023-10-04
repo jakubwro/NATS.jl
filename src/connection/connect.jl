@@ -10,7 +10,7 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_streams(host, port, options)
+function init_protocol(host, port, options)
     sock = Sockets.connect(port)
     try
         info_msg = next_protocol_message(sock)
@@ -78,7 +78,7 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
     end
 
     options = merge(DEFAULT_CONNECT_ARGS, kw)
-    sock, read_stream, write_stream, info_msg = init_streams(host, port, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
@@ -112,7 +112,7 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
                 status(nc, RECONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
-                sock, read_stream, write_stream, info_msg = retry(init_streams, delays=SOCKET_CONNECT_DELAYS)(host, port, options)
+                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=SOCKET_CONNECT_DELAYS)(host, port, options)
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 @info "Reconnected after $(time() - start_time) s."

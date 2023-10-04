@@ -86,4 +86,6 @@ end
     @test_throws ErrorException publish("DRAIN_TEST"; connection = nc)
     @test_throws ErrorException ping(nc)
     @test NATS.status(nc) == NATS.DRAINED
+    NATS.drain(nc) # Draining drained connectin is noop.
+    @test NATS.status(nc) == NATS.DRAINED
 end
