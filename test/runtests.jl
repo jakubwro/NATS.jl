@@ -31,7 +31,7 @@ end
 
 have_nats = is_nats_available()
 
-@testset "Shuold run connected tests" begin
+@testset "Should run connected tests" begin
     @test have_nats
 end
 
