@@ -215,7 +215,7 @@ end
 
 @testset "Send malformed Msg" begin
     nc = NATS.connect()
-    con_msg = NATS.from_kwargs(NATS.Connect, NATS.DEFAULT_CONNECT_ARGS, (protocol=100,))
+    con_msg = NATS.from_kwargs(NATS.Connect, NATS.DEFAULT_CONNECT_OPTIONS, (protocol=100,))
     NATS.send(nc, con_msg)
     sleep(5)
     @test nc.status == NATS.CONNECTED

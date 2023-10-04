@@ -24,7 +24,7 @@ function init_protocol(host, port, options)
         end
 
         # TODO: sign nonce here.
-        connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_ARGS, options)
+        connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_OPTIONS, options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
 
@@ -77,7 +77,7 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
         return connection(:default) # report error instead
     end
 
-    options = merge(DEFAULT_CONNECT_ARGS, kw)
+    options = merge(DEFAULT_CONNECT_OPTIONS, kw)
     sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
 
     nc = Connection(info_msg)
