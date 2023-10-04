@@ -29,7 +29,7 @@ jobs:
       - name: "Start NATS server with token authentication."
         run: |
           echo $PWD
-          name=`docker create --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t`
+          name=`docker create --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t --user jakub --pass passw0rd`
           docker container start $name
           sleep 2
           docker logs $name
@@ -49,6 +49,11 @@ jobs:
         env:
           JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
           NATS_AUTH_TOKEN: "s3cr3t"
+      - uses: julia-actions/julia-runtest@v1
+        env:
+          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
+          NATS_USER: "jakub"
+          NATS_PASS: "passw0rd"
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov
