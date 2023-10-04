@@ -97,3 +97,8 @@ end
     @test_throws ErrorException NATS.connection(:something)
     @test_throws ErrorException NATS.connection(10000000)
 end
+
+@testset "Connect error from protocol init when options are wrong" begin
+    @test_throws "invalid client protocol" NATS.connect(default = false, protocol = 100)
+    @test_throws "Client requires TLS but it is not available for the server." NATS.connect(default = false, tls_required = true)
+end
