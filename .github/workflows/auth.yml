@@ -29,14 +29,14 @@ jobs:
       - name: "Start NATS server with token and basic authentication."
         run: |
           echo $PWD
-          name=`docker create --network ${{ job.container.network }} --name nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t --user jakub --pass passw0rd`
+          name=`docker create --network ${{ job.container.network }} -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t --user jakub --pass passw0rd`
           docker container start $name
           sleep 2
           docker logs $name
       - name: "Start NATS server with nkey authentication."
         run: |
           echo $PWD
-          name=`docker create -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf --network ${{ job.container.network }} --network-alias nats-nkeys -p 4224:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
+          name=`docker create -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf --network ${{ job.container.network }} -p 4224:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
           docker container start $name
           sleep 2
           docker logs $name
@@ -53,12 +53,12 @@ jobs:
           arch: ${{ matrix.julia-arch }}
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
-      # - run: |
-          # JULIA_NUM_THREAD=${{ matrix.julia-num-threads }} NATS_AUTH_TOKEN=s3cr3t julia --color=yes --project test/runtests.jl
-      # - run: |
-          # JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_USER=jakub NATS_PASS=passw0rd  julia --color=yes --project test/runtests.jl
       - run: |
-          NATS_PORT=4224 NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --color=yes --project test/runtests.jl
+          JULIA_NUM_THREAD=${{ matrix.julia-num-threads }} NATS_AUTH_TOKEN=s3cr3t julia --color=yes --project test/runtests.jl
+      - run: |
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_USER=jakub NATS_PASS=passw0rd  julia --color=yes --project test/runtests.jl
+      - run: |
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_PORT=4224 NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --color=yes --project test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov
