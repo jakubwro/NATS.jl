@@ -19,6 +19,13 @@ function default_connect_options()
     )
 end
 
+function tls_options(
+    tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded path
+    tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", nothing)
+)
+    (tls_ca_cert_path, tls_client_key_path)
+end
+
 function validate_connect_options(server_info::Info, options)
     # TODO: maybe better to rely on server side validation. Grab Err messages and decide if conn should be terminated.
     server_info.proto > 0 || error("Server supports too old protocol version.")
@@ -30,7 +37,7 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_protocol(host, port, nkey_seed, options)
+function init_protocol(host, port, nkey_seed, tls_options, options)
     sock = Sockets.connect(port)
     try
         info_msg = next_protocol_message(sock)
@@ -38,7 +45,7 @@ function init_protocol(host, port, nkey_seed, options)
         validate_connect_options(info_msg, options)
         read_stream, write_stream = sock, sock
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
-            (read_stream, write_stream) = upgrade_to_tls(sock)
+            (read_stream, write_stream) = upgrade_to_tls(sock; tls_options...)
             @info "Socket upgraded"
         end
 
@@ -50,7 +57,7 @@ function init_protocol(host, port, nkey_seed, options)
         end
 
         # TODO: sign nonce here.
-        connect_msg = from_kwargs(Connect, default_connect_options(), options)
+        connect_msg = from_kwargs(Connect, default_connect_options(), options) # TODO: simplify this.
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
 
@@ -103,8 +110,7 @@ function connect(
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
     default = true, # TODO: make it false
     nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
-    tls_cert_file = nothing,
-    tls_key_file = nothing,
+    tls_options = tls_options(),
     options...
 )
     if default && !isnothing(state.default_connection)
@@ -112,7 +118,7 @@ function connect(
     end
 
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, tls_options, options)
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
@@ -147,7 +153,7 @@ function connect(
                 status(nc, CONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
-                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=RECONNECT_DELAYS)(host, port, nkey_seed, options)
+                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=RECONNECT_DELAYS)(host, port, nkey_seed, tls_options, options)
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
