@@ -3,12 +3,13 @@
 # """
 # digraph G {
 #   connecting   -> connected
+#   connecting   -> disconnected
 #   connected    -> connecting
 #   connected    -> draining
 #   draining     -> drained
 # }
 # """
-@enum ConnectionStatus CONNECTING CONNECTED DRAINING DRAINED
+@enum ConnectionStatus CONNECTING CONNECTED DISCONNECTED DRAINING DRAINED
 
 @kwdef mutable struct Stats
     msgs_handled::Int64 = 0

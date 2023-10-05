@@ -161,7 +161,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(60); close(cond); close(results) end
+    @async begin sleep(80); close(cond); close(results) end
     sleep(2)
     @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
@@ -201,13 +201,13 @@ end
     end
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     wait(pub_task)
     unsubscribe(sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."

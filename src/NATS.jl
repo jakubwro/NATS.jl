@@ -27,6 +27,7 @@ const OUTBOX_SIZE = 10000000
 const RECONNECT_DELAYS = Base.ExponentialBackOff(n=220752000000000000, first_delay=0.0001, max_delay=1) # 7 bilion years.
 const SUBSCRIPTION_CHANNEL_SIZE = 10000
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
+const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
 include("protocol/protocol.jl")
 include("connection/connection.jl")

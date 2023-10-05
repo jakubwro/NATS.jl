@@ -148,7 +148,15 @@ function connect(
                 status(nc, CONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
-                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, nkey_seed, ca_cert_path, client_key_path, options)
+                start_reconnect_time = time()
+                try
+                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, nkey_seed, ca_cert_path, client_key_path, options)
+                catch err
+                    time_diff = time() - start_reconnect_time
+                    @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
+                    status(nc, DISCONNECTED)
+                    break
+                end
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1

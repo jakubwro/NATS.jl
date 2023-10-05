@@ -1,5 +1,3 @@
-const REQUEST_TIMEOUT_SECONDS = 5
-
 """
 $(SIGNATURES)
 
