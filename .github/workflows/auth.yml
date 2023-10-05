@@ -51,22 +51,14 @@ jobs:
         with:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        env:
-          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
-          NATS_AUTH_TOKEN: "s3cr3t"
-      - uses: julia-actions/julia-runtest@v1
-        env:
-          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
-          NATS_USER: "jakub"
-          NATS_PASS: "passw0rd"
-      - uses: julia-actions/julia-runtest@v1
-        env:
-          JULIA_NUM_THREADS: ${{ matrix.julia-num-threads }}
-          NATS_PORT: "4224"
-          # NATS_NKEY_SEED: "SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA"
-          # NATS_NKEY: "UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J"
+      - run: |
+          julia --project -e 'using Pkg; Pkg.instantiate()'
+      - run: |
+          JULIA_NUM_THREAD=${{ matrix.julia-num-threads }} NATS_AUTH_TOKEN=s3cr3t julia --colors=yes --project test/runtests.jl
+      - run: |
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_USER=jakub NATS_PASS=passw0rd  julia --colors=yes --project test/runtests.jl
+      - run: |
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_PORT=4224 NATS_USER=jakub NATS_PASS=passw0rd NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --colors=yes --project test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov
