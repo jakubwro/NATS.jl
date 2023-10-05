@@ -10,17 +10,23 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_protocol(host, port, options)
+function init_protocol(host, port, nkey_seed, options)
     sock = Sockets.connect(port)
     try
         info_msg = next_protocol_message(sock)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
-        # @show fetch(nc.info)
         read_stream, write_stream = sock, sock
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
             (read_stream, write_stream) = upgrade_to_tls(sock)
             @info "Socket upgraded"
+        end
+
+        if !isnothing(info_msg.nonce)
+            isnothing(nkey_seed) && error("Server requires signature but no `nkey_seed` provided.")
+            isnothing(options.nkey) && error("Missing `nkey` parameter.")
+            sig = sign(info_msg.nonce, nkey_seed)
+            options = merge(options, (sig = sig,))
         end
 
         # TODO: sign nonce here.
@@ -72,13 +78,21 @@ end
 Initialize and return `Connection`.
 See `Connect protocol message`.
 """
-function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true, cert_file = nothing, key_file = nothing, kw...)
+function connect(
+    host::String = NATS_HOST,
+    port::Int = NATS_PORT;
+    default = true,
+    nkey_seed = NATS_NKEY_SEED,
+    tls_cert_file = nothing,
+    tls_key_file = nothing,
+    options...
+)
     if default && !isnothing(state.default_connection)
-        return connection(:default) # report error instead
+        return connection(:default) # TODO: report error instead
     end
 
-    options = merge(DEFAULT_CONNECT_OPTIONS, kw)
-    sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
+    options = merge(DEFAULT_CONNECT_OPTIONS, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, options)
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
@@ -113,7 +127,7 @@ function connect(host::String = NATS_HOST, port::Int = NATS_PORT; default = true
                 status(nc, CONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
-                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=SOCKET_CONNECT_DELAYS)(host, port, options)
+                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=SOCKET_CONNECT_DELAYS)(host, port, nkey_seed, options)
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1

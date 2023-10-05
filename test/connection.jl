@@ -123,3 +123,18 @@ end
     @test_throws "invalid client protocol" NATS.connect(default = false, protocol = 100)
     @test_throws "Client requires TLS but it is not available for the server." NATS.connect(default = false, tls_required = true)
 end
+
+
+@testset "Nonce signatures" begin
+    seed = "SUAJ4LZRG3KF7C7U4E5737YMAOGUAWBODUM6DBWLY4UPUMXH6TH7JLQFDM"
+    nkey = "UAGPV4UFVS34M2XGY7HLSNEBDVJZZDZ6XMQ4NTXVEMKZQNSFH2AJFUA5"
+    nonce = "XTdilcu9paonaBQ"
+    sig = "3tsErI9fNKHWOHLAbc_XQ8Oo3XHv__7I_fA1aQ7xod3gYpxhDzt1vItbQLv3FhDtDFycxJJ0wA26rG3NEwWZBg"
+    @test NATS.sign(nonce, seed) == sig
+
+    seed = "SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA"
+    nkey= "UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J"
+    nonce = "HiA_hND1AV-DjmM"
+    sig = "g4HDazX_ZZig_FOFBzhorLSYCEDRlv20Y5vErFjDlTRZMqaaF27ImP16es_GI83Fn59xr9V98Ux5GlEvvaeADQ"
+    @test NATS.sign(nonce, seed) == sig
+end

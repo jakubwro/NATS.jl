@@ -9,3 +9,7 @@ docker create -p 4223:4222 -v $(pwd)/test/certs:/certs -it nats --tls --tlscert 
 ```
 nats reply help.please 'OK, I CAN HELP!!!' --server localhost:4223 --tlsca test/certs/nats.crt
 ```
+
+```
+docker create -v $(pwd)/test/configs/nats-server-nkey-auth.conf:/nats-server.conf -p 4224:4222 nats
+```

@@ -8,6 +8,9 @@ using JSON3
 using MbedTLS
 using DocStringExtensions
 using BufferedStreams
+using Sodium
+using Base64
+using CodecBase
 
 import Base: show, convert, close
 
@@ -17,6 +20,7 @@ const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"
 const NATS_HOST = get(ENV, "NATS_HOST", "localhost")
 const NATS_PORT = parse(Int, get(ENV, "NATS_PORT", "4222"))
+const NATS_NKEY_SEED = get(ENV, "NATS_NKEY_SEED", nothing)
 
 # Server might be configured to require client TLS certificate.
 const NATS_TLS_CERT_PATH = get(ENV, "NATS_TLS_CERT_PATH", nothing)
