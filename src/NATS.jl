@@ -19,36 +19,15 @@ export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, 
 const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"
 
+const MIME_PROTOCOL = MIME"application/nats"
+const MIME_PAYLOAD  = MIME"application/nats-payload"
+const MIME_HEADERS  = MIME"application/nats-headers"
+
 const ERROR_THROTTLING_SECONDS = 5
-
-function default_connect_options()
-    (
-        verbose= parse(Bool, get(ENV, "NATS_VERBOSE", "false")),
-        pedantic = parse(Bool, get(ENV, "NATS_PEDANTIC", "false")),
-        tls_required = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false")),
-        auth_token = get(ENV, "NATS_AUTH_TOKEN", nothing),
-        user = get(ENV, "NATS_USER", nothing),
-        pass = get(ENV, "NATS_PASS", nothing),
-        name = nothing,
-        lang = NATS_CLIENT_LANG,
-        version = NATS_CLIENT_VERSION,
-        protocol = 1,
-        echo = nothing,
-        sig = nothing,
-        jwt = get(ENV, "NATS_JWT", nothing),
-        no_responders = true,
-        headers = true,
-        nkey = get(ENV, "NATS_NKEY", nothing)
-    )
-end
-
 const OUTBOX_SIZE = 10000000
 const SOCKET_CONNECT_DELAYS = Base.ExponentialBackOff(n=1000, first_delay=0.5, max_delay=1)
 const SUBSCRIPTION_CHANNEL_SIZE = 10000
 
-const MIME_PROTOCOL = MIME"application/nats"
-const MIME_PAYLOAD  = MIME"application/nats-payload"
-const MIME_HEADERS  = MIME"application/nats-headers"
 
 include("protocol/protocol.jl")
 include("connection/connection.jl")

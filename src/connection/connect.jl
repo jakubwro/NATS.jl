@@ -1,3 +1,23 @@
+function default_connect_options()
+    (
+        verbose= parse(Bool, get(ENV, "NATS_VERBOSE", "false")),
+        pedantic = parse(Bool, get(ENV, "NATS_PEDANTIC", "false")),
+        tls_required = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false")),
+        auth_token = get(ENV, "NATS_AUTH_TOKEN", nothing),
+        user = get(ENV, "NATS_USER", nothing),
+        pass = get(ENV, "NATS_PASS", nothing),
+        name = nothing,
+        lang = NATS_CLIENT_LANG,
+        version = NATS_CLIENT_VERSION,
+        protocol = 1,
+        echo = nothing,
+        sig = nothing,
+        jwt = get(ENV, "NATS_JWT", nothing),
+        no_responders = true,
+        headers = true,
+        nkey = get(ENV, "NATS_NKEY", nothing)
+    )
+end
 
 function validate_connect_options(server_info::Info, options)
     # TODO: maybe better to rely on server side validation. Grab Err messages and decide if conn should be terminated.
