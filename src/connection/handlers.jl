@@ -43,7 +43,11 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         if Base.n_avail(ch) == ch.sz_max
             # TODO: drop old msgs?
         else
+            try
             put!(ch, msg)
+            catch err
+                @show err
+            end
         end
         _cleanup_unsub_msg(nc, msg.sid)
     end

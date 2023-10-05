@@ -1,24 +1,34 @@
 
-function _start_async_handler(f::Function, subject::String)
-    error_ch = Channel(100000)
-
-    ch = Channel(10000000, spawn = true) do ch # TODO: move to const
+function _start_async_handler(f::Function, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
+    error_ch = Channel(channel_size)
+    ch = Channel(channel_size)
+    Threads.@spawn begin
         try
             while true
                 msg = take!(ch)
                 Threads.@spawn :default try
                     f(msg)
                 catch err
-                    put!(error_ch, err)
+                    try
+                        put!(error_ch, err)
+                    catch
+                        @debug "Error channel is full for sub on $subject."
+                    end
                 end
             end
-        catch
+        catch err
+            if err isa InvalidStateException
+                # This is fine, subscription is unsubscribed.
+                @debug "Task for subscription on $subject finished."
+            else
+                @error "Unexpected error." err
+            end
             close(error_ch)
         end
     end
     Threads.@spawn :default begin
         while true
-            sleep(5)
+            sleep(error_throttling_seconds) # TODO: check diff and adjust
             avail = Base.n_avail(error_ch)
             errors = [ take!(error_ch) for _ in 1:avail ]
             if !isempty(errors)

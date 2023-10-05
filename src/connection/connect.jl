@@ -74,7 +74,8 @@ function init_protocol(host, port, nkey_seed, options)
 end
 
 function reopen_outbox(nc::Connection)
-    new_outbox = Channel{ProtocolMessage}(OUTBOX_SIZE)
+    old_outbox = outbox(nc)
+    new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
     for (sid, sub) in pairs(nc.subs)
         put!(new_outbox, sub)
         if haskey(nc.unsubs, sid)
@@ -82,13 +83,12 @@ function reopen_outbox(nc::Connection)
         end
     end
     subs_count = Base.n_avail(new_outbox)
-    for msg in collect(nc.outbox)
+    for msg in old_outbox
         if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
             put!(new_outbox, msg)
         end
     end
-    @info "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
-
+    @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
     outbox(nc, new_outbox)
 end
 
@@ -132,7 +132,7 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
-                    close(nc.outbox)
+                    close(outbox(nc))
                     close(sock)
                 end
                 if isdrained(nc)
@@ -147,7 +147,7 @@ function connect(
                 status(nc, CONNECTING)
                 start_time = time()
                 # TODO: handle repeating server Err messages.
-                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=SOCKET_CONNECT_DELAYS)(host, port, nkey_seed, options)
+                sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=RECONNECT_DELAYS)(host, port, nkey_seed, options)
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1

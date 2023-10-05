@@ -25,8 +25,8 @@ mutable struct Connection
     stats::Stats
     rng::AbstractRNG
     lock::ReentrantLock
-    function Connection(info::Info)
-        new(CONNECTING, info, Channel{ProtocolMessage}(OUTBOX_SIZE), Dict{String, Sub}(), Dict{String, Int64}(), Stats(), MersenneTwister(), ReentrantLock())
+    function Connection(info::Info; outbox_size = OUTBOX_SIZE)
+        new(CONNECTING, info, Channel{ProtocolMessage}(outbox_size), Dict{String, Sub}(), Dict{String, Int64}(), Stats(), MersenneTwister(), ReentrantLock())
     end
 end
 

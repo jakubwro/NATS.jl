@@ -1,5 +1,5 @@
-function _start_handler(f::Function, subject::String)
-    ch = Channel(10000000) # TODO: move to const
+function _start_handler(f::Function, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
+    ch = Channel(channel_size)
     Threads.@spawn begin 
         last_error_time = time()
         errors_since_last_log = 0
@@ -16,7 +16,7 @@ function _start_handler(f::Function, subject::String)
                 errors_since_last_log = errors_since_last_log + 1
                 now = time()
                 time_diff = now - last_error_time
-                if last_error_time < now - 5.0
+                if last_error_time < now - error_throttling_seconds
                     last_error_time = now
                     @error "$errors_since_last_log handler errors on \"$subject\" in last $(round(time_diff, digits = 2)) s. Last one:" err
                     errors_since_last_log = 0
