@@ -87,7 +87,8 @@ function connect(
     tls_key_file = nothing,
     options...
 )
-    @info "NATS_PORT: $(get(ENV, "NATS_PORT", "not found"))"
+    @info "ENV NATS_PORT: $(get(ENV, "NATS_PORT", "not found"))"
+    @info "CONST NATS_PORT: $NATS_PORT"
     @info "Connecting to nats://$host:$port"
     if default && !isnothing(state.default_connection)
         return connection(:default) # TODO: report error instead
