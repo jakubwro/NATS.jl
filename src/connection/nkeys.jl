@@ -1,11 +1,12 @@
 # NATS authentication
 
-const KEY_LENGTH = 32
-const SIGNATURE_LENGTH = 64
+const PUBLIC_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_PUBLICKEYBYTES
+const SECRET_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_SECRETKEYBYTES
+const SIGNATURE_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_BYTES
 
 function sign(nonce::String, nkey_seed::String)
-    secret_key =  Vector{Cuchar}(undef, KEY_LENGTH)
-    public_key =  Vector{Cuchar}(undef, KEY_LENGTH)
+    public_key =  Vector{Cuchar}(undef, PUBLIC_KEY_LENGTH)
+    secret_key =  Vector{Cuchar}(undef, SECRET_KEY_LENGTH)
     raw_seed = _decode_seed(nkey_seed)    
     errno = Sodium.LibSodium.crypto_sign_ed25519_seed_keypair(public_key, secret_key, raw_seed)
     errno == 0 || error("Cannot get key pair from nkey seed.")
