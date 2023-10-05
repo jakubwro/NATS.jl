@@ -26,10 +26,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: "Start NATS server with token and basic authentication."
+      - name: "Start NATS server with token authentication."
         run: |
           echo $PWD
-          name=`docker create --network ${{ job.container.network }} -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t --user jakub --pass passw0rd`
+          name=`docker create --network ${{ job.container.network }} -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --auth s3cr3t`
+          docker container start $name
+          sleep 2
+          docker logs $name
+      - name: "Start NATS server with basic authentication."
+        run: |
+          echo $PWD
+          name=`docker create --network ${{ job.container.network }} -p 4223:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --user jakub --pass passw0rd`
           docker container start $name
           sleep 2
           docker logs $name
@@ -54,9 +61,9 @@ jobs:
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
       - run: |
-          JULIA_NUM_THREAD=${{ matrix.julia-num-threads }} NATS_AUTH_TOKEN=s3cr3t julia --color=yes --project test/runtests.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }}  NATS_PORT=4222 NATS_AUTH_TOKEN=s3cr3t julia --color=yes --project test/runtests.jl
       - run: |
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_USER=jakub NATS_PASS=passw0rd  julia --color=yes --project test/runtests.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_PORT=4223 NATS_USER=jakub NATS_PASS=passw0rd  julia --color=yes --project test/runtests.jl
       - run: |
           JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_PORT=4224 NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --color=yes --project test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
