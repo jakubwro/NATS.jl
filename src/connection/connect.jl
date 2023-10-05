@@ -30,7 +30,7 @@ function init_protocol(host, port, nkey_seed, options)
         end
 
         # TODO: sign nonce here.
-        connect_msg = from_kwargs(Connect, DEFAULT_CONNECT_OPTIONS, options)
+        connect_msg = from_kwargs(Connect, default_connect_options(), options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
 
@@ -79,10 +79,10 @@ Initialize and return `Connection`.
 See `Connect protocol message`.
 """
 function connect(
-    host::String = NATS_HOST,
-    port::Int = NATS_PORT;
-    default = true,
-    nkey_seed = NATS_NKEY_SEED,
+    host::String = get(ENV, "NATS_HOST", "localhost"),
+    port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
+    default = true, # TODO: make it false
+    nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
     tls_cert_file = nothing,
     tls_key_file = nothing,
     options...
@@ -94,7 +94,7 @@ function connect(
         return connection(:default) # TODO: report error instead
     end
 
-    options = merge(DEFAULT_CONNECT_OPTIONS, options)
+    options = merge(default_connect_options(), options)
     sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, options)
 
     nc = Connection(info_msg)

@@ -25,7 +25,7 @@ end
 
 nc = NATS.connect()
 sleep(5)
-@assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_HOST):$(NATS.NATS_PORT)."
+@assert nc.status == NATS.CONNECTED "Cannot establish connection."
 
 @testset "Publish subscribe with custom data" begin
     nc = NATS.connect()
