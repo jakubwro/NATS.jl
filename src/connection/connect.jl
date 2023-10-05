@@ -87,6 +87,7 @@ function connect(
     tls_key_file = nothing,
     options...
 )
+    @info "Connecting to nats://$host:$port"
     if default && !isnothing(state.default_connection)
         return connection(:default) # TODO: report error instead
     end
