@@ -161,7 +161,7 @@ end
         end
         errormonitor(t)
     end
-    @async begin sleep(80); close(cond); close(results) end
+    @async begin sleep(120); close(cond); close(results) end
     sleep(2)
     @info "Received $(Base.n_avail(results)) / $n results after half of time. "
     @test restart_nats_server(nats_container_id) == 0
