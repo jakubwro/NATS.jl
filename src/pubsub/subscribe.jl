@@ -38,7 +38,7 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
     ch = Channel(channel_size)
 
     if async_handlers == true
-        Threads.@spawn begin
+        spawn_sticky_task(() -> begin
             try
                 while true
                     msg = take!(ch)
@@ -65,9 +65,9 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                     @error "Unexpected subscription error." err
                 end
             end
-        end
+        end)
     else
-        Threads.@spawn begin
+        spawn_sticky_task(() ->begin
             try
                 while true
                     msg = take!(ch)
@@ -91,7 +91,7 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                     @error "Unexpected subscription error." err
                 end
             end
-        end
+        end)
     end
 
     monitor_task = Threads.@spawn :default begin
