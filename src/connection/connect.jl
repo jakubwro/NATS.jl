@@ -23,7 +23,7 @@ function tls_options(
     tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded path
     tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", nothing)
 )
-    (tls_ca_cert_path, tls_client_key_path)
+    (tls_ca_cert_path = tls_ca_cert_path, tls_client_key_path = tls_ca_cert_path)
 end
 
 function validate_connect_options(server_info::Info, options)
