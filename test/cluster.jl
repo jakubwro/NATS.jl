@@ -15,7 +15,7 @@ function find_container_id(name)
 end
 
 function signal_lame_duck_mode(container_id)
-    cmd = `docker exec -it $container_id nats-server --signal ldm=1`
+    cmd = `docker exec $container_id nats-server --signal ldm=1`
     result = run(cmd)
     result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
 end
