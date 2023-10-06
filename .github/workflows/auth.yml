@@ -47,13 +47,20 @@ jobs:
           docker container start $name
           sleep 2
           docker logs $name
-      - name: "Start reply service"
+      - name: "Start NATS server with TLS authentication."
         run: |
-          docker ps
-          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats://s3cr3t@nats:4222 reply help.please 'OK, I CAN HELP!!!'`
-          container_id=`docker container start $name`
+          echo $PWD
+          name=`docker create -v $(pwd)/test/configs/nats-server-tls-auth.conf:/nats-server.conf --network ${{ job.container.network }} -p 4225:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }}`
+          docker container start $name
           sleep 2
-          docker logs $container_id
+          docker logs $name
+      # - name: "Start reply service"
+      #   run: |
+      #     docker ps
+      #     name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats://s3cr3t@nats:4222 reply help.please 'OK, I CAN HELP!!!'`
+      #     container_id=`docker container start $name`
+      #     sleep 2
+      #     docker logs $container_id
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.julia-version }}
