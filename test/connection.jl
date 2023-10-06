@@ -154,7 +154,7 @@ end
     sub2 = subscribe("overload_channel", async_handlers = false, channel_size = 100) do msg
         sleep(21)
     end
-    for _ in 1:81
+    for _ in 1:82
         publish("too_many_handlers")
     end
     sleep(21)
