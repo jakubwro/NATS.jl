@@ -56,10 +56,21 @@ end
 end
 
 function no_messages_lost(pub_conn, sub_conn)
-    received_count = 0
+  
+end
+
+@testset "No messages lost during cluster switch." begin
+    pub_conn = NATS.connect("localhost", 5222, default=false)
+    sub_conn = NATS.connect("localhost", 5223, default=false)
+    
+    sub_conn_received_count = 0
     subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
-        received_count = received_count + 1
-        # @show payload(msg)
+        sub_conn_received_count = sub_conn_received_count + 1
+    end
+
+    pub_conn_received_count = 0
+    subscribe("a_topic"; async_handlers = false, connection = pub_conn) do msg
+        pub_conn_received_count = pub_conn_received_count + 1
     end
 
     container_id = find_container_id("nats-node-1")
@@ -74,9 +85,13 @@ function no_messages_lost(pub_conn, sub_conn)
         publish("a_topic"; payload = "$i", connection = pub_conn)
         sleep(0.001)
     end
-    @info "Published $n messages in $(time() - start_time) seconds."
 
-    @test received_count == n
+    sleep(0.1)
+
+    @info "Published $n messages in $(time() - start_time) seconds."
+    @info "Distrupted connection received $pub_conn_received_count msgs."
+
+    @test sub_conn_received_count == n
 
     
     sleep(15) # Wait at least 10 s for server exit
@@ -85,15 +100,5 @@ function no_messages_lost(pub_conn, sub_conn)
 
     drain(pub_conn)
     drain(sub_conn)
-end
 
-@testset "No messages lost during cluster switch with separate connection" begin
-    pub_conn = NATS.connect("localhost", 5222, default=false)
-    sub_conn = NATS.connect("localhost", 5223, default=false)
-    no_messages_lost(pub_conn, sub_conn)
-end
-
-@testset "No messages lost during cluster switch with shared connection" begin
-    conn = NATS.connect("localhost", 5222, default=false)
-    no_messages_lost(conn, conn)
 end
