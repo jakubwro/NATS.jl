@@ -2,6 +2,7 @@ using Test
 using NATS
 using Random
 
+@info "Running with $(Threads.nthreads()) threads."
 
 function find_container_id(name)
     io = IOBuffer();
