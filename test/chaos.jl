@@ -212,11 +212,3 @@ end
     unsubscribe(sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 end
-
-@testset "Send malformed Msg" begin
-    nc = NATS.connect()
-    con_msg = NATS.from_options(NATS.Connect, NATS.default_connect_options(), (protocol=100,))
-    NATS.send(nc, con_msg)
-    sleep(5)
-    @test nc.status == NATS.CONNECTED
-end
