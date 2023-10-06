@@ -1,0 +1,50 @@
+
+name: Cluster tests
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        julia-version: ['1.9.3']
+        julia-arch: [x64]
+        nats-version: ['2.10.1']
+        julia-num-threads: ['1']
+        os: [ubuntu-latest]
+    
+    services:
+      nats-no-tls:
+        image: nats:${{ matrix.nats-version }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: "Start NATS cluster."
+        run: |
+          echo $PWD
+          cd tests
+          docker compose up -d
+          sleep 2
+          docker ps
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+      - run: |
+          julia --project -e 'println("It works")
+        #   annotate: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Stop services"
+        run: |
+          cd tests
+          docker compose down
