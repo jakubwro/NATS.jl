@@ -9,7 +9,6 @@ using MbedTLS
 using DocStringExtensions
 using BufferedStreams
 using Sodium
-using Base64
 using CodecBase
 
 import Base: show, convert, close
