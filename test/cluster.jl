@@ -55,10 +55,6 @@ end
     drain(connection)
 end
 
-function no_messages_lost(pub_conn, sub_conn)
-  
-end
-
 @testset "No messages lost during cluster switch." begin
     pub_conn = NATS.connect("localhost", 5222, default=false)
     sub_conn = NATS.connect("localhost", 5223, default=false)
