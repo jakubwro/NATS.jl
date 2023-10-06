@@ -44,6 +44,7 @@ function sendloop(nc::Connection, io::IO)
             flush(io)
             empty!(buffer)
         end
+        @info "Sender task finished, $(Base.n_avail(outbox_channel)) msgs in outbox."
     catch err
         if err isa InvalidStateException
             # This is fine, outbox closed by reconnect loop.

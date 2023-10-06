@@ -38,7 +38,8 @@ jobs:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
       - run: |
-          julia --project -e 'println("It works")'
+          julia --project -e 'using Pkg; Pkg.instantiate()'
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --code-coverage=user --project test/cluster.jl
         #   annotate: true
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
