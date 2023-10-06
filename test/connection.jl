@@ -139,3 +139,26 @@ end
     sig = "g4HDazX_ZZig_FOFBzhorLSYCEDRlv20Y5vErFjDlTRZMqaaF27ImP16es_GI83Fn59xr9V98Ux5GlEvvaeADQ"
     @test NATS.sign(nonce, seed) == sig
 end
+
+
+@testset "Subscription warnings" begin
+    nc = NATS.connect()
+
+    subscribe("too_many_handlers", async_handlers = true) do msg
+        sleep(21)
+    end
+
+    for _ in 1:1001
+        publish("too_many_handlers")
+    end
+
+    subscribe("overload_channel", async_handlers = false, channel_size = 100) do msg
+        sleep(21)
+    end
+
+    for _ in 1:81
+        publish("too_many_handlers")
+    end
+
+    sleep(21)
+end

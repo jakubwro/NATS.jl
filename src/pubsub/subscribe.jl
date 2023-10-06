@@ -59,12 +59,7 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                     async_handlers || wait(handler_task)
                 end
             catch err
-                if err isa InvalidStateException
-                    # This is fine, subscription is unsubscribed.
-                    @debug "Task for subscription on $subject finished."
-                else
-                    @error "Unexpected subscription error." err
-                end
+                err isa InvalidStateException || rethrow()
             end
         end)
     else
@@ -85,12 +80,7 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                     Threads.atomic_sub!(handlers_running, 1)
                 end
             catch err
-                if err isa InvalidStateException
-                    # This is fine, subscription is unsubscribed.
-                    @debug "Task for subscription on $subject finished."
-                else
-                    @error "Unexpected subscription error." err
-                end
+                err isa InvalidStateException || rethrow()
             end
         end)
     end
