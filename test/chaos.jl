@@ -212,3 +212,10 @@ end
     unsubscribe(sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 end
+
+@testset "Disconnecting when retries exhausted." begin
+    nc = NATS.connect(;default = false, reconnect_delays = [])
+    @test restart_nats_server() == 0
+    sleep(2)
+    @test nc.status == NATS.DISCONNECTED
+end
