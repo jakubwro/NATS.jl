@@ -14,6 +14,12 @@ function find_container_id(name)
     container_id
 end
 
+port_to_container = Dict(
+    5222 => find_container_id("nats-node-1"),
+    5223 => find_container_id("nats-node-2"),
+    5224 => find_container_id("nats-node-3")
+)
+
 function signal_lame_duck_mode(container_id)
     cmd = `docker exec $container_id nats-server --signal ldm=1`
     result = run(cmd)
@@ -34,10 +40,9 @@ end
         "This is a reply."
     end
 
-    container_id = find_container_id("nats-node-1")
     errormonitor(@async begin
         sleep(2)
-        signal_lame_duck_mode(container_id)
+        signal_lame_duck_mode(port_to_container[5222])
     end)
 
     response = request(String, "a_topic", timer = Timer(10); connection)
@@ -46,7 +51,7 @@ end
     @test connection.port != 5222
 
     sleep(15) # Wait at least 10 s for server exit
-    start_container(container_id)
+    start_container(port_to_container[5222])
     sleep(10)
     @test "localhost:5222" in connection.info.connect_urls
     drain(connection)
@@ -66,10 +71,9 @@ end
         pub_conn_received_count = pub_conn_received_count + 1
     end
 
-    container_id = find_container_id("nats-node-1")
     errormonitor(@async begin
         sleep(2)
-        signal_lame_duck_mode(container_id)
+        signal_lame_duck_mode(port_to_container[5222])
     end)
 
     n = 1500
@@ -87,7 +91,7 @@ end
     @test sub_conn_received_count == n
 
     sleep(15) # Wait at least 10 s for server exit
-    start_container(container_id)
+    start_container(port_to_container[5222])
     sleep(10)
 
     drain(pub_conn)
