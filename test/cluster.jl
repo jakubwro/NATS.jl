@@ -14,22 +14,14 @@ function find_container_id(name)
     container_id
 end
 
-port_to_container_map = Dict(
-    5222 => find_container_id("nats-node-1"),
-    5223 => find_container_id("nats-node-2"),
-    5224 => find_container_id("nats-node-3")
-)
-
-function signal_lame_duck_mode(port)
-    container_id = port_to_container_map[port]
+function signal_lame_duck_mode(container_id)
     cmd = `docker exec -it $container_id nats-server --signal ldm=1`
     result = run(cmd)
     result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
 end
 
-function start_container(port)
-    container_id = port_to_container_map[port]
-    cmd = `docker start $container_id`
+function start_container(container_id)
+    @show cmd = `docker start $container_id`
     result = run(cmd)
     result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
 end
@@ -42,9 +34,10 @@ end
         "This is a reply."
     end
 
+    container_id = find_container_id("nats-node-1")
     @async begin
         sleep(2)
-        signal_lame_duck_mode(connection.port)
+        signal_lame_duck_mode(container_id)
     end
 
     response = request(String, "a_topic", timer = Timer(10); connection)
@@ -52,9 +45,11 @@ end
     @test response == "This is a reply."
     @test connection.port != 5222
 
-    start_container(5222)
+    sleep(15) # Wait at least 10 s for server exit
 
-    sleep(2)
+    start_container(container_id)
+
+    sleep(5)
 
     @test "localhost:5222" in connection.info.connect_urls
 end
