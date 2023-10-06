@@ -30,7 +30,7 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_protocol(host, port, nkey_seed, ca_cert_path, client_key_path, options)
+function init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
     sock = Sockets.connect(port)
     try
         info_msg = next_protocol_message(sock)
@@ -38,7 +38,7 @@ function init_protocol(host, port, nkey_seed, ca_cert_path, client_key_path, opt
         validate_connect_options(info_msg, options)
         read_stream, write_stream = sock, sock
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
-            (read_stream, write_stream) = upgrade_to_tls(sock, ca_cert_path, client_key_path)
+            (read_stream, write_stream) = upgrade_to_tls(sock, ca_cert_path, client_cert_path, client_key_path)
             @info "Socket upgraded"
         end
 
@@ -105,7 +105,8 @@ function connect(
     reconnect_delays = RECONNECT_DELAYS,
     nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
     ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded path
-    client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", nothing),
+    client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", "test/certs/client.crt"),
+    client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", "test/certs/client.key"),
     options...
 )
     if default && !isnothing(state.default_connection)
@@ -113,7 +114,7 @@ function connect(
     end
 
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, ca_cert_path, client_key_path, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
@@ -150,7 +151,7 @@ function connect(
                 # TODO: handle repeating server Err messages.
                 start_reconnect_time = time()
                 try
-                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, nkey_seed, ca_cert_path, client_key_path, options)
+                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err

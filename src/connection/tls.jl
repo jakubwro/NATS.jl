@@ -1,6 +1,6 @@
 # Returns read and write streams.
 
-function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing})
+function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing})
     entropy = MbedTLS.Entropy()
     rng = MbedTLS.CtrDrbg()
     MbedTLS.seed!(rng, entropy)
@@ -22,8 +22,10 @@ function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Not
 
     MbedTLS.setup!(ctx, conf)
     MbedTLS.set_bio!(ctx, sock)
-    if !isnothing(client_key_path)
-        # TODO: MbedTLS.set_key!()
+    if !isnothing(client_key_path) && !isnothing(client_key_path)
+        cert = MbedTLS.crt_parse_file(client_cert_path)
+        key = MbedTLS.parse_keyfile(client_key_path)
+        MbedTLS.own_cert!(conf, cert, key)
     end
     
     MbedTLS.handshake(ctx)

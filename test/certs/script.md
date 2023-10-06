@@ -3,7 +3,11 @@ openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out nats.crt -
 ```
 
 ```
-openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -CA nats.crt -CAkey nats.key -nodes -out client.crt -keyout client.key 
+openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -CA nats.crt -CAkey nats.key -nodes -out client.crt -keyout client.key  -addext "subjectAltName = DNS:localhost, email:jakub@localhost"
+```
+
+```
+docker create -v $(pwd)/test/certs:/certs -v $(pwd)/test/configs/nats-server-tls-auth.conf:/nats-server.conf  -p 4225:4222 nats
 ```
 
 ```
