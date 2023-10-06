@@ -12,7 +12,6 @@ include("util.jl")
 
 @info "Running with $(Threads.nthreads()) threads."
 
-include("utils.jl")
 include("protocol.jl")
 
 function is_nats_available()

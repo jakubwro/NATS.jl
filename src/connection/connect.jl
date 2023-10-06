@@ -1,5 +1,6 @@
 function default_connect_options()
     (
+        # Options that are defined in the protocol, see Connect struct.
         verbose= parse(Bool, get(ENV, "NATS_VERBOSE", "false")),
         pedantic = parse(Bool, get(ENV, "NATS_PEDANTIC", "false")),
         tls_required = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false")),
@@ -15,7 +16,12 @@ function default_connect_options()
         jwt = get(ENV, "NATS_JWT", nothing),
         no_responders = true,
         headers = true,
-        nkey = get(ENV, "NATS_NKEY", nothing)
+        nkey = get(ENV, "NATS_NKEY", nothing),
+        # Options used only on client side, never sent to server
+        nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
+        tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded paths
+        tls_client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", "test/certs/client.crt"),
+        tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", "test/certs/client.key")
     )
 end
 
@@ -30,7 +36,7 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
+function init_protocol(host, port, options)
     sock = Sockets.connect(port)
     try
         info_msg = next_protocol_message(sock)
@@ -38,7 +44,8 @@ function init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, cl
         validate_connect_options(info_msg, options)
         read_stream, write_stream = sock, sock
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
-            (read_stream, write_stream) = upgrade_to_tls(sock, ca_cert_path, client_cert_path, client_key_path)
+            tls_options = options[(:tls_ca_cert_path, :tls_client_cert_path, :tls_client_key_path)]
+            (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
             @info "Socket upgraded"
         end
 
@@ -49,8 +56,12 @@ function init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, cl
             options = merge(options, (sig = sig,))
         end
 
-        # TODO: sign nonce here.
-        connect_msg = from_kwargs(Connect, default_connect_options(), options) # TODO: simplify this.
+        defaults = default_connect_options()
+        known_options = keys(defaults)
+        provided_keys = keys(options)
+        keys_df = setdiff(provided_keys, known_options)
+        !isempty(keys_df) && error("Unknown `connect` options: $(join(keys_df, ", "))") 
+        connect_msg = from_options(Connect, options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
 
@@ -103,10 +114,6 @@ function connect(
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
     default = true, # TODO: make it false
     reconnect_delays = RECONNECT_DELAYS,
-    nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
-    ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded path
-    client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", "test/certs/client.crt"),
-    client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", "test/certs/client.key"),
     options...
 )
     if default && !isnothing(state.default_connection)
@@ -114,7 +121,7 @@ function connect(
     end
 
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
 
     nc = Connection(info_msg)
     status(nc, CONNECTED)
@@ -151,7 +158,7 @@ function connect(
                 # TODO: handle repeating server Err messages.
                 start_reconnect_time = time()
                 try
-                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, nkey_seed, ca_cert_path, client_cert_path, client_key_path, options)
+                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, options)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err

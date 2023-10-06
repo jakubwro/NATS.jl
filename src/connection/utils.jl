@@ -40,26 +40,8 @@ end
 # """
 # Alternative for `@kwdef` that works better for NATS case. 
 # """
-function from_kwargs(T::Type, defaults, kwargs)
-    # TODO: instead of this write a macro that attaches struct fields as kwargs of a function.
-    args = merge(defaults, kwargs)
-    fields = fieldnames(T)
-    missing_args = setdiff(fields, keys(args))
-    if !isempty(missing_args)
-        error("Missing keyword arguments: $missing_args.")
-    end
-    unknown_args = setdiff(keys(args), fields)
-    if !isempty(unknown_args)
-        error("Unknown keyword arguments: $unknown_args.")
-    end
-    args = args[fields]
-    field_types = fieldtypes(T)
-    for ((key, val), t) in zip(pairs(args), field_types)
-        if !(val isa t)
-            error("Keyword argument `$key` expected to be `$t` but `$val` of type `$(typeof(val))` encountered.")
-        end
-    end
-    T(args...)
+function from_options(T::Type, options)
+    T(options[fieldnames(T)]...)
 end
 
 function spawn_sticky_task(f)
