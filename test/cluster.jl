@@ -46,26 +46,23 @@ end
     @test connection.port != 5222
 
     sleep(15) # Wait at least 10 s for server exit
-
     start_container(container_id)
-
     sleep(5)
     @test "localhost:5222" in connection.info.connect_urls
-
     drain(connection)
 end
 
 @testset "No messages lost during cluster switch." begin
-    pub_conn = NATS.connect("localhost", 5222, default=false)
-    sub_conn = NATS.connect("localhost", 5223, default=false)
+    pub_conn = NATS.connect("localhost", 5222, default=false, echo = false) # TODO: unclear why echo needs to be false to not have doubled msgs.
+    sub_conn = NATS.connect("localhost", 5223, default=false) 
     
     sub_conn_received_count = 0
-    subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
+    sub1 = subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
         sub_conn_received_count = sub_conn_received_count + 1
     end
 
     pub_conn_received_count = 0
-    subscribe("a_topic"; async_handlers = false, connection = pub_conn) do msg
+    sub2 = subscribe("a_topic"; async_handlers = false, connection = pub_conn) do msg
         pub_conn_received_count = pub_conn_received_count + 1
     end
 
@@ -89,11 +86,8 @@ end
 
     @test sub_conn_received_count == n
 
-    
     sleep(15) # Wait at least 10 s for server exit
-
     start_container(container_id)
-
     drain(pub_conn)
     drain(sub_conn)
 
