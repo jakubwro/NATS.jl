@@ -11,6 +11,7 @@ function process(nc::Connection, msg::Info)
     if !isnothing(msg.ldm) && msg.ldm
         @warn "Server is in Lame Duck Mode, forcing reconnect to other server"
         @info "Connect urls are: $(msg.connect_urls)"
+        close(outbox(nc))
     end
 end
 
