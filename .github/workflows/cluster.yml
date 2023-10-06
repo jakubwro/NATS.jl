@@ -29,7 +29,7 @@ jobs:
       - name: "Start NATS cluster."
         run: |
           echo $PWD
-          cd tests
+          cd test
           docker compose up -d
           sleep 2
           docker ps
