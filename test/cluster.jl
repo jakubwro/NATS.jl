@@ -47,7 +47,7 @@ end
 
     sleep(15) # Wait at least 10 s for server exit
     start_container(container_id)
-    sleep(5)
+    sleep(10)
     @test "localhost:5222" in connection.info.connect_urls
     drain(connection)
 end
@@ -88,6 +88,8 @@ end
 
     sleep(15) # Wait at least 10 s for server exit
     start_container(container_id)
+    sleep(10)
+
     drain(pub_conn)
     drain(sub_conn)
 
