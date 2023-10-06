@@ -52,7 +52,7 @@ end
     drain(connection)
 end
 
-@testset "No messages lost during cluster switch." begin
+@testset "No messages lost during node switch." begin
     pub_conn = NATS.connect("localhost", 5222, default=false, echo = false) # TODO: unclear why echo needs to be false to not have doubled msgs.
     sub_conn = NATS.connect("localhost", 5223, default=false) 
     
