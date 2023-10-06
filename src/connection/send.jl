@@ -16,12 +16,12 @@ const buffer = ProtocolMessage[]
 
 function sendloop(nc::Connection, io::IO)
     try
-        mime = MIME_PROTOCOL() 
-        while true
+        mime = MIME_PROTOCOL()
+        outbox_channel = outbox(nc)
+        while isopen(outbox_channel)
             if !isempty(buffer)
                 @warn "Buffer has $(length(buffer)) messages."
             end
-            outbox_channel = outbox(nc)
             fetch(outbox_channel) # Wait untill some messages are there.
             buf = IOBuffer() # Buffer write to avoid often task yield.
             pending = Base.n_avail(outbox_channel)
