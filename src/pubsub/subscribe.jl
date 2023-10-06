@@ -29,6 +29,7 @@ function subscribe(
     sub
 end
 
+# TODO: recactor this
 function _start_tasks(f::Function, async_handlers::Bool, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
     last_error = nothing
     last_error_msg = nothing
@@ -94,7 +95,7 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
         end)
     end
 
-    monitor_task = Threads.@spawn :default begin
+    monitor_task = Threads.@spawn :interactive begin
         while isopen(ch)
             sleep(error_throttling_seconds) # TODO: check diff and adjust
             errs, err, msg = @lock lock begin
@@ -103,24 +104,26 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                 errors_since_last_log_save, last_error, last_error_msg
             end
             if errs > 0
-                @error "$errs handler errors on \"$subject\" in last 5 s." err msg
+                @error "$errs handler errors on \"$subject\" in last $error_throttling_seconds s." err msg
             end
         end
     end
     errormonitor(monitor_task)
 
-    stats_task = Threads.@spawn :default begin
+    stats_task = Threads.@spawn :interactive begin
         while isopen(ch) || Base.n_avail(ch) > 0
             if handlers_running.value > 1000
-                @warn "$(handlers_running.value) handlers running for subscription on $subject."
-                last_warning = time()
+                @warn "$(handlers_running[]) handlers running for subscription on $subject."
+            else
+                @debug "$(handlers_running[]) handlers running for subscription on $subject."
             end
             level = Base.n_avail(ch) / ch.sz_max
             if level > 0.8
-                @warn "Subscription on $subject channel full in $level %"
-                last_warning = time()
+                @warn "Subscription on $subject channel full in $(100 * level) %"
+            else
+                @debug "Subscription on $subject channel full in $(100 * level) %"
             end
-            sleep(20)
+            sleep(20) # TODO: configure it
         end
     end
     errormonitor(stats_task)

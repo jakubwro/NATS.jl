@@ -17,6 +17,21 @@
     reconnections::Int64 = 0
 end
 
+@kwdef struct SubStats
+    # "Seconds since the epoch."
+    # time_created::Float64
+    "Count of msgs handled without error."
+    msgs_handled::Int64 = 0
+    "Count of msgs that caused handler function error."
+    msgs_errored::Int64 = 0
+    "Msgs that was not put to the channel because it was full."
+    msgs_dropped::Int64 = 0
+    "Total handlers running at the moment."
+    handers_running::Int64 = 0
+    "Function that can be installed to monitor handler errors."
+    error_handler::Function = nothing
+end
+
 mutable struct Connection
     status::ConnectionStatus
     info::Info
