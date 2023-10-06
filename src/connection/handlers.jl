@@ -7,6 +7,11 @@ end
 function process(nc::Connection, msg::Info)
     @info "New INFO received: ." msg
     info(nc, msg)
+
+    if !isnothing(msg.ldm) && msg.ldm
+        @warn "Server is in Lame Duck Mode, forcing reconnect to other server"
+        @info "Connect urls are: $(msg.connect_urls)"
+    end
 end
 
 function process(nc::Connection, ping::Ping)
