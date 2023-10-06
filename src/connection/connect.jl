@@ -50,9 +50,9 @@ function init_protocol(host, port, options)
         end
 
         if !isnothing(info_msg.nonce)
-            isnothing(nkey_seed) && error("Server requires signature but no `nkey_seed` provided.")
+            isnothing(options.nkey_seed) && error("Server requires signature but no `nkey_seed` provided.")
             isnothing(options.nkey) && error("Missing `nkey` parameter.")
-            sig = sign(info_msg.nonce, nkey_seed)
+            sig = sign(info_msg.nonce, options.nkey_seed)
             options = merge(options, (sig = sig,))
         end
 
