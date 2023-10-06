@@ -48,6 +48,7 @@ end
 
 info(c::Connection)::Info = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
+clustername(c::Connection) = @something info(c).cluster "unnamed"
 status(c::Connection)::ConnectionStatus = @lock c.lock c.status
 status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 outbox(c::Connection) = @lock c.lock c.outbox

@@ -17,7 +17,7 @@ function default_connect_options()
         no_responders = true,
         headers = true,
         nkey = get(ENV, "NATS_NKEY", nothing),
-        # Options used only on client side, never sent to server
+        # Options used only on client side, never sent to server.
         nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
         tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded paths
         tls_client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", "test/certs/client.crt"),
@@ -157,8 +157,16 @@ function connect(
                 start_time = time()
                 # TODO: handle repeating server Err messages.
                 start_reconnect_time = time()
+                function check_errors(s, e)
+                    total_retries = length(reconnect_delays)
+                    current_retries = total_retries - s[1]
+                    current_time = time() - start_reconnect_time
+                    mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
+                    true
+                end
+                retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
                 try
-                    sock, read_stream, write_stream, info_msg = retry(init_protocol, delays=reconnect_delays)(host, port, options)
+                    sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
@@ -169,7 +177,7 @@ function connect(
                 status(nc, CONNECTED)
                 @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
                 @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
-                @info "Reconnected after $(time() - start_time) s."
+                @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
             end
         end)
 
