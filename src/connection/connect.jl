@@ -166,7 +166,7 @@ function connect(
                     close(sock)
                 end
                 if isdrained(nc)
-                    @warn "Drained, no reconnect."
+                    @debug "Drained, no reconnect."
                     break
                 end
                 try wait(sender_task) catch end

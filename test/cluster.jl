@@ -21,7 +21,7 @@ function signal_lame_duck_mode(container_id)
 end
 
 function start_container(container_id)
-    @show cmd = `docker start $container_id`
+    cmd = `docker start $container_id`
     result = run(cmd)
     result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
 end
@@ -29,13 +29,12 @@ end
 @testset "Request during node switch" begin
     connection = NATS.connect("localhost", 5222, default=false)
 
-    reply("a_topic"; async_handlers = true, connection) do msg
+    sub = reply("a_topic"; async_handlers = true, connection) do msg
         sleep(7)
         "This is a reply."
     end
 
     container_id = find_container_id("nats-node-1")
-    @show container_id
     errormonitor(@async begin
         sleep(2)
         signal_lame_duck_mode(container_id)
@@ -51,6 +50,50 @@ end
     start_container(container_id)
 
     sleep(5)
-
     @test "localhost:5222" in connection.info.connect_urls
+
+    drain(connection)
+end
+
+function no_messages_lost(pub_conn, sub_conn)
+    received_count = 0
+    subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
+        received_count = received_count + 1
+        # @show payload(msg)
+    end
+
+    container_id = find_container_id("nats-node-1")
+    errormonitor(@async begin
+        sleep(2)
+        signal_lame_duck_mode(container_id)
+    end)
+
+    n = 1500
+    start_time = time()
+    for i in 1:n
+        publish("a_topic"; payload = "$i", connection = pub_conn)
+        sleep(0.001)
+    end
+    @info "Published $n messages in $(time() - start_time) seconds."
+
+    @test received_count == n
+
+    
+    sleep(15) # Wait at least 10 s for server exit
+
+    start_container(container_id)
+
+    drain(pub_conn)
+    drain(sub_conn)
+end
+
+@testset "No messages lost during cluster switch with separate connection" begin
+    pub_conn = NATS.connect("localhost", 5222, default=false)
+    sub_conn = NATS.connect("localhost", 5223, default=false)
+    no_messages_lost(pub_conn, sub_conn)
+end
+
+@testset "No messages lost during cluster switch with shared connection" begin
+    conn = NATS.connect("localhost", 5222, default=false)
+    no_messages_lost(conn, conn)
 end
