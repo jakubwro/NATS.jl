@@ -36,8 +36,25 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function init_protocol(host, port, options)
-    sock = Sockets.connect(port)
+function connect_urls(nc::Connection)::Vector{Tuple{String, Int}}
+    urls = info(nc).connect_urls
+    if isnothing(urls)
+        [(nc.host, nc.port)]
+    else
+        map(urls) do url
+            @assert ':' in url "$url is not correct"
+            host, port = split(url, ":")
+            host, parse(Int, port)
+        end
+    end
+end
+
+function init_protocol(host, port, options; nc = nothing)
+    if !isnothing(nc)
+        # If this is an existing connection, try to use other cluster server.
+        host, port = rand(connect_urls(nc))
+    end
+    sock = Sockets.connect(host, port)
     try
         info_msg = next_protocol_message(sock)
         info_msg isa Info || error("Expected INFO, received $info_msg")
@@ -77,6 +94,9 @@ function init_protocol(host, port, options)
             next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
         end
 
+        if !isnothing(nc)
+            nc.host, nc.port = host, port
+        end
         sock, read_stream, write_stream, info_msg
     catch
         close(sock)
@@ -114,6 +134,7 @@ function connect(
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
     default = true, # TODO: make it false
     reconnect_delays = RECONNECT_DELAYS,
+    outbox_size = OUTBOX_SIZE,
     options...
 )
     if default && !isnothing(state.default_connection)
@@ -123,7 +144,7 @@ function connect(
     options = merge(default_connect_options(), options)
     sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
 
-    nc = Connection(info_msg)
+    nc = Connection(; host, port, info = info_msg, outbox = Channel{ProtocolMessage}(outbox_size))
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
     spawn_sticky_task(() ->
@@ -166,7 +187,7 @@ function connect(
                 end
                 retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
                 try
-                    sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options)
+                    sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options; nc)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err

@@ -32,18 +32,17 @@ end
     error_handler::Function = nothing
 end
 
-mutable struct Connection
-    status::ConnectionStatus
+@kwdef mutable struct Connection
+    host::String
+    port::Int64
+    status::ConnectionStatus = CONNECTING
     info::Info
     outbox::Channel{ProtocolMessage}
-    subs::Dict{String, Sub}
-    unsubs::Dict{String, Int64}
-    stats::Stats
-    rng::AbstractRNG
-    lock::ReentrantLock
-    function Connection(info::Info; outbox_size = OUTBOX_SIZE)
-        new(CONNECTING, info, Channel{ProtocolMessage}(outbox_size), Dict{String, Sub}(), Dict{String, Int64}(), Stats(), MersenneTwister(), ReentrantLock())
-    end
+    subs::Dict{String, Sub} = Dict{String, Sub}()
+    unsubs::Dict{String, Int64} = Dict{String, Int64}()
+    stats::Stats = Stats()
+    rng::AbstractRNG = MersenneTwister()
+    lock::ReentrantLock = ReentrantLock()
 end
 
 info(c::Connection)::Info = @lock c.lock c.info

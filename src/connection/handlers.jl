@@ -4,9 +4,9 @@ function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
     @warn "Unexpected message delivered." msg
 end
 
-function process(nc::Connection, info::Info)
-    @info "New INFO received: ." info
-    info(nc, info)
+function process(nc::Connection, msg::Info)
+    @info "New INFO received: ." msg
+    info(nc, msg)
 end
 
 function process(nc::Connection, ping::Ping)
