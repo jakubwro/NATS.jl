@@ -150,7 +150,6 @@ end
     for _ in 1:1001
         publish("too_many_handlers")
     end
-    unsubscribe(sub)
 
     sub2 = subscribe("overload_channel", async_handlers = false, channel_size = 100) do msg
         sleep(21)
