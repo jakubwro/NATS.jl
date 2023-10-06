@@ -35,10 +35,11 @@ end
     end
 
     container_id = find_container_id("nats-node-1")
-    @async begin
+    @show container_id
+    errormonitor(@async begin
         sleep(2)
         signal_lame_duck_mode(container_id)
-    end
+    end)
 
     response = request(String, "a_topic", timer = Timer(10); connection)
 
