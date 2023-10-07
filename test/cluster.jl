@@ -109,6 +109,52 @@ end
 
 end
 
+@testset "Lame Duck Mode during heavy publications" begin
+    connection = NATS.connect("localhost", 5222, default=false)
+
+    received_count = Threads.Atomic{Int64}(0)
+    published_count = Threads.Atomic{Int64}(0)
+    subject = "pub_subject"
+    sub = subscribe(subject; connection) do msg
+        Threads.atomic_add!(received_count, 1)
+    end
+    sleep(0.5)
+
+    pub_task = Threads.@spawn begin
+        # publishes 100k msgs / s for 10s (roughly)
+        for i in 1:10000
+            timer = Timer(0.001)
+            for _ in 1:100
+                publish(subject; payload = "Hi!", connection)
+            end
+            Threads.atomic_add!(published_count, 100)
+            try wait(timer) catch end
+        end
+        @info "Publisher finished."
+    end
+    sleep(2)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
+    sleep(2)
+    signal_lame_duck_mode(port_to_container[5222])
+
+    while !istaskdone(pub_task)
+        sleep(2)
+        @info "Published: $(published_count.value), received: $(received_count.value)."
+    end
+    sleep(5) # Wait all messages delivered
+    unsubscribe(sub; connection)
+    @info "Published: $(published_count.value), received: $(received_count.value)."
+
+    @test published_count[] == received_count.value[]
+
+    sleep(15) # Wait at least 10 s for server exit
+    start_container(port_to_container[5222])
+    sleep(10)
+    @test "localhost:5222" in connection.info.connect_urls
+    drain(connection)
+end
+
+
 # @testset "Switch sub connection." begin
 #     conn_a = NATS.connect("localhost", 5222, default=false)
 #     conn_b = NATS.connect("localhost", 5223, default=false) 
