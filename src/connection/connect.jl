@@ -134,7 +134,7 @@ Connect is a blocking operation that initiazlies connection.
 Options are:
 - `default`: sets connection as a default connection. Default connection is used when no connection is specified.
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again. Default is $RECONNECT_DELAYS.
-- `outbox_size`: size of outbox buffer for cient messages. Default is $DEFAULT_OUTBOX_SIZE. If to small operations may throw exceptions.
+- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE. If to small operations may throw exceptions.
 - `verbose: turns on `+OK` protocol acknowledgements
 - `pedantic: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required: indicates whether the client requires an SSL connection
