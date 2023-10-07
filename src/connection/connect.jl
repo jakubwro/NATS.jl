@@ -125,9 +125,32 @@ end
 
 #TODO: restore link #NATS.Connect
 """
-    connect([host, port; kw...])
-Initialize and return `Connection`.
-See `Connect protocol message`.
+    connect([host, port; options...])
+
+Connect to NATS server.
+
+Connect is a blocking operation that initiazlies connection.
+
+Options are:
+- `default`: sets connection as a default connection. Default connection is used when no connection is specified.
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again. Default is $RECONNECT_DELAYS.
+- `outbox_size`: size of outbox buffer for cient messages. Default is $DEFAULT_OUTBOX_SIZE. If to small operations may throw exceptions.
+- `verbose: turns on `+OK` protocol acknowledgements
+- `pedantic: turns on additional strict format checking, e.g. for properly formed subjects
+- `tls_required: indicates whether the client requires an SSL connection
+- `auth_token`: client authorization token
+- `user`: connection username
+- `pass`: connection password
+- `name`: client name
+- `echo`: if set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`
+- `jwt`: the JWT that identifies a user permissions and account.
+- `no_responders`: enable quick replies for cases where a request is sent to a topic with no responders.
+- `headers`: whether the client supports headers
+- `nkey`: the public NKey to authenticate the client
+- `nkey_seed`: the private NKey to authenticate the client
+- `tls_ca_cert_path`: CA certuficate file path
+- `tls_client_cert_path`: client public certificate file
+- `tls_client_key_path`: client private certificate file
 """
 function connect(
     host::String = get(ENV, "NATS_HOST", "localhost"),
