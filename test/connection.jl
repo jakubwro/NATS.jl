@@ -155,7 +155,7 @@ end
         sleep(21)
     end
     for _ in 1:82
-        publish("too_many_handlers")
+        publish("overload_channel")
     end
     sleep(21)
 
