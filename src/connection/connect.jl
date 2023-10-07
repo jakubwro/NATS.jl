@@ -164,6 +164,7 @@ function connect(
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))
+                    @info "Wait end time: $(time())"
                     # close(sock)
                 end
                 if isdrained(nc)
