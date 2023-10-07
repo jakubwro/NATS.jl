@@ -14,7 +14,7 @@ end
 
 const buffer = ProtocolMessage[]
 
-function sendloop(nc::Connection, io::IO)
+function sendloop(nc::Connection, io::IO, old_sock)
     try
         mime = MIME_PROTOCOL()
         outbox_channel = outbox(nc)
@@ -41,6 +41,8 @@ function sendloop(nc::Connection, io::IO)
                 end
                 show(buf, mime, msg)
             end
+            !isnothing(old_sock) && close(old_sock)
+            old_sock = nothing
             write(io, take!(buf))
             flush(io)
         end

@@ -12,8 +12,12 @@
 @enum ConnectionStatus CONNECTING CONNECTED DISCONNECTED DRAINING DRAINED
 
 @kwdef mutable struct Stats
+    "Count of msgs handled without error."
     msgs_handled::Int64 = 0
+    "Count of msgs that caused handler function error."
     msgs_not_handled::Int64 = 0
+    "Msgs that was not put to a subscription channel because it was full."
+    msgs_dropped::Int64 = 0
     reconnections::Int64 = 0
 end
 

@@ -149,9 +149,10 @@ function connect(
     # TODO: task monitoring, warn about broken connection after n reconnects.
     spawn_sticky_task(() ->
         begin
+            old_sock = nothing
             while true # TODO: While is drained.
                 receiver_task = spawn_sticky_task(() -> while !eof(read_stream) process(nc, next_protocol_message(read_stream)) end)
-                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream))
+                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream, old_sock))
 
                 err_channel = Channel()
                 bind(err_channel, receiver_task)
@@ -163,7 +164,7 @@ function connect(
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))
-                    close(sock)
+                    # close(sock)
                 end
                 if isdrained(nc)
                     @debug "Drained, no reconnect."
@@ -171,7 +172,7 @@ function connect(
                 end
                 try wait(sender_task) catch end
                 reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
-                try wait(receiver_task) catch end
+                # try wait(receiver_task) catch end
 
                 @warn "Reconnecting..."
                 status(nc, CONNECTING)
@@ -186,6 +187,7 @@ function connect(
                     true
                 end
                 retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
+                old_sock = sock
                 try
                     sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options; nc)
                 catch err

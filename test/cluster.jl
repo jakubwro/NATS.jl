@@ -94,8 +94,7 @@ end
     @info "Published $n messages in $(time() - start_time) seconds."
     @info "Distrupted connection received $pub_conn_received_count msgs."
 
-    # TODO: try minimize this closig socket after openning new one.
-    @test pub_conn_received_count > n - 5 # allow some messages lost cause sub is disconnected for few ms
+    @test pub_conn_received_count == n
     @test unique(pub_conn_results) == pub_conn_results
 
     @test sub_conn_received_count == n
@@ -109,3 +108,26 @@ end
     drain(sub_conn)
 
 end
+
+# @testset "Switch sub connection." begin
+#     conn_a = NATS.connect("localhost", 5222, default=false)
+#     conn_b = NATS.connect("localhost", 5223, default=false) 
+
+#     subject = "switch"
+
+#     sub = subscribe(subject; connection = conn_a) do msg
+#         @show msg
+#     end
+
+#     @async for i in 1:10
+#         publish(subject; payload = "$i", connection = conn_a)
+#         sleep(1)
+#     end
+
+#     sleep(5)
+#     unsubscribe(sub; connection = conn_a)
+#     NATS.send(conn_b, sub)
+
+#     # unsubscribe(sub; connection = conn_a)
+
+# end
