@@ -45,7 +45,9 @@ end
         signal_lame_duck_mode(port_to_container[5222])
     end)
 
+    start_time = time()
     response = request(String, "a_topic", timer = Timer(10); connection)
+    @info "Response time was $(time() - start_time)"
 
     @test response == "This is a reply."
     @test connection.port != 5222
