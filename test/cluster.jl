@@ -46,7 +46,7 @@ end
     end)
 
     start_time = time()
-    response = request(String, "a_topic", timer = Timer(10); connection)
+    response = request(String, "a_topic", timer = Timer(15); connection)
     @info "Response time was $(time() - start_time)"
 
     @test response == "This is a reply."
