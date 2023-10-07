@@ -18,18 +18,19 @@ function sendloop(nc::Connection, io::IO)
     try
         mime = MIME_PROTOCOL()
         outbox_channel = outbox(nc)
+        to_resend = collect(buffer)
+        !isempty(to_resend) && @warn "Buffer has $(length(to_resend)) msgs"
         while isopen(outbox_channel)
-            if !isempty(buffer)
-                @warn "Buffer has $(length(buffer)) messages."
-            end
             fetch(outbox_channel) # Wait untill some messages are there.
+            empty!(buffer)
             buf = IOBuffer() # Buffer write to avoid often task yield.
             pending = Base.n_avail(outbox_channel)
             batch = min(pending, 5000)
             @assert batch > 0
-            for msg in buffer
-                show(buf, mime, msg)
-            end
+            # for msg in to_resend
+            #     show(buf, mime, msg)
+            # end
+            empty!(to_resend)
             # send_buf = []
             for _ in 1:batch
                 msg = take!(outbox_channel)
@@ -42,7 +43,6 @@ function sendloop(nc::Connection, io::IO)
             end
             write(io, take!(buf))
             flush(io)
-            empty!(buffer)
         end
         @info "Sender task finished, $(Base.n_avail(outbox_channel)) msgs in outbox."
     catch err
@@ -50,6 +50,7 @@ function sendloop(nc::Connection, io::IO)
             # This is fine, outbox closed by reconnect loop.
         else
             rethrow()
+            # If task errors on write, maybe msgs should be resend
         end
     end
 end

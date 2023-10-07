@@ -58,18 +58,24 @@ end
 end
 
 @testset "No messages lost during node switch." begin
-    pub_conn = NATS.connect("localhost", 5222, default=false, echo = false) # TODO: unclear why echo needs to be false to not have doubled msgs.
+    pub_conn = NATS.connect("localhost", 5222, default=false) # TODO: unclear why echo needs to be false to not have doubled msgs.
     sub_conn = NATS.connect("localhost", 5223, default=false) 
     
     sub_conn_received_count = 0
+    sub_conn_results = []
     sub1 = subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
         sub_conn_received_count = sub_conn_received_count + 1
+        push!(sub_conn_results, payload(msg))
     end
 
     pub_conn_received_count = 0
+    pub_conn_results = []
     sub2 = subscribe("a_topic"; async_handlers = false, connection = pub_conn) do msg
         pub_conn_received_count = pub_conn_received_count + 1
+        push!(pub_conn_results, payload(msg))
     end
+
+    sleep(0.5) # TODO: this sleep should be removed?
 
     errormonitor(@async begin
         sleep(2)
@@ -88,7 +94,12 @@ end
     @info "Published $n messages in $(time() - start_time) seconds."
     @info "Distrupted connection received $pub_conn_received_count msgs."
 
-    @test sub_conn_received_count == n # TODO: this should be == n, try to find out why not
+    # TODO: try minimize this closig socket after openning new one.
+    @test pub_conn_received_count > n - 5 # allow some messages lost cause sub is disconnected for few ms
+    @test unique(pub_conn_results) == pub_conn_results
+
+    @test sub_conn_received_count == n
+    @test unique(sub_conn_results) == sub_conn_results
 
     sleep(15) # Wait at least 10 s for server exit
     start_container(port_to_container[5222])
