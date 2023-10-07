@@ -26,6 +26,8 @@ function default_connect_options()
 end
 
 function validate_connect_options(server_info::Info, options)
+    # TODO: check if proto is 1 when `echo` flag is set
+
     # TODO: maybe better to rely on server side validation. Grab Err messages and decide if conn should be terminated.
     server_info.proto > 0 || error("Server supports too old protocol version.")
     server_info.headers   || error("Server does not support headers.") # TODO: maybe this can be relaxed.
@@ -127,22 +129,20 @@ end
 """
     connect([host, port; options...])
 
-Connect to NATS server.
-
-Connect is a blocking operation that initiazlies connection.
+Connect to NATS server. The function is blocking until connection is initialized.
 
 Options are:
-- `default`: sets connection as a default connection. Default connection is used when no connection is specified.
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again. Default is $RECONNECT_DELAYS.
-- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE. If to small operations may throw exceptions.
-- `verbose: turns on `+OK` protocol acknowledgements
+- `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again. Default is $RECONNECT_DELAYS
+- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE, if to small operations that send messages to server (e.g. `publish`) may throw an exception
+- `verbose: turns on protocol acknowledgements
 - `pedantic: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required: indicates whether the client requires an SSL connection
 - `auth_token`: client authorization token
 - `user`: connection username
 - `pass`: connection password
 - `name`: client name
-- `echo`: if set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`
+- `echo`: if set to `false`, the server will not send originating messages from this connection to its own subscriptions
 - `jwt`: the JWT that identifies a user permissions and account.
 - `no_responders`: enable quick replies for cases where a request is sent to a topic with no responders.
 - `headers`: whether the client supports headers

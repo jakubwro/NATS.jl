@@ -10,6 +10,7 @@ function drain(nc::Connection)
     for (_, sub) in nc.subs
         unsubscribe(sub; max_msgs = 0, connection = nc)
     end
+    # TODO: wait for handlers running == 0
     sleep(3)
     length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
     status(nc, DRAINED)
