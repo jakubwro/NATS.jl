@@ -3,7 +3,7 @@ $(SIGNATURES)
 
 Publish message to a subject.
 
-Optional keyword argumetns are:
+Optional keyword arguments are:
 - `connection`: connection to be used, if not specified `default` connection is taken
 - `reply_to`: subject to which a result should be published
 - `payload`: payload string
@@ -22,7 +22,7 @@ end
 """
 $(SIGNATURES)
 
-Publish `data` to a `subject`, payload is obtained with `show` method taking $MIME_PAYLOAD, headers are obtained wth `show` method taking $MIME_HEADERS.
+Publish `data` to a `subject`, payload is obtained with `show` method taking `mime` `$(MIME_PAYLOAD())`, headers are obtained wth `show` method taking `mime` `$(MIME_HEADERS())`.
 
 Optional parameters:
 - `connection`: connection to be used, if not specified `default` connection is taken
@@ -30,8 +30,11 @@ Optional parameters:
 
 It is equivalent to:
 ```
-publish(subject; payload = String(repr(NATS.MIME_PAYLOAD(), data)), headers = String(repr(NATS.MIME_PAYLOAD(), data)))
-````
+    publish(
+        subject;
+        payload = String(repr(NATS.MIME_PAYLOAD(), data)),
+        headers = String(repr(NATS.MIME_PAYLOAD(), data)))
+```
 """
 function publish(
     subject::String,
