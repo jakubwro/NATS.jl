@@ -2,24 +2,32 @@ function _send(nc, message)
     put!(outbox(nc), message)
 end
 
-function send(nc::Connection, message::ProtocolMessage)
+function can_send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
         if message isa Unsub || message isa Pong
-            status(nc) == DRAINED && error("Connection is drained.")
+            !(status(nc) == DRAINED || status(nc) == DISCONNECTED)
         else
-            error("Connection is drained.")
+            false
         end
+    else
+        true
     end
-    
+end
+
+function send(nc::Connection, message::ProtocolMessage)
+    can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
+
     delays = Base.ExponentialBackOff(n=1, first_delay=0.01, max_delay=1)
     
     # this is faster than
     # retry(() -> put!(outbox(nc), message); delays)()
     for d in delays
         try
+            # During reconnect outbox might be closed. Wait for a new outbox open.
             put!(outbox(nc), message)
             return true
         catch
+            can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
             sleep(d)
         end
     end
