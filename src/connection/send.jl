@@ -1,7 +1,3 @@
-function _send(nc, message)
-    put!(outbox(nc), message)
-end
-
 function can_send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
         if message isa Unsub || message isa Pong
