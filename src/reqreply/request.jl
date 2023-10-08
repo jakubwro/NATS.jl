@@ -5,6 +5,10 @@ Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply)
 
 Default timeout is $REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timer`.
 
+Optional keyword arguments are:
+- `connection`: connection to be used, if not specified `default` connection is taken
+- `timer`: error will be thrown if no replies received until `timer` expires
+
 # Examples
 ```julia-repl
 julia> NATS.request("help.please")
@@ -34,6 +38,27 @@ function has_error_status(msg::NATS.Message)
     statuscode(msg) in 400:599
 end
 
+"""
+$(SIGNATURES)
+
+Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
+
+Optional keyword arguments are:
+- `connection`: connection to be used, if not specified `default` connection is taken
+- `timer`: error will be thrown if no replies received until `timer` expires
+
+# Examples
+```julia-repl
+julia> NATS.request("help.please")
+NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, 17, "OK, I CAN HELP!!!")
+
+julia> request("help.please"; timer = Timer(0))
+ERROR: No replies received.
+
+julia> request("help.please", nreplies = 2; timer = Timer(0))
+NATS.Msg[]
+```
+"""
 function request(
     subject::String,
     data,
