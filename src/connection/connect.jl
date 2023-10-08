@@ -133,11 +133,14 @@ Connect to NATS server. The function is blocking until connection is initialized
 
 Options are:
 - `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again. Default is $RECONNECT_DELAYS
-- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE, if to small operations that send messages to server (e.g. `publish`) may throw an exception
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again, default is $RECONNECT_DELAYS what meas retry every second for 7 billion years.
+- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose: turns on protocol acknowledgements
 - `pedantic: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required: indicates whether the client requires an SSL connection
+- `tls_ca_cert_path`: CA certuficate file path
+- `tls_client_cert_path`: client public certificate file
+- `tls_client_key_path`: client private certificate file
 - `auth_token`: client authorization token
 - `user`: connection username
 - `pass`: connection password
@@ -145,12 +148,8 @@ Options are:
 - `echo`: if set to `false`, the server will not send originating messages from this connection to its own subscriptions
 - `jwt`: the JWT that identifies a user permissions and account.
 - `no_responders`: enable quick replies for cases where a request is sent to a topic with no responders.
-- `headers`: whether the client supports headers
 - `nkey`: the public NKey to authenticate the client
 - `nkey_seed`: the private NKey to authenticate the client
-- `tls_ca_cert_path`: CA certuficate file path
-- `tls_client_cert_path`: client public certificate file
-- `tls_client_key_path`: client private certificate file
 """
 function connect(
     host::String = get(ENV, "NATS_HOST", "localhost"),

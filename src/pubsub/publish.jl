@@ -2,6 +2,12 @@
 $(SIGNATURES)
 
 Publish message to a subject.
+
+Optional keyword argumetns are:
+- `connection`: connection to be used, if not specified `default` connection is taken
+- `reply_to`: subject to which a result should be published
+- `payload`: payload string
+- `headers`: vector of pair of string
 """
 function publish(
     subject::String;
@@ -16,7 +22,16 @@ end
 """
 $(SIGNATURES)
 
-Publish message to a subject.
+Publish `data` to a `subject`, payload is obtained with `show` method taking $MIME_PAYLOAD, headers are obtained wth `show` method taking $MIME_HEADERS.
+
+Optional parameters:
+- `connection`: connection to be used, if not specified `default` connection is taken
+- `reply_to`: subject to which a result should be published
+
+It is equivalent to:
+```
+publish(subject; payload = String(repr(NATS.MIME_PAYLOAD(), data)), headers = String(repr(NATS.MIME_PAYLOAD(), data)))
+````
 """
 function publish(
     subject::String,
