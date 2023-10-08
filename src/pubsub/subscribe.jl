@@ -30,6 +30,7 @@ function subscribe(
     channel = _start_tasks(f_typed, async_handlers, subject, channel_size, error_throttling_seconds)
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
+        state.sub_stats[sid] = Stats()
         connection.subs[sid] = sub
     end
     send(connection, sub)

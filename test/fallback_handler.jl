@@ -9,8 +9,8 @@ using NATS
     end
     empty!(NATS.state.handlers) # Break state of connection to force fallback handler.
     publish("SOME.BAR"; payload = "Hi!")
-    sleep(0.5) # Wait for compilation.
-    @test nc.stats.msgs_not_handled > 0
+    sleep(2) # Wait for compilation.
+    @test nc.stats.msgs_dropped > 0
     unsubscribe(sub)
 end
 
@@ -29,7 +29,7 @@ end
     empty!(NATS.state.handlers) # Break state of connection to force fallback handler.
     publish("SOME.FOO"; payload = "Hi!")
     sleep(0.5) # Wait for compilation.
-    @test nc.stats.msgs_not_handled > 0
+    @test nc.stats.msgs_dropped > 0
     @test was_called
     unsubscribe(sub)
 end

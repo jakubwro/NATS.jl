@@ -11,42 +11,20 @@
 # """
 @enum ConnectionStatus CONNECTING CONNECTED DISCONNECTED DRAINING DRAINED
 
-@kwdef mutable struct Stats
-    "Count of msgs handled without error."
-    msgs_handled::Int64 = 0
-    "Count of msgs that caused handler function error."
-    msgs_not_handled::Int64 = 0
-    "Msgs that was not put to a subscription channel because it was full."
-    msgs_dropped::Int64 = 0
-    reconnections::Int64 = 0
-end
-
-@kwdef struct SubStats
-    # "Seconds since the epoch."
-    # time_created::Float64
-    "Count of msgs handled without error."
-    msgs_handled::Int64 = 0
-    "Count of msgs that caused handler function error."
-    msgs_errored::Int64 = 0
-    "Msgs that was not put to the channel because it was full."
-    msgs_dropped::Int64 = 0
-    "Total handlers running at the moment."
-    handers_running::Int64 = 0
-    "Function that can be installed to monitor handler errors."
-    error_handler::Function = nothing
-end
+include("stats.jl")
 
 @kwdef mutable struct Connection
     host::String
     port::Int64
     status::ConnectionStatus = CONNECTING
+    stats::Stats = Stats()
     info::Info
     outbox::Channel{ProtocolMessage}
+    reconnect_count::Int64 = 0
+    lock::ReentrantLock = ReentrantLock()
+    rng::AbstractRNG = MersenneTwister()
     subs::Dict{String, Sub} = Dict{String, Sub}()
     unsubs::Dict{String, Int64} = Dict{String, Int64}()
-    stats::Stats = Stats()
-    rng::AbstractRNG = MersenneTwister()
-    lock::ReentrantLock = ReentrantLock()
 end
 
 info(c::Connection)::Info = @lock c.lock c.info
@@ -65,6 +43,7 @@ mutable struct State
     fallback_handlers::Vector{Function}
     lock::ReentrantLock
     stats::Stats
+    sub_stats::Dict{String, Stats}
 end
 
 function connection(id::Symbol)
@@ -100,7 +79,7 @@ include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
 
-const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats())
+const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(), Dict{String, Stats}())
 
 function status()
     println("=== Connection status ====================")
@@ -118,12 +97,12 @@ function status()
     end
     println("subscriptions:  $(length(state.handlers))           ")
     println("msgs_handled:   $(state.stats.msgs_handled)         ")
-    println("msgs_unhandled: $(state.stats.msgs_not_handled)        ")
+    println("msgs_errored:   $(state.stats.msgs_errored)        ")
     println("==========================================")
 end
 
-# show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-#     status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
+show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
+    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 # """
 # Enqueue protocol message in `outbox` to be written to socket.

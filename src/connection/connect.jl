@@ -221,8 +221,8 @@ function connect(
                 end
                 info(nc, info_msg)
                 status(nc, CONNECTED)
-                @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
-                @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
+                # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
+                # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
                 @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
             end
         end)

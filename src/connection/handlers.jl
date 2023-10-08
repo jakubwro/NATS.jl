@@ -27,12 +27,7 @@ end
 function process(nc::Connection, msg::Union{Msg, HMsg})
     @debug "Received $msg"
     ch = lock(state.lock) do
-        c = get(state.handlers, msg.sid, nothing)
-        if !isnothing(c)
-            nc.stats.msgs_handled = nc.stats.msgs_handled + 1
-            state.stats.msgs_handled = state.stats.msgs_handled + 1
-        end
-        c
+        get(state.handlers, msg.sid, nothing)
     end
     if isnothing(ch)
         fallbacks = lock(state.lock) do
@@ -41,15 +36,14 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         for f in fallbacks
             Base.invokelatest(f, nc, msg)
         end
-        lock(state.lock) do
-            nc.stats.msgs_not_handled = nc.stats.msgs_not_handled + 1
-            state.stats.msgs_not_handled = state.stats.msgs_not_handled + 1
-        end
+        @inc_stat :msgs_dropped state.stats nc.stats
     else
         if Base.n_avail(ch) == ch.sz_max
             # TODO: drop old msgs?
+            @inc_stat :msgs_dropped state.stats nc.stats
         else
             put!(ch, msg)
+            @inc_stat :msgs_received state.stats nc.stats
         end
         _cleanup_unsub_msg(nc, msg.sid)
     end
