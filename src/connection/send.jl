@@ -1,3 +1,7 @@
+function _send(nc, message)
+    put!(outbox(nc), message)
+end
+
 function send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
         if message isa Unsub || message isa Pong
@@ -6,10 +10,20 @@ function send(nc::Connection, message::ProtocolMessage)
             error("Connection is drained.")
         end
     end
-
-    # When connection is lost outbox might be closed. Retry until new outbox is there.
-    delays = vcat(0.001, 0.01, repeat([0.1], 100))
-    retry(() -> put!(outbox(nc), message); delays)()
+    
+    delays = Base.ExponentialBackOff(n=1, first_delay=0.01, max_delay=1)
+    
+    # this is faster than
+    # retry(() -> put!(outbox(nc), message); delays)()
+    for d in delays
+        try
+            put!(outbox(nc), message)
+            return true
+        catch
+            sleep(d)
+        end
+    end
+    false
 end
 
 const buffer = ProtocolMessage[]
