@@ -17,18 +17,17 @@ function send(nc::Connection, message::ProtocolMessage)
     
     # this is faster than
     # retry(() -> put!(outbox(nc), message); delays)()
-    was_put = false
     for d in delays
         try
             # During reconnect outbox might be closed. Wait for a new outbox open.
             put!(outbox(nc), message)
-            was_put = true
+            return
         catch
             can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
             sleep(d)
         end
     end
-    was_put || error("Unable to send. Outbox closed for more than $(sum(delays)) seconds.")
+    error("Unable to send. Outbox closed for more than $(sum(delays)) seconds.")
 end
 
 const buffer = ProtocolMessage[]
