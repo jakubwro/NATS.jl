@@ -98,9 +98,11 @@ end
 
     @test pub_conn_received_count == n
     @test unique(pub_conn_results) == pub_conn_results
+    @show first(pub_conn_results) last(pub_conn_results)
 
     @test sub_conn_received_count == n
     @test unique(sub_conn_results) == sub_conn_results
+    @show first(sub_conn_results) last(sub_conn_results)
 
     sleep(15) # Wait at least 10 s for server exit
     start_container(port_to_container[5222])
