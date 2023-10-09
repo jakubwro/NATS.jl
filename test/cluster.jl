@@ -90,10 +90,10 @@ end
         publish("a_topic"; payload = "$i", connection = pub_conn)
         sleep(0.001)
     end
+    @info "Published $n messages in $(time() - start_time) seconds."
 
     sleep(0.1)
 
-    @info "Published $n messages in $(time() - start_time) seconds."
     @info "Distrupted connection received $pub_conn_received_count msgs."
 
     @test pub_conn_received_count == n
@@ -108,6 +108,8 @@ end
 
     drain(pub_conn)
     drain(sub_conn)
+
+    @show NATS.state.stats
 
 end
 
