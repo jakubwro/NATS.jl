@@ -16,9 +16,6 @@ NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, 17, "OK, I CAN HELP!!!")
 
 julia> request("help.please"; timer = Timer(0))
 ERROR: No replies received.
-
-julia> request("help.please", nreplies = 2; timer = Timer(0))
-NATS.Msg[]
 ```
 """
 function request(
@@ -49,12 +46,6 @@ Optional keyword arguments are:
 
 # Examples
 ```julia-repl
-julia> NATS.request("help.please")
-NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, 17, "OK, I CAN HELP!!!")
-
-julia> request("help.please"; timer = Timer(0))
-ERROR: No replies received.
-
 julia> request("help.please", nreplies = 2; timer = Timer(0))
 NATS.Msg[]
 ```
