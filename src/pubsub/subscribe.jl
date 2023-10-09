@@ -10,8 +10,8 @@ Optional keyword arguments are:
 - `connection`: connection to be used, if not specified `default` connection is taken
 - `queue_group`: NATS server will distribute messages across queue group members
 - `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
-- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is $SUBSCRIPTION_CHANNEL_SIZE
-- `error_throttling_seconds`: time intervals in seconds that handler errors will be reported in logs, default is $SUBSCRIPTION_ERROR_THROTTLING_SECONDS seconds
+- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$SUBSCRIPTION_CHANNEL_SIZE`
+- `error_throttling_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
 """
 function subscribe(
     f,
@@ -27,10 +27,11 @@ function subscribe(
     f_typed = _fast_call(f, arg_t)
     sid = @lock NATS.state.lock randstring(connection.rng, 20) # TODO: make helper method
     sub = Sub(subject, queue_group, sid)
-    channel = _start_tasks(f_typed, async_handlers, subject, channel_size, error_throttling_seconds)
+    sub_stats = Stats()
+    channel = _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, error_throttling_seconds)
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
-        state.sub_stats[sid] = Stats()
+        state.sub_stats[sid] = sub_stats
         connection.subs[sid] = sub
     end
     send(connection, sub)
@@ -38,7 +39,7 @@ function subscribe(
 end
 
 # TODO: recactor this
-function _start_tasks(f::Function, async_handlers::Bool, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
+function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_handlers::Bool, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
     last_error = nothing
     last_error_msg = nothing
     errors_since_last_log = 0
@@ -52,10 +53,16 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
                 while true
                     msg = take!(ch)
                     handler_task = Threads.@spawn :default begin
+                        task_local_storage("sub_stats", sub_stats)
                         Threads.atomic_add!(handlers_running, 1)
                         try
+                            @inc_stat :handlers_running sub_stats conn_stats state.stats
                             f(msg)
-                        catch err
+                            @inc_stat :msgs_handled sub_stats conn_stats state.stats
+                            @dec_stat :handlers_running sub_stats conn_stats state.stats
+                        catch 
+                            @inc_stat :msgs_errored sub_stats conn_stats state.stats
+                            @dec_stat :handlers_running sub_stats conn_stats state.stats
                             @lock lock begin
                                 last_error = err
                                 last_error_msg = msg
@@ -72,13 +79,16 @@ function _start_tasks(f::Function, async_handlers::Bool, subject::String, channe
         end)
     else
         spawn_sticky_task(() ->begin
+            task_local_storage("sub_stats", sub_stats)
             try
                 while true
                     msg = take!(ch)
                     Threads.atomic_add!(handlers_running, 1)
                     try
                         f(msg)
+                        @inc_stat :msgs_handled sub_stats conn_stats state.stats
                     catch err
+                        @inc_stat :msgs_errored sub_stats conn_stats state.stats
                         @lock lock begin
                             last_error = err
                             last_error_msg = msg

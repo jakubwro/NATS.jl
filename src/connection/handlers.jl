@@ -38,12 +38,13 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
         end
         @inc_stat :msgs_dropped state.stats nc.stats
     else
+        sub_stats = state.sub_stats[msg.sid]
         if Base.n_avail(ch) == ch.sz_max
             # TODO: drop old msgs?
-            @inc_stat :msgs_dropped state.stats nc.stats
+            @inc_stat :msgs_dropped state.stats nc.stats sub_stats
         else
             put!(ch, msg)
-            @inc_stat :msgs_received state.stats nc.stats
+            @inc_stat :msgs_received state.stats nc.stats sub_stats
         end
         _cleanup_unsub_msg(nc, msg.sid)
     end

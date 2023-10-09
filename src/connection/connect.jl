@@ -133,11 +133,11 @@ Connect to NATS server. The function is blocking until connection is initialized
 
 Options are:
 - `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again, default is $RECONNECT_DELAYS what meas retry every second for 7 billion years.
-- `outbox_size`: size of outbox buffer for cient messages. Default is $OUTBOX_SIZE, if too small operations that send messages to server (e.g. `publish`) may throw an exception
-- `verbose: turns on protocol acknowledgements
-- `pedantic: turns on additional strict format checking, e.g. for properly formed subjects
-- `tls_required: indicates whether the client requires an SSL connection
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again, default is `$RECONNECT_DELAYS` what meas retry every second for 7 billion years.
+- `outbox_size`: size of outbox buffer for cient messages. Default is `$OUTBOX_SIZE`, if too small operations that send messages to server (e.g. `publish`) may throw an exception
+- `verbose`: turns on protocol acknowledgements
+- `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
+- `tls_required`: indicates whether the client requires an SSL connection
 - `tls_ca_cert_path`: CA certuficate file path
 - `tls_client_cert_path`: client public certificate file
 - `tls_client_key_path`: client private certificate file
