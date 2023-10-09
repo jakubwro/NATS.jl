@@ -59,9 +59,12 @@ function sendloop(nc::Connection, io::IO, old_sock)
                 end
                 show(buf, mime, msg)
             end
-            
-            !isnothing(old_sock) && begin close(old_sock); @info "Socket close time: $(time())" end
-            old_sock = nothing
+           
+            @async begin
+                sleep(0.04)
+                !isnothing(old_sock) && begin close(old_sock); @info "Socket close time: $(time())" end
+                old_sock = nothing
+            end
             write(io, take!(buf))
             flush(io)
         end
