@@ -65,8 +65,9 @@ function sendloop(nc::Connection, io::IO, old_sock)
             write(io, take!(buf))
             flush(io)
         end
-        @info "Sender task finished, $(Base.n_avail(outbox_channel)) msgs in outbox."
+        @info "Sender task finished at $(time()), $(Base.n_avail(outbox_channel)) msgs in outbox."
     catch err
+        @info "Sender task finished at $(time())."
         if err isa InvalidStateException
             # This is fine, outbox closed by reconnect loop.
         else

@@ -173,7 +173,17 @@ function connect(
         begin
             old_sock = nothing
             while true # TODO: While is drained.
-                receiver_task = spawn_sticky_task(() -> while !eof(read_stream) process(nc, next_protocol_message(read_stream)) end)
+                receiver_task = spawn_sticky_task(() -> begin 
+                    try
+                        while !eof(read_stream) 
+                            process(nc, next_protocol_message(read_stream))
+                        end
+                        @warn "Receiver task finished at $(time())"
+                    catch
+                        @warn "Receiver task finished at $(time())"
+                        rethrow()
+                    end
+                end)
                 sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream, old_sock))
 
                 err_channel = Channel()
