@@ -13,21 +13,22 @@ end
 function send(nc::Connection, message::ProtocolMessage)
     can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
 
-    delays = Base.ExponentialBackOff(n=1, first_delay=0.01, max_delay=1)
+    delays = Base.ExponentialBackOff(n=100, first_delay=0.0001, max_delay=0.01)
     
     # this is faster than
     # retry(() -> put!(outbox(nc), message); delays)()
+    was_put = false
     for d in delays
         try
             # During reconnect outbox might be closed. Wait for a new outbox open.
             put!(outbox(nc), message)
-            return true
+            was_put = true
         catch
             can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
             sleep(d)
         end
     end
-    false
+    was_put || error("Unable to send. Outbox closed for more than $(sum(delays)) seconds.")
 end
 
 const buffer = ProtocolMessage[]
