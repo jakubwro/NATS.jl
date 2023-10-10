@@ -44,11 +44,11 @@ function from_options(T::Type, options)
     T(options[fieldnames(T)]...)
 end
 
-function spawn_sticky_task(f)
+function spawn_sticky_task(pool::Symbol, f)
     t = Threads.Task(f)
     # Setting sticky flag to false makes processing 10x slower when running with multiple threads.
-    t.sticky = true
-    Base.Threads._spawn_set_thrpool(t, :default)
+    t.sticky = pool == :interactive
+    Base.Threads._spawn_set_thrpool(t, pool)
     Base.Threads.schedule(t)
     errormonitor(t)
     t

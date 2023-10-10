@@ -172,11 +172,11 @@ function connect(
     nc = Connection(; host, port, info = info_msg, outbox = Channel{ProtocolMessage}(outbox_size))
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
-    spawn_sticky_task(() ->
+    spawn_sticky_task(:interactive, () ->
         begin
             old_sock = nothing
             while true # TODO: While is drained.
-                receiver_task = spawn_sticky_task(() -> begin 
+                receiver_task = spawn_sticky_task(:interactive, () -> begin 
                     try
                         while !eof(read_stream) 
                             process(nc, next_protocol_message(read_stream))
@@ -187,7 +187,7 @@ function connect(
                         rethrow()
                     end
                 end)
-                sender_task = spawn_sticky_task(() -> sendloop(nc, write_stream, old_sock))
+                sender_task = spawn_sticky_task(:interactive, () -> sendloop(nc, write_stream, old_sock))
 
                 err_channel = Channel()
                 bind(err_channel, receiver_task)
@@ -196,6 +196,9 @@ function connect(
                 try
                     wait(err_channel)
                 catch err
+                    if err isa InterruptException
+                        # TODO: stop the loop, drain connection
+                    end
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))

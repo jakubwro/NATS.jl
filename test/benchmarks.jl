@@ -2,6 +2,10 @@ using Test
 using Random
 using NATS
 
+@show Threads.nthreads()
+@show Threads.nthreads(:interactive)
+@show Threads.nthreads(:default)
+
 include("util.jl")
 
 @testset "Warmup" begin
