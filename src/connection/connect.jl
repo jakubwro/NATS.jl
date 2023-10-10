@@ -187,7 +187,7 @@ function connect(
                         rethrow()
                     end
                 end)
-                sender_task = spawn_sticky_task(:interactive, () -> sendloop(nc, write_stream, old_sock))
+                sender_task = spawn_sticky_task(:interactive, () -> sendloop(nc, write_stream, nothing))
 
                 err_channel = Channel()
                 bind(err_channel, receiver_task)
@@ -203,7 +203,7 @@ function connect(
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))
                     @info "Wait end time: $(time())"
-                    # close(sock)
+                    close(sock)
                 end
                 if isdrained(nc)
                     @debug "Drained, no reconnect."
