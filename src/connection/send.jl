@@ -17,10 +17,15 @@ function send(nc::Connection, message::ProtocolMessage)
     
     # this is faster than
     # retry(() -> put!(outbox(nc), message); delays)()
+    start_time = time()
     for d in delays
         try
             # During reconnect outbox might be closed. Wait for a new outbox open.
             put!(outbox(nc), message)
+            time_elapsed = time() - start_time
+            if time_elapsed > 1.0
+                @warn "Enqueueing a message took $time_elapsed seconds. Outbox might be too small. Outbox size: $(Base.n_avail(outbox(nc)))."
+            end
             return
         catch
             can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
@@ -30,30 +35,18 @@ function send(nc::Connection, message::ProtocolMessage)
     error("Unable to send. Outbox closed for more than $(sum(delays)) seconds.")
 end
 
-const buffer = ProtocolMessage[]
-
 function sendloop(nc::Connection, io::IO, old_sock)
     try
         mime = MIME_PROTOCOL()
         outbox_channel = outbox(nc)
-        to_resend = collect(buffer)
-        !isempty(to_resend) && @warn "Buffer has $(length(to_resend)) msgs"
         while isopen(outbox_channel)
             fetch(outbox_channel) # Wait untill some messages are there.
-            empty!(buffer)
             buf = IOBuffer() # Buffer write to avoid often task yield.
             pending = Base.n_avail(outbox_channel)
-            batch = min(pending, 5000)
+            batch = min(pending, 5000) # TODO: configure it dynamically with ENV
             @assert batch > 0
-            # for msg in to_resend
-            #     show(buf, mime, msg)
-            # end
-            empty!(to_resend)
-            # send_buf = []
             for _ in 1:batch
                 msg = take!(outbox_channel)
-                push!(buffer, msg)
-                # push!(send_buf, msg)
                 if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
                     @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
                 end
@@ -75,7 +68,7 @@ function sendloop(nc::Connection, io::IO, old_sock)
             # This is fine, outbox closed by reconnect loop.
         else
             rethrow()
-            # If task errors on write, maybe msgs should be resend
+            # TODO: If task errors on write, maybe msgs should be resend?
         end
     end
 end
