@@ -13,7 +13,7 @@ end
 function send(nc::Connection, message::ProtocolMessage)
     can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
 
-    delays = Base.ExponentialBackOff(n=100, first_delay=0.0001, max_delay=0.01)
+    delays = Base.ExponentialBackOff(n=100, first_delay=0.001, max_delay=0.01)
     
     # this is faster than
     # retry(() -> put!(outbox(nc), message); delays)()
