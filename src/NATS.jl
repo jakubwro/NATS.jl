@@ -28,6 +28,11 @@ const SUBSCRIPTION_CHANNEL_SIZE = 10000
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
 const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
+# If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
+const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false
+const SEND_BATCH_SIZE = 5000
+
+
 include("protocol/protocol.jl")
 include("connection/connection.jl")
 include("pubsub/pubsub.jl")

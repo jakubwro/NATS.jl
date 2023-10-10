@@ -119,9 +119,8 @@ function reopen_outbox(nc::Connection)
     end
     subs_count = Base.n_avail(new_outbox)
     for msg in old_outbox
+        # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
         if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
-            put!(new_outbox, msg)
-        elseif msg isa Sub && !in(msg.sid, sids)
             put!(new_outbox, msg)
         end
     end
@@ -208,6 +207,7 @@ function connect(
                     break
                 end
                 try wait(sender_task) catch end
+                # TODO: add flag to decide at which pont reopen outbox.
                 reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
                 # try wait(receiver_task) catch end
 

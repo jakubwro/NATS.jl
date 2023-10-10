@@ -40,11 +40,17 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
     else
         sub_stats = state.sub_stats[msg.sid]
         if Base.n_avail(ch) == ch.sz_max
-            # TODO: drop old msgs?
+            # This check is safe, as the only task putting in to subs channel is this one.
+            # TODO: drop older msgs?
             @inc_stat :msgs_dropped state.stats nc.stats sub_stats
         else
-            put!(ch, msg)
-            @inc_stat :msgs_received state.stats nc.stats sub_stats
+            try
+                put!(ch, msg)
+                @inc_stat :msgs_received state.stats nc.stats sub_stats
+            catch
+                # Channel was closed by `unsubscribe`.
+                @inc_stat :msgs_dropped state.stats nc.stats sub_stats
+            end
         end
         _cleanup_unsub_msg(nc, msg.sid)
     end

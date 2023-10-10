@@ -43,9 +43,9 @@ function sendloop(nc::Connection, io::IO, old_sock)
             fetch(outbox_channel) # Wait untill some messages are there.
             buf = IOBuffer() # Buffer write to avoid often task yield.
             pending = Base.n_avail(outbox_channel)
-            batch = min(pending, 5000) # TODO: configure it dynamically with ENV
-            @assert batch > 0
-            for _ in 1:batch
+            batch_size = min(pending, SEND_BATCH_SIZE) # TODO: configure it dynamically with ENV
+            @assert batch_size > 0
+            for _ in 1:batch_size
                 msg = take!(outbox_channel)
                 if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
                     @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
