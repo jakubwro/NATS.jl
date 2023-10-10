@@ -109,8 +109,10 @@ end
 function reopen_outbox(nc::Connection)
     old_outbox = outbox(nc)
     new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
+    sids = Set{String}()
     for (sid, sub) in pairs(nc.subs)
         put!(new_outbox, sub)
+        push!(sids, sid)
         if haskey(nc.unsubs, sid)
             put!(new_outbox, Unsub(sid, nc.unsubs[sid]))
         end
@@ -118,6 +120,8 @@ function reopen_outbox(nc::Connection)
     subs_count = Base.n_avail(new_outbox)
     for msg in old_outbox
         if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
+            put!(new_outbox, msg)
+        elseif msg isa Sub && !in(msg.sid, sids)
             put!(new_outbox, msg)
         end
     end

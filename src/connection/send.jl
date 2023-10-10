@@ -24,7 +24,7 @@ function send(nc::Connection, message::ProtocolMessage)
             put!(outbox(nc), message)
             time_elapsed = time() - start_time
             if time_elapsed > 1.0
-                @warn "Enqueueing a message took $time_elapsed seconds. Outbox might be too small. Outbox size: $(Base.n_avail(outbox(nc)))."
+                @warn "Enqueueing a message to outbox took $time_elapsed seconds. Outbox might be too small or connection disconnected too long. Outbox size: $(Base.n_avail(outbox(nc)))."
             end
             return
         catch
