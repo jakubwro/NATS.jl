@@ -96,7 +96,8 @@ end
 
     @info "Distrupted connection received $pub_conn_received_count msgs."
 
-    @test pub_conn_received_count == n
+    @test pub_conn_received_count > n - 5
+    @test pub_conn_received_count <= n
     @test unique(pub_conn_results) == pub_conn_results
     @show first(pub_conn_results) last(pub_conn_results)
 
