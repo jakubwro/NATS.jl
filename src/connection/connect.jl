@@ -100,8 +100,12 @@ function init_protocol(host, port, options; nc = nothing)
             nc.host, nc.port = host, port
         end
         sock, read_stream, write_stream, info_msg
-    catch
+    catch err
         close(sock)
+        if err isa InterruptException
+            @warn "Draining all." err
+            Threads.@spawn :interactive drain()
+        end
         rethrow()
     end
 end
@@ -174,18 +178,29 @@ function connect(
     # TODO: task monitoring, warn about broken connection after n reconnects.
     spawn_sticky_task(:interactive, () ->
         begin
+            @show Threads.threadid()
             old_sock = nothing
-            while true # TODO: While is drained.
+            while true
                 receiver_task = spawn_sticky_task(:interactive, () -> begin 
-                    try
-                        while !eof(read_stream) 
-                            process(nc, next_protocol_message(read_stream))
+                    @show Threads.threadid()
+
+                    while true
+                        try
+                            eof(read_stream) && break
+                            disable_sigint() do
+                                process(nc, next_protocol_message(read_stream))
+                            end
+                        catch err
+                            if err isa InterruptException
+                                @warn "Draining connecitons!" err
+                                Threads.@spawn :interactive drain() 
+                            else
+                                rethrow()
+                            end
                         end
-                        @warn "Receiver task finished at $(time())"
-                    catch
-                        @warn "Receiver task finished at $(time())"
-                        rethrow()
                     end
+                    @warn "Receiver task finished at $(time())"
+          
                 end)
                 sender_task = spawn_sticky_task(:interactive, () -> sendloop(nc, write_stream, nothing))
 
@@ -198,6 +213,7 @@ function connect(
                 catch err
                     if err isa InterruptException
                         # TODO: stop the loop, drain connection
+                        
                     end
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result

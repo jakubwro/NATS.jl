@@ -16,3 +16,7 @@ function drain(nc::Connection)
     status(nc, DRAINED)
     close(outbox(nc))
 end
+
+function drain()
+    #stop all
+end

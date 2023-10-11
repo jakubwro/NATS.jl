@@ -36,39 +36,42 @@ function send(nc::Connection, message::ProtocolMessage)
 end
 
 function sendloop(nc::Connection, io::IO, old_sock)
-    try
-        mime = MIME_PROTOCOL()
-        outbox_channel = outbox(nc)
-        while isopen(outbox_channel)
+    @show Threads.threadid()
+    mime = MIME_PROTOCOL()
+    outbox_channel = outbox(nc)
+    while isopen(outbox_channel)
+        try 
             fetch(outbox_channel) # Wait untill some messages are there.
-            buf = IOBuffer() # Buffer write to avoid often task yield.
-            pending = Base.n_avail(outbox_channel)
-            batch_size = min(pending, SEND_BATCH_SIZE) # TODO: configure it dynamically with ENV
-            @assert batch_size > 0
-            for _ in 1:batch_size
-                msg = take!(outbox_channel)
-                if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
+            disable_sigint() do
+                buf = IOBuffer() # Buffer write to avoid often task yield.
+                pending = Base.n_avail(outbox_channel)
+                batch_size = min(pending, SEND_BATCH_SIZE) # TODO: configure it dynamically with ENV
+                @assert batch_size > 0
+                for _ in 1:batch_size
+                    msg = take!(outbox_channel)
+                    if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
                     @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
+                    end
+                    show(buf, mime, msg)
                 end
-                show(buf, mime, msg)
+            
+                # @async begin
+                #     sleep(0.3)
+                #     !isnothing(old_sock) && begin close(old_sock); @info "Socket close time: $(time())" end
+                #     old_sock = nothing
+                # end
+                write(io, take!(buf))
+                flush(io)
             end
-           
-            @async begin
-                sleep(0.3)
-                !isnothing(old_sock) && begin close(old_sock); @info "Socket close time: $(time())" end
-                old_sock = nothing
+        catch err
+            if err isa InterruptException
+                @warn "Draining all connections." err
+            elseif err isa InvalidStateException
+                # This is fine, outbox closed, loop will stop.
+            else
+                rethrow()
             end
-            write(io, take!(buf))
-            flush(io)
-        end
-        @info "Sender task finished at $(time()), $(Base.n_avail(outbox_channel)) msgs in outbox."
-    catch err
-        @info "Sender task finished at $(time())."
-        if err isa InvalidStateException
-            # This is fine, outbox closed by reconnect loop.
-        else
-            rethrow()
-            # TODO: If task errors on write, maybe msgs should be resend?
         end
     end
+    @info "Sender task finished at $(time()), $(Base.n_avail(outbox_channel)) msgs in outbox."
 end
