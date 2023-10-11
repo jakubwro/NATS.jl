@@ -35,7 +35,7 @@ end
 
 function get_tls_input_buffered(ssl)
     io = Base.BufferStream()
-    t = Threads.@spawn :default begin # TODO: make it sticky.
+    t = Threads.@spawn :interactive begin # TODO: make it sticky.
         try
             while !eof(ssl)
                 av = readavailable(ssl)
