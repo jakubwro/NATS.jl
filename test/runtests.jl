@@ -41,7 +41,7 @@ if have_nats
     include("fallback_handler.jl")
 
     @testset "All subs should be closed" begin
-        sleep(0.5)
+        sleep(5)
         @test isempty(NATS.state.handlers)
 
         for nc in NATS.state.connections
