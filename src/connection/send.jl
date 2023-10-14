@@ -35,7 +35,7 @@ function send(nc::Connection, message::ProtocolMessage)
     error("Unable to send. Outbox closed for more than $(sum(delays)) seconds.")
 end
 
-function sendloop(nc::Connection, io::IO, old_sock)
+function sendloop(nc::Connection, io::IO)
     @show Threads.threadid()
     mime = MIME_PROTOCOL()
     outbox_channel = outbox(nc)
@@ -50,24 +50,21 @@ function sendloop(nc::Connection, io::IO, old_sock)
                 for _ in 1:batch_size
                     msg = take!(outbox_channel)
                     if msg isa Unsub && !isnothing(msg.max_msgs) && msg.max_msgs > 0 # TODO: make more generic handler per msg type
-                    @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
+                        @lock state.lock begin nc.unsubs[msg.sid] = msg.max_msgs end # TODO: move it somewhere else
                     end
                     show(buf, mime, msg)
                 end
             
-                # @async begin
-                #     sleep(0.3)
-                #     !isnothing(old_sock) && begin close(old_sock); @info "Socket close time: $(time())" end
-                #     old_sock = nothing
-                # end
                 write(io, take!(buf))
                 flush(io)
             end
         catch err
             if err isa InterruptException
                 @warn "Draining all connections." err
+                # continue loop
             elseif err isa InvalidStateException
-                # This is fine, outbox closed, loop will stop.
+                # This is fine, outbox closed, new task will be spawn
+                break
             else
                 rethrow()
             end

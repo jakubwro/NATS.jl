@@ -102,10 +102,6 @@ function init_protocol(host, port, options; nc = nothing)
         sock, read_stream, write_stream, info_msg
     catch err
         close(sock)
-        if err isa InterruptException
-            @warn "Draining all." err
-            Threads.@spawn :interactive drain()
-        end
         rethrow()
     end
 end
@@ -130,6 +126,28 @@ function reopen_outbox(nc::Connection)
     end
     @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
     outbox(nc, new_outbox)
+end
+
+function receiver(nc::Connection, io::IO)
+    @show Threads.threadid()
+
+    while true
+        try
+            eof(io) && break
+            disable_sigint() do
+                process(nc, next_protocol_message(io))
+            end
+        catch err
+            if err isa InterruptException
+                @warn "Draining connecitons!" err
+                Threads.@spawn :interactive drain() 
+            else
+                @warn "Receiver task finished at $(time())" err
+                rethrow()
+            end
+        end
+    end
+    @warn "Receiver task finished at $(time())"
 end
 
 #TODO: restore link #NATS.Connect
@@ -176,89 +194,73 @@ function connect(
     nc = Connection(; host, port, info = info_msg, outbox = Channel{ProtocolMessage}(outbox_size))
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
-    spawn_sticky_task(:interactive, () ->
-        begin
-            @show Threads.threadid()
-            old_sock = nothing
+    reconnect_task = Threads.@spawn :interactive begin
+        @show Threads.threadid()
+        while true
+            receiver_task = Threads.@spawn :interactive receiver(nc, read_stream)
+            sender_task = Threads.@spawn :interactive sendloop(nc, write_stream)
+
+            err_channel = Channel()
+            bind(err_channel, receiver_task)
+            bind(err_channel, sender_task)
+            
             while true
-                receiver_task = spawn_sticky_task(:interactive, () -> begin 
-                    @show Threads.threadid()
-
-                    while true
-                        try
-                            eof(read_stream) && break
-                            disable_sigint() do
-                                process(nc, next_protocol_message(read_stream))
-                            end
-                        catch err
-                            if err isa InterruptException
-                                @warn "Draining connecitons!" err
-                                Threads.@spawn :interactive drain() 
-                            else
-                                rethrow()
-                            end
-                        end
-                    end
-                    @warn "Receiver task finished at $(time())"
-          
-                end)
-                sender_task = spawn_sticky_task(:interactive, () -> sendloop(nc, write_stream, nothing))
-
-                err_channel = Channel()
-                bind(err_channel, receiver_task)
-                bind(err_channel, sender_task)
-                
                 try
                     wait(err_channel)
                 catch err
                     if err isa InterruptException
                         # TODO: stop the loop, drain connection
-                        
+                        @warn "Drain all (connect)." err
+                        continue
                     end
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))
                     @info "Wait end time: $(time())"
                     close(sock)
-                end
-                if isdrained(nc)
-                    @debug "Drained, no reconnect."
                     break
                 end
-                try wait(sender_task) catch end
-                # TODO: add flag to decide at which pont reopen outbox.
-                reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
-                # try wait(receiver_task) catch end
-
-                @warn "Reconnecting..."
-                status(nc, CONNECTING)
-                start_time = time()
-                # TODO: handle repeating server Err messages.
-                start_reconnect_time = time()
-                function check_errors(s, e)
-                    total_retries = length(reconnect_delays)
-                    current_retries = total_retries - s[1]
-                    current_time = time() - start_reconnect_time
-                    mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                    true
-                end
-                retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
-                old_sock = sock
-                try
-                    sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options; nc)
-                catch err
-                    time_diff = time() - start_reconnect_time
-                    @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
-                    status(nc, DISCONNECTED)
-                    break
-                end
-                info(nc, info_msg)
-                status(nc, CONNECTED)
-                # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
-                # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
-                @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
             end
-        end)
+            if isdrained(nc)
+                @debug "Drained, no reconnect."
+                break
+            end
+            try wait(sender_task) catch end
+            # TODO: add flag to decide at which pont reopen outbox.
+            reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
+            # try wait(receiver_task) catch end
+
+            @warn "Reconnecting..."
+            status(nc, CONNECTING)
+            start_time = time()
+            # TODO: handle repeating server Err messages.
+            start_reconnect_time = time()
+            function check_errors(s, e)
+                total_retries = length(reconnect_delays)
+                current_retries = total_retries - s[1]
+                current_time = time() - start_reconnect_time
+                mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
+                if e isa InterruptException
+                    @warn "Drain all." e
+                end
+                true
+            end
+            retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
+            try
+                sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options; nc)
+            catch err
+                time_diff = time() - start_reconnect_time
+                @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
+                status(nc, DISCONNECTED)
+                break
+            end
+            info(nc, info_msg)
+            status(nc, CONNECTED)
+            # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
+            # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
+            @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+        end
+    end
 
     if default
         connection(:default, nc)
