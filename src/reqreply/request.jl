@@ -75,7 +75,7 @@ function request(
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
     bind(replies, @async wait(timer))
-    received = try first(collect(replies), nreplies) catch [] end # TODO: fix
+    received = try first(collect(replies), nreplies) catch err; [] end # TODO: fix
     unsubscribe(sub; connection, max_msgs = 0) # TODO: maybe move it to async task
     @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
     received
