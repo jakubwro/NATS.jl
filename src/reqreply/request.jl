@@ -60,12 +60,12 @@ function request(
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = @lock NATS.state.lock randstring(connection.rng, 20)
-    replies = Channel(nreplies)
+    replies_channel = Channel(nreplies)
     sub = subscribe(reply_to; async_handlers = false, connection) do msg
         try
-            put!(replies, msg)
-            if Base.n_avail(replies) == nreplies || has_error_status(msg)
-                close(replies)
+            put!(replies_channel, msg)
+            if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
+                close(replies_channel)
             end
         catch err
             @warn "Error from subscribe" err
@@ -78,12 +78,12 @@ function request(
         try wait(timer) catch end
         unsubscribe(sub; connection, max_msgs = 0) # TODO: maybe move it to async task
         sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
-        close(replies)
+        close(replies_channel)
     end
     errormonitor(timeout_task)
-    received = collect(replies) # Waits until channel closed.
-    @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
-    received
+    replies = collect(replies_channel) # Waits until channel closed.
+    @debug "Received $(length(replies)) messages with statuses: $(map(m -> statuscode(m), replies))"
+    replies
 end
 
 function request(
