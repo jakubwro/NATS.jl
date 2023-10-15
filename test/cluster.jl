@@ -118,11 +118,12 @@ end
 
 @testset "Lame Duck Mode during heavy publications" begin
     connection = NATS.connect("localhost", 5222, default=false)
+    subscription_connection = NATS.connect("localhost", 5224, default=false)
 
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
-    sub = subscribe(subject; connection) do msg
+    sub = subscribe(subject; connection = subscription_connection) do msg
         Threads.atomic_add!(received_count, 1)
     end
     sleep(0.5)
