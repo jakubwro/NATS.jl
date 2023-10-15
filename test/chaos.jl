@@ -151,8 +151,8 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            delays = rand(1.0:0.1:3.0, 3)
-            msg = retry(request; delays)(subject; timer=Timer(5))
+            delays = rand(3.0:0.1:5.0, 3)
+            msg = retry(request; delays)(subject; timer=Timer(15))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
