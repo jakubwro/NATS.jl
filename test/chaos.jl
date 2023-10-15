@@ -34,8 +34,9 @@ function stop_nats_server(container_id = find_nats_container_id())
     result.exitcode
 end
 
+nc = NATS.connect()
+
 @testset "Reconnecting." begin
-    nc = NATS.connect()
     @test restart_nats_server() == 0
     sleep(10)
     @test nc.status == NATS.CONNECTED
@@ -65,7 +66,6 @@ end
 # end
 
 @testset "Subscribtion survive reconnect." begin
-    nc = NATS.connect()
     c = Channel(100)
     subject = randstring(5)
     sub = subscribe(subject) do msg
@@ -81,7 +81,6 @@ end
 end
 
 @testset "Reconnect during request." begin
-    nc = NATS.connect()
     subject = randstring(5)
     sub = reply(subject) do msg
         sleep(5)
@@ -102,7 +101,6 @@ end
 @testset "4K requests" begin
     nats_container_id = find_nats_container_id()
     @info "NATS container is $nats_container_id"
-    nc = NATS.connect()
     @async interactive_status(tm)
 
     n = 400 # TODO: restore 4k
@@ -147,7 +145,6 @@ end
 @testset "4K requests with request retry." begin
     nats_container_id = find_nats_container_id()
     @info "NATS container is $nats_container_id"
-    nc = NATS.connect()
     @async interactive_status(tm)
 
     n = 400 # TODO: restore 4k
@@ -191,7 +188,6 @@ end
 end
 
 @testset "Disconnects during heavy publications." begin
-    nc = NATS.connect()
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"

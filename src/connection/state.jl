@@ -1,21 +1,29 @@
 # Global state.
 
-mutable struct State
-    default_connection::Union{Connection, Nothing}
-    connections::Vector{Connection}
-    handlers::Dict{String, Channel}
-    "Handlers of messages for which handler was not found."
-    fallback_handlers::Vector{Function}
-    lock::ReentrantLock
-    stats::Stats
-    sub_stats::Dict{String, Stats}
-end
-
 function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
     @warn "Unexpected message delivered." msg
 end
 
-const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(), Dict{String, Stats}())
+@kwdef mutable struct State
+    default_connection::Union{Connection, Nothing} = nothing
+    connections::Vector{Connection} = Connection[]
+    handlers::Dict{String, Channel} = Dict{String, Function}()
+    "Handlers of messages for which handler was not found."
+    fallback_handlers::Vector{Function} = Function[default_fallback_handler]
+    lock::ReentrantLock = ReentrantLock()
+    stats::Stats = Stats()
+    sub_stats::Dict{String, Stats} = Dict{String, Stats}()
+end
+
+const state = State()
+
+# Allow other packages to handle unexpected messages.
+# JetStream might want to `nak` messages that need acknowledgement.
+function install_fallback_handler(f)
+    @lock state.lock begin
+        push!(state.fallback_handlers, f)
+    end
+end
 
 function connection(id::Symbol)
     if id === :default

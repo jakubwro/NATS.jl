@@ -3,7 +3,6 @@ using NATS
 using Random
 
 @testset "Request reply" begin
-    nc = NATS.connect()
     sub = reply("SOME.REQUESTS") do msg
         "This is a reply."
     end
@@ -17,7 +16,6 @@ using Random
 end
 
 @testset "Request multiple replies." begin
-    nc = NATS.connect()
     subject = randstring(10)
     sub1 = reply(subject) do msg
         "Reply from service 1."
@@ -37,7 +35,6 @@ end
 end
 
 @testset "4K requests" begin
-    nc = NATS.connect()
     n = 4000
 
     subject = @lock NATS.state.lock randstring(5)
@@ -75,7 +72,6 @@ end
 end
 
 @testset "4K requests external" begin
-    nc = NATS.connect()
     
     try
         request("help.please")
@@ -109,12 +105,10 @@ end
 end
 
 @testset "No responders." begin
-    nc = NATS.connect()
     @test_throws ErrorException request("SOME.NULL")
 end
 
 @testset "Typed request reply tests" begin
-    nc = NATS.connect()
     sub = reply("SOME.REQUESTS") do msg::String
         "Received $msg"
     end
@@ -125,7 +119,6 @@ end
 end
 
 @testset "Request reply with headers" begin
-    nc = NATS.connect()
     sub = reply("SOME.REQUESTS") do msg
         "This is a reply.", ["A" => "B"]
     end

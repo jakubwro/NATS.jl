@@ -185,7 +185,8 @@ function connect(
     options...
 )
     if default && !isnothing(state.default_connection)
-        return connection(:default) # TODO: report error instead
+        dc = connection(:default)
+        isdrained(dc) || error("Default connection already exists. To set new default connection or `drain` the old one first.")
     end
 
     options = merge(default_connect_options(), options)
@@ -262,9 +263,7 @@ function connect(
         end
     end
 
-    if default
-        connection(:default, nc)
-    end
+    default && connection(:default, nc)
     @lock state.lock push!(state.connections, nc)
     nc
 end

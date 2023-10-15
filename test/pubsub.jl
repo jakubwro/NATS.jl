@@ -4,7 +4,6 @@ using NATS
 using Random
 
 @testset "Publish subscribe" begin
-    nc = NATS.connect()
     c = Channel()
     sub = subscribe("SOME.BAR") do msg
         put!(c, msg)
@@ -45,7 +44,6 @@ end
 end
 
 @testset "Typed subscription handlers" begin
-    nc = NATS.connect()
     c = Channel()
 
     sub = subscribe("SOME.BAR") do msg::String
@@ -62,7 +60,6 @@ end
 
 
 @testset "Publish subscribe with headers" begin
-    nc = NATS.connect()
     c = Channel()
     sub = subscribe("SOME.BAR") do msg
         put!(c, msg)
@@ -79,7 +76,6 @@ end
 end
 
 @testset "Subscription without argument" begin
-    nc = NATS.connect()
     subject = randstring(8)
     was_delivered = false
     sub = subscribe(subject) do
@@ -93,7 +89,6 @@ end
 end
 
 @testset "Subscription with multiple arguments" begin
-    nc = NATS.connect()
     subject = randstring(8)
     # TODO: test if error message is clear.
     @test_throws MethodError subscribe(subject) do x, y, z

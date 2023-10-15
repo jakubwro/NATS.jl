@@ -7,15 +7,14 @@ using Random
     @test_throws ErrorException publish("SOME_SUBJECT"; payload = "Hi!")
 end
 
+nc = NATS.connect()
+
 @testset "Ping" begin
-    nc = NATS.connect()
     ping(nc)
     @test true # TODO: add pong count to connection stats
 end
 
 @testset "Method error hints." begin
-    nc = NATS.connect()
-    
     # hint = """To use `Type{Float64}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
     #         ```
     #         import Base: convert
@@ -42,7 +41,6 @@ end
 end
 
 @testset "Handler error throttling." begin
-    nc = NATS.connect()
     subject = randstring(8)
     sub = subscribe(subject) do msg
         error("Just testing...")
@@ -60,7 +58,6 @@ end
 end
 
 @testset "Handler error throttling async." begin
-    nc = NATS.connect()
     subject = randstring(8)
     sub = subscribe(subject, async_handlers = true) do msg
         error("Just testing...")
@@ -78,7 +75,6 @@ end
 end
 
 @testset "Should reconnect on malformed msg" begin
-    nc = NATS.connect()
     options = merge(NATS.default_connect_options(), (protocol=100,) )
     con_msg = NATS.from_options(NATS.Connect, options)
     NATS.send(nc, con_msg)
@@ -87,7 +83,6 @@ end
 end
 
 @testset "Should reconnect on outbox closed" begin
-    nc = NATS.connect()
     close(nc.outbox)
     sleep(5)
     @test nc.status == NATS.CONNECTED
@@ -126,8 +121,6 @@ end
 end
 
 @testset "Subscription warnings" begin
-    nc = NATS.connect()
-
     sub1 = subscribe("too_many_handlers", async_handlers = true) do msg
         sleep(21)
     end

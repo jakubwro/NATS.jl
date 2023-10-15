@@ -3,7 +3,6 @@ using Test
 using NATS
 
 @testset "Test fallback handler" begin
-    nc = NATS.connect()
     sub = subscribe("SOME.BAR") do msg
         @show msg
     end
@@ -15,7 +14,6 @@ using NATS
 end
 
 @testset "Test custom fallback handler" begin
-    nc = NATS.connect()
     empty!(NATS.state.fallback_handlers)
     was_called = false
     push!(NATS.state.fallback_handlers, (nc, msg) -> begin
