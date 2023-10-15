@@ -151,7 +151,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-                delays = rand(3.0:0.1:5.0, 12)
+                delays = rand(3.0:0.1:5.0, 15)
                 msg = retry(request; delays)(subject; timer=Timer(5))
                 put!(results, msg)
                 if Base.n_avail(results) == n
