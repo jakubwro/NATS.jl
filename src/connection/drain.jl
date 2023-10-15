@@ -2,6 +2,12 @@ function isdrained(nc::Connection)
     status(nc) in [DRAINING, DRAINED]
 end
 
+"""
+$SIGNATURES
+
+Unsubscribe all subscriptions, wait for precessing all messages in buffers, then close connection.
+Drained connection is no more usable. This method is used to gracefuly stop the process.
+"""
 function drain(nc::Connection)
     if isdrained(nc)
         return
@@ -17,6 +23,11 @@ function drain(nc::Connection)
     close(outbox(nc))
 end
 
+"""
+$SIGNATURES
+
+`drains` all connections.
+"""
 function drain()
-    #stop all
+    drain.(NATS.connections)
 end
