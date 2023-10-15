@@ -22,6 +22,18 @@ function restart_nats_server(container_id = find_nats_container_id())
     result.exitcode
 end
 
+function stop_nats_server(container_id = find_nats_container_id())
+    cmd = `docker stop $container_id`
+    @info "Cmd is $cmd"
+    result = run(cmd)
+    if result.exitcode == 0
+        @info "Stopped NATS server."
+    else
+        @warn "Cannot stop NATS server, exit code from $cmd was $(result.exitcode)."
+    end
+    result.exitcode
+end
+
 @testset "Reconnecting." begin
     nc = NATS.connect()
     @test restart_nats_server() == 0
@@ -216,7 +228,7 @@ end
 
 @testset "Disconnecting when retries exhausted." begin
     nc = NATS.connect(; default = false, reconnect_delays = [])
-    @test restart_nats_server() == 0
+    @test stop_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED
 end
