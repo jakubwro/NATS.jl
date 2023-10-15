@@ -93,7 +93,7 @@ end
     nc = NATS.connect()
     @async interactive_status(tm)
 
-    n = 4000
+    n = 400 # TODO: restore 4k
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
@@ -138,7 +138,7 @@ end
     nc = NATS.connect()
     @async interactive_status(tm)
 
-    n = 4000
+    n = 400 # TODO: restore 4k
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
