@@ -35,6 +35,19 @@ status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 outbox(c::Connection) = @lock c.lock c.outbox
 outbox(c::Connection, ch::Channel{ProtocolMessage}) = @lock c.lock c.outbox = ch
 
+function new_inbox(connection::Connection, prefix::String = "")
+    random_suffix = @lock connection.lock randstring(connection.rng, 10)
+    if !isnothing(prefix) && !isempty(prefix)
+        "$prefix.$random_suffix"
+    else
+        "inbox.$random_suffix"
+    end
+end
+
+function new_sid(connection::Connection)
+    @lock connection.lock randstring(connection.rng, 20)
+end
+
 mutable struct State
     default_connection::Union{Connection, Nothing}
     connections::Vector{Connection}

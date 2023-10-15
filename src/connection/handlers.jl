@@ -48,6 +48,7 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
                 put!(ch, msg)
                 @inc_stat :msgs_received state.stats nc.stats sub_stats
             catch
+                # TODO: if msg needs ack send nak here
                 # Channel was closed by `unsubscribe`.
                 @inc_stat :msgs_dropped state.stats nc.stats sub_stats
             end

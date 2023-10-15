@@ -25,7 +25,7 @@ function subscribe(
     arg_t = argtype(f)
     find_msg_conversion_or_throw(arg_t)
     f_typed = _fast_call(f, arg_t)
-    sid = @lock NATS.state.lock randstring(connection.rng, 20) # TODO: make helper method
+    sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
     channel = _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, error_throttling_seconds)

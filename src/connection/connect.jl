@@ -139,7 +139,7 @@ function receiver(nc::Connection, io::IO)
             end
         catch err
             if err isa InterruptException
-                @warn "Draining connecitons!" err
+                @warn "Draining connections!" err
                 Threads.@spawn :interactive drain() 
             else
                 @warn "Receiver task finished at $(time())" err

@@ -28,7 +28,7 @@ function request(
     if isempty(replies) || all(has_error_status, replies)
         error("No replies received.")
     end
-    first(replies)
+    first(filter(!has_error_status, replies))
 end
 
 function has_error_status(msg::NATS.Message)
@@ -59,7 +59,7 @@ function request(
 )
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
-    reply_to = @lock NATS.state.lock randstring(connection.rng, 20)
+    reply_to = new_inbox(connection)
     replies_channel = Channel(nreplies)
     sub = subscribe(reply_to; async_handlers = false, connection) do msg
         put!(replies_channel, msg)
