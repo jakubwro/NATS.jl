@@ -151,14 +151,14 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            delays = rand(3.0:0.1:5.0, 3)
-            msg = retry(request; delays)(subject; timer=Timer(15))
-            put!(results, msg)
-            if Base.n_avail(results) == n
-                close(cond)
-                close(results)
+                delays = rand(3.0:0.1:5.0, 7)
+                msg = retry(request; delays)(subject; timer=Timer(5))
+                put!(results, msg)
+                if Base.n_avail(results) == n
+                    close(cond)
+                    close(results)
+                end
             end
-        end
         errormonitor(t)
     end
     @async begin sleep(120); close(cond); close(results) end
