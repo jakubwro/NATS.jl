@@ -74,9 +74,14 @@ function request(
     end
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
-    bind(replies, @async wait(timer))
-    received = try first(collect(replies), nreplies) catch err; [] end # TODO: fix
-    unsubscribe(sub; connection, max_msgs = 0) # TODO: maybe move it to async task
+    timeout_task = @async begin
+        try wait(timer) catch end
+        unsubscribe(sub; connection, max_msgs = 0) # TODO: maybe move it to async task
+        sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
+        close(replies)
+    end
+    errormonitor(timeout_task)
+    received = collect(replies) # Waits until channel closed.
     @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
     received
 end
