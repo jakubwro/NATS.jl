@@ -3,4 +3,5 @@
 
 ```@docs
 connect
+drain
 ```
