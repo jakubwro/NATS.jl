@@ -11,6 +11,12 @@ mutable struct State
     sub_stats::Dict{String, Stats}
 end
 
+function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
+    @warn "Unexpected message delivered." msg
+end
+
+const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(), Dict{String, Stats}())
+
 function connection(id::Symbol)
     if id === :default
         nc = @lock state.lock state.default_connection

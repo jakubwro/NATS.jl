@@ -1,9 +1,5 @@
 # Logic related to msgs received from NATS server.
 
-function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
-    @warn "Unexpected message delivered." msg
-end
-
 function process(nc::Connection, msg::Info)
     @info "New INFO received: ." msg
     info(nc, msg)

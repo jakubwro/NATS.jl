@@ -56,8 +56,6 @@ include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
 
-const state = State(nothing, Connection[], Dict{String, Function}(), Function[default_fallback_handler], ReentrantLock(), Stats(), Dict{String, Stats}())
-
 function status()
     println("=== Connection status ====================")
     println("connections:    $(length(state.connections))        ")
