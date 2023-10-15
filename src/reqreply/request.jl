@@ -61,25 +61,22 @@ function request(
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = @lock NATS.state.lock randstring(connection.rng, 20)
     replies = Channel(nreplies)
-    sub = subscribe(reply_to; connection) do msg
-        put!(replies, msg)
-        if Base.n_avail(replies) == nreplies || has_error_status(msg)
-            close(replies)
+    sub = subscribe(reply_to; async_handlers = false, connection) do msg
+        try
+            put!(replies, msg)
+            if Base.n_avail(replies) == nreplies || has_error_status(msg)
+                close(replies)
+            end
+        catch err
+            @warn "Error from subscribe" err
+            # TODO: send `nak` if jetstream message.
         end
     end
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
-    Threads.@spawn :default begin 
-        wait(timer)
-        # To prevent a message delivery after timeout repeat unsubscribe with zero messages.
-        # There is still small probablity than message will be delivered in between. In such
-        # case `-NAK`` will be sent to reply subject in `connection.jl` for jetstream message.
-        # TODO: allow for registering custom handler of such case.
-        unsubscribe(sub; connection, max_msgs = 0)
-        close(replies)
-    end
+    bind(replies, @async wait(timer))
     received = first(collect(replies), nreplies)
-    # TODO: nak remaining messages? log warning?
+    unsubscribe(sub; connection, max_msgs = 0)
     @debug "Received $(length(received)) messages with statuses: $(map(m -> statuscode(m), received))"
     received
 end
