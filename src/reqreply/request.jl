@@ -62,21 +62,16 @@ function request(
     reply_to = @lock NATS.state.lock randstring(connection.rng, 20)
     replies_channel = Channel(nreplies)
     sub = subscribe(reply_to; async_handlers = false, connection) do msg
-        try
-            put!(replies_channel, msg)
-            if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
-                close(replies_channel)
-            end
-        catch err
-            @warn "Error from subscribe" err
-            # TODO: send `nak` if jetstream message.
+        put!(replies_channel, msg)
+        if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
+            close(replies_channel)
         end
     end
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
     timeout_task = @async begin
         try wait(timer) catch end
-        unsubscribe(sub; connection, max_msgs = 0) # TODO: maybe move it to async task
+        unsubscribe(sub; connection, max_msgs = 0)
         sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
         close(replies_channel)
     end
