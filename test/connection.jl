@@ -7,7 +7,7 @@ using Random
     @test_throws ErrorException publish("SOME_SUBJECT"; payload = "Hi!")
 end
 
-nc = NATS.connect()
+nc = NATS.connect(default = true)
 
 @testset "Ping" begin
     ping(nc)

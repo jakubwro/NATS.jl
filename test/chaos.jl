@@ -34,7 +34,7 @@ function stop_nats_server(container_id = find_nats_container_id())
     result.exitcode
 end
 
-nc = NATS.connect()
+nc = NATS.connect(default = true)
 
 @testset "Reconnecting." begin
     @test restart_nats_server() == 0

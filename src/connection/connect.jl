@@ -158,7 +158,7 @@ Connect to NATS server. The function is blocking until connection is initialized
 
 Options are:
 - `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again, default is `$RECONNECT_DELAYS` what meas retry every second for 7 billion years.
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
 - `outbox_size`: size of outbox buffer for cient messages. Default is `$OUTBOX_SIZE`, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
@@ -179,7 +179,7 @@ Options are:
 function connect(
     host::String = get(ENV, "NATS_HOST", "localhost"),
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
-    default = true, # TODO: make it false
+    default = false,
     reconnect_delays = RECONNECT_DELAYS,
     outbox_size = OUTBOX_SIZE,
     options...
