@@ -22,18 +22,23 @@ end
 function _decode(encoded::String)
     padding_length = mod(8 - mod(length(encoded), 8), 8)
     raw = transcode(Base32Decoder(), encoded * repeat("=", padding_length))
-	length(raw) < 4 && error("Invalid length of encoded seed.")
-    # ntoh, hton
-    # crc = raw[end-1:end]
-    # TODO: validate CRC16 sum of raw[begin:end-2] vs crc
-	raw[begin:end-2]
+	length(raw) < 4 && error("Invalid length of decoded nkey.")
+    crc_bytes = raw[end-1:end]
+    data_bytes = raw[begin:end-2]
+    crc = read(IOBuffer(crc_bytes), UInt16)
+    crc == crc16(data_bytes) || error("Invalid nkey CRC16 sum.")
+	data_bytes
 end
 
+const NKEY_SEED_PREFIXES = ['S'] # seed
+const NKEY_PUBLIC_PREFIXES = ['N', 'C', 'O', 'A', 'U', 'X'] # server, cluster, operator, account, user, curve
+const NKEY_PREFIXES = ['S', 'P', 'N', 'C', 'O', 'A', 'U', 'X'] # seed, private, server, cluster, operator, account, user, curve
 
 function _decode_seed(seed) 
+    # https://github.com/nats-io/nkeys/blob/3e454c8ca12e8e8a15d4c058d380e1ec31399597/strkey.go#L172
+    seed[1] in NKEY_PUBLIC_PREFIXES && error("Provided public nkey instead of private nkey seed, it should start with character '$(NKEY_SEED_PREFIXES...)'.")
+    seed[1] in NKEY_SEED_PREFIXES || error("Invalid nkey seed prefix, expected one of: $NKEY_SEED_PREFIXES.")
+    seed[2] in NKEY_PUBLIC_PREFIXES || error("Invalid public nkey prefix, expected one of: $NKEY_PUBLIC_PREFIXES.")
     raw = _decode(seed)
-	
-    # TODO: validate prefixes: https://github.com/nats-io/nkeys/blob/3e454c8ca12e8e8a15d4c058d380e1ec31399597/strkey.go#L172
-
 	raw[3:end]
 end

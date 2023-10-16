@@ -60,7 +60,7 @@ function request(
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = new_inbox(connection)
-    replies_channel = Channel(nreplies)
+    replies_channel = Channel{NATS.Message}(nreplies)
     sub = subscribe(reply_to; async_handlers = false, connection) do msg
         put!(replies_channel, msg)
         if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
