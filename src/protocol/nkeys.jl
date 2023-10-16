@@ -25,7 +25,7 @@ function _decode(encoded::String)
 	length(raw) < 4 && error("Invalid length of decoded nkey.")
     crc_bytes = raw[end-1:end]
     data_bytes = raw[begin:end-2]
-    crc = read(IOBuffer(crc_bytes), UInt16)
+    crc = only(reinterpret(UInt16, crc_bytes))
     crc == crc16(data_bytes) || error("Invalid nkey CRC16 sum.")
 	data_bytes
 end
@@ -36,7 +36,7 @@ const NKEY_PREFIXES = ['S', 'P', 'N', 'C', 'O', 'A', 'U', 'X'] # seed, private, 
 
 function _decode_seed(seed) 
     # https://github.com/nats-io/nkeys/blob/3e454c8ca12e8e8a15d4c058d380e1ec31399597/strkey.go#L172
-    seed[1] in NKEY_PUBLIC_PREFIXES && error("Provided public nkey instead of private nkey seed, it should start with character '$(NKEY_SEED_PREFIXES...)'.")
+    seed[1] in NKEY_PUBLIC_PREFIXES && error("Public nkey provided instead of private nkey seed, it should start with character '$(NKEY_SEED_PREFIXES...)'.")
     seed[1] in NKEY_SEED_PREFIXES || error("Invalid nkey seed prefix, expected one of: $NKEY_SEED_PREFIXES.")
     seed[2] in NKEY_PUBLIC_PREFIXES || error("Invalid public nkey prefix, expected one of: $NKEY_PUBLIC_PREFIXES.")
     raw = _decode(seed)
