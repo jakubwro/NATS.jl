@@ -21,6 +21,7 @@ function drain(nc::Connection)
     length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
     status(nc, DRAINED)
     close(outbox(nc))
+    @warn "connection drained"
 end
 
 """
@@ -29,5 +30,5 @@ $SIGNATURES
 `drains` all connections.
 """
 function drain()
-    drain.(NATS.connections)
+    drain.(NATS.state.connections)
 end

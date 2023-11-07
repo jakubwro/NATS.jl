@@ -69,14 +69,16 @@ function request(
     end
     unsubscribe(sub; connection, max_msgs = nreplies)
     publish(subject, data; connection, reply_to)
-    timeout_task = @async begin
+    timeout_task = Threads.@spawn :interactive disable_sigint() do
         try wait(timer) catch end
         unsubscribe(sub; connection, max_msgs = 0)
         sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
-        close(replies_channel)
     end
-    errormonitor(timeout_task)
+    bind(replies_channel, timeout_task)
+    # errormonitor(timeout_task)
+    # @info "waiting"
     replies = collect(replies_channel) # Waits until channel closed.
+    # @show replies
     @debug "Received $(length(replies)) messages with statuses: $(map(m -> statuscode(m), replies))"
     replies
 end

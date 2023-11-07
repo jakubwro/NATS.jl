@@ -59,10 +59,7 @@ function sendloop(nc::Connection, io::IO)
                 flush(io)
             end
         catch err
-            if err isa InterruptException
-                @warn "Draining all connections." err
-                # continue loop
-            elseif err isa InvalidStateException
+            if err isa InvalidStateException
                 # This is fine, outbox closed, new task will be spawn
                 break
             else

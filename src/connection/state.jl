@@ -28,7 +28,7 @@ end
 function connection(id::Symbol)
     if id === :default
         nc = @lock state.lock state.default_connection
-        isnothing(nc) && error("No default connection availabe. Call `NATS.connect(default = true)` before.")
+        isnothing(nc) && error("No default connection availabe. Call `NATS.connect(default = true)` before. See https://jakubwro.github.io/NATS.jl/dev/connect") #TODO: move docs url to consts
         nc
     else
         error("Connection `:$id` does not exits.")

@@ -103,7 +103,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
         end)
     end
 
-    monitor_task = Threads.@spawn :interactive begin
+    monitor_task = Threads.@spawn :default begin
         while isopen(ch)
             sleep(error_throttling_seconds) # TODO: check diff and adjust
             errs, err, msg = @lock lock begin
@@ -118,7 +118,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
     end
     errormonitor(monitor_task)
 
-    stats_task = Threads.@spawn :interactive begin
+    stats_task = Threads.@spawn :default begin
         while isopen(ch) || Base.n_avail(ch) > 0
             if handlers_running.value > 1000
                 @warn "$(handlers_running[]) handlers running for subscription on $subject."

@@ -132,20 +132,8 @@ function receiver(nc::Connection, io::IO)
     @show Threads.threadid()
 
     while true
-        try
-            eof(io) && break
-            disable_sigint() do
-                process(nc, next_protocol_message(io))
-            end
-        catch err
-            if err isa InterruptException
-                @warn "Draining connections!" err
-                Threads.@spawn :interactive drain() 
-            else
-                @warn "Receiver task finished at $(time())" err
-                rethrow()
-            end
-        end
+        eof(io) && break
+        process(nc, next_protocol_message(io))
     end
     @warn "Receiver task finished at $(time())"
 end
@@ -195,11 +183,11 @@ function connect(
     nc = Connection(; host, port, info = info_msg, outbox = Channel{ProtocolMessage}(outbox_size))
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
-    reconnect_task = Threads.@spawn :interactive begin
+    reconnect_task = Threads.@spawn :interactive disable_sigint() do
         @show Threads.threadid()
         while true
-            receiver_task = Threads.@spawn :interactive receiver(nc, read_stream)
-            sender_task = Threads.@spawn :interactive sendloop(nc, write_stream)
+            receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
+            sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
@@ -209,11 +197,6 @@ function connect(
                 try
                     wait(err_channel)
                 catch err
-                    if err isa InterruptException
-                        # TODO: stop the loop, drain connection
-                        @warn "Drain all (connect)." err
-                        continue
-                    end
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     close(outbox(nc))
@@ -241,9 +224,6 @@ function connect(
                 current_retries = total_retries - s[1]
                 current_time = time() - start_reconnect_time
                 mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                if e isa InterruptException
-                    @warn "Drain all." e
-                end
                 true
             end
             retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
