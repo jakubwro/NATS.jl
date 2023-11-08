@@ -11,11 +11,11 @@ function sigint_current_process()
 end
 
 @testset "SIGINT during heavy publications." begin
-    nc = NATS.connect()
+    connection = NATS.connect()
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
-    sub = subscribe(subject) do msg
+    sub = subscribe(subject; connection) do msg
         Threads.atomic_add!(received_count, 1)
     end
     sleep(0.5)
@@ -24,7 +24,7 @@ end
         for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:10
-                publish(subject; payload = "Hi!")
+                publish(subject; payload = "Hi!", connection)
             end
             Threads.atomic_add!(published_count, 10)
             try wait(timer) catch end
@@ -38,6 +38,6 @@ end
     wait(pub_task)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 
-    @test status(nc) == NATS.DRAINED
+    @test NATS.status(connection) == NATS.DRAINED
 end
 

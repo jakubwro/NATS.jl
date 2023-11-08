@@ -3,6 +3,11 @@
 const INTERRUPT_HANDLER_SLEEP_SECONDS = 0.3333
 
 function start_interrupt_handler()
+
+    if Threads.nthreads(:interactive) != 1
+        @warn "Running $(Threads.nthreads(:interactive)) interactive threads. NATS require exactly one interactive thread to handle SIGINT correctly."
+    end
+
     interrupt_handler_task = Threads.@spawn :interactive begin
         while true
             try
