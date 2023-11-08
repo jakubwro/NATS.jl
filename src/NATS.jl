@@ -37,8 +37,12 @@ include("protocol/protocol.jl")
 include("connection/connection.jl")
 include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
+include("interrupts.jl")
 
 function __init__()
+
+    start_interrupt_handler()
+
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
         if exc.f == convert && length(argtypes) > 1
              # TODO: check if 2nd arg is Msg of Hmsg
