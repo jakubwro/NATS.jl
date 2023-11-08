@@ -12,7 +12,8 @@ makedocs(
         "reqreply.md",
         "Internals" => [
             "design.md",
-            "protocol.md"
+            "protocol.md",
+            "interrupt_handling.md"
         ]
     ]
 )

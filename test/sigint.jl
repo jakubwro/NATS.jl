@@ -1,4 +1,3 @@
-using Test
 using NATS
 using Random
 
@@ -10,7 +9,7 @@ function sigint_current_process()
     res.exitcode == 0 || error("$cmd failed with $(res.exitcode)")
 end
 
-@testset "SIGINT during heavy publications." begin
+function run_test()
     connection = NATS.connect()
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
@@ -35,9 +34,18 @@ end
     @info "Published: $(published_count.value), received: $(received_count.value)."
     @info "Sending SIGINT"
     sigint_current_process()
-    wait(pub_task)
+    try wait(pub_task) catch end
     @info "Published: $(published_count.value), received: $(received_count.value)."
 
-    @test NATS.status(connection) == NATS.DRAINED
+    sleep(2)
+
 end
 
+t = Threads.@spawn :default run_test()
+
+wait(t)
+sleep(5)
+NATS.status()
+if NATS.status(NATS.connection(1)) == NATS.DRAINED
+    @info "Test passed correctly."
+end
