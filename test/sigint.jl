@@ -38,5 +38,6 @@ end
     wait(pub_task)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 
+    @test status(nc) == NATS.DRAINED
 end
 

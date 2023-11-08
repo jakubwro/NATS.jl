@@ -1,0 +1,49 @@
+
+name: SIGINT tests
+
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        julia-version: ['1.9.3']
+        julia-arch: [x64]
+        nats-version: ['2.10.1']
+        julia-num-threads: ['1']
+        os: [ubuntu-latest]
+    
+    services:
+      nats:
+        image: nats:${{ matrix.nats-version }}
+        options: --name nats
+        ports:
+          - 4222:4222
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+      - run: |
+          julia --project -e 'using Pkg; Pkg.instantiate()'
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} julia --color=yes --code-coverage=user --project test/sigint.jl
+      - uses: julia-actions/julia-processcoverage@v1
+        #   annotate: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Stop services"
+        run: |
+          echo $PWD
+          cd test/cluster
+          docker compose down
