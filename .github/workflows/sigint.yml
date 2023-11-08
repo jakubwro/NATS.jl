@@ -17,7 +17,7 @@ jobs:
         julia-version: ['1.9.3']
         julia-arch: [x64]
         nats-version: ['2.10.1']
-        julia-num-threads: ['1']
+        julia-num-threads: ['1,1']
         os: [ubuntu-latest]
     
     services:
