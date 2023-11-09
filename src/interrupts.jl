@@ -15,13 +15,7 @@ function start_interrupt_handler()
             catch err
                 if err isa InterruptException
                     @info "Handling interrupt."
-                    # if isinteractive()
-                        # For interractive session interrupt REPL, `drain` manually if needed.
-                        # schedule(Base.roottask, InterruptException(); error = true)
-                    # else
-                        # Non interactive, drain all connections.
-                        drain()
-                    # end
+                    drain()
                 end
             end
         end
