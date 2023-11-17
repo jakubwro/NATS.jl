@@ -6,7 +6,7 @@ function start_interrupt_handler()
     interrupt_handler_task = @async begin
 
         if Threads.threadid() != 1
-            @warn "Interrupt handler started on wrong thread"
+            @warn "Interrupt handler started on a wrong thread, must run on thread 1 to receive interrupts"
             # In this case interrupt will be ignored, better to kill process on interrupt.
             Base.exit_on_sigint(true)
             return

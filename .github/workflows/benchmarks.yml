@@ -16,7 +16,7 @@ jobs:
         julia-version: ['1.9.3', '1.10.0-beta3']
         julia-arch: [x64]
         nats-version: ['2.10.1']
-        julia-num-threads: ['1', '1,1', '2,1'] # TODO: add ['1,4', '4,4'], but it require large runner, default there are only 2 cores. 
+        julia-num-threads: ['1', '1,1', '2,1', '1,2'] # TODO: add ['1,4', '4,4'], but it require large runner, default there are only 2 cores. 
         os: [ubuntu-latest]
     
     services:
