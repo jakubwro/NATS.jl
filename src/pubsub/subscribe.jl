@@ -52,7 +52,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             try
                 while true
                     msg = take!(ch)
-                    handler_task = Threads.@spawn :default begin
+                    handler_task = Threads.@spawn :default disable_sigint() do
                         task_local_storage("sub_stats", sub_stats)
                         Threads.atomic_add!(handlers_running, 1)
                         try
@@ -78,7 +78,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             end
         end
     else
-        spawn_sticky_task(:default, () -> begin
+        Threads.@spawn :default disable_sigint() do
             task_local_storage("sub_stats", sub_stats)
             try
                 while true
@@ -100,7 +100,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             catch err
                 err isa InvalidStateException || rethrow()
             end
-        end)
+        end
     end
 
     monitor_task = Threads.@spawn :interactive disable_sigint() do
