@@ -48,7 +48,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
     ch = Channel(channel_size)
 
     if async_handlers == true
-        spawn_sticky_task(:default, () -> begin
+        Threads.@spawn :interactive disable_sigint() do
             try
                 while true
                     msg = take!(ch)
@@ -76,7 +76,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             catch err
                 err isa InvalidStateException || rethrow()
             end
-        end)
+        end
     else
         spawn_sticky_task(:default, () -> begin
             task_local_storage("sub_stats", sub_stats)
