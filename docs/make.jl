@@ -7,9 +7,12 @@ makedocs(
     modules = [NATS],
     pages = [
         "index.md",
-        "connect.md",
-        "pubsub.md",
-        "reqreply.md",
+        "examples.md",
+        "Functions" => [
+            "connect.md",
+            "pubsub.md",
+            "reqreply.md",
+        ],
         "Internals" => [
             "design.md",
             "protocol.md",

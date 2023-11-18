@@ -1,74 +1,25 @@
-# NATS.jl
+# NATS.jl - NATS client for Julia.
 
-NATS client for Julia.
+NATS.jl allows to connect to [NATS](https://nats.io) cluster from Julia.
+It allows to implement patterns like [publish-subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub), [request-reply](https://docs.nats.io/nats-concepts/core-nats/reqreply), and [queue groups](https://docs.nats.io/nats-concepts/core-nats/queue).
 
-# Quick examples
+> **Warning**
+> NATS not a reliable communication protocol, just like raw TCP connection it provides just at most once message delivery guarantees.
+> For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See JetStream.jl project.
 
-## Publish subscribe
+## Architecture overview
 
-```julia-repl
-julia> using NATS
+Each connection creates several asynchronous tasks for monitoring connection state, receiving messages from server, publishing messages to server.
 
-julia> nc = NATS.connect("localhost", 4222)
-NATS.Connection(CONNECTED, 0 subs, 0 unsubs, 0 outbox)
+## Interrupt handling
 
-julia> sub = subscribe(nc, "test_subject") do msg
-                  @show payload(msg)
-              end
-NATS.Sub("test_subject", nothing, "TeQmd23Z")
+Gracefull handling of interrupt is important in scenario of deployment in kubernetes cluster to handle pods autoscalling.
+Thre are several issues with Julia if it comes to handling signals:
+1. by default when SIGINT is delivered process is exited immediatelly, this can be prevented by calling `Base.exit_on_sigint` with `false` parameter.
+2. even when this is confugured interrupts are delivered to all tasks running on thread 1. Depending on `--threads` configuration this thread might run all tasks (when `--threads 1` which is default) or it can handle tasks scheduled on interactive threadpool (with `--threads M,N` where N is number of interactive threads). 
 
-julia> publish(nc, "test_subject"; payload="Hello.")
-NATS.Pub("test_subject", nothing, 6, "Hello.")
+To workaround this behavior all tasks started by `NATS.jl` are started inside `disable_sigint` wrapper, exception to this is special task designated to handling interrupts and scheduled on thread 1 with `sticky` flag set to `true`, what `@async` macro does.
+Limitation to this approach is that tasks started by user of `NATS.jl` or other packages may start tasks that will intercept `InterruptException` may ignore it or introduce unexpected behaviour. On user side this might be mitigated by wrapping tasks functions into `disable_sigint`, also entrypoint to application should do this or handle interrupt correctly, for instance by calling `NATS.drain` to close all connections and wait until it is done.
 
-payload(msg) = "Hello."
-```
-
-## Request reply
-
-```bash
-> nats reply help.please 'OK, I CAN HELP!!!'
-
-20:35:19 Listening on "help.please" in group "NATS-RPLY-22"
-```
-
-```julia-repl
-julia> using NATS
-
-julia> nc = NATS.connect("localhost", 4222)
-NATS.Connection(CONNECTED, 0 subs, 0 unsubs, 0 outbox)
-
-julia> rep = @time NATS.request(nc, "help.please");
-  0.006738 seconds (88 allocations: 4.969 KiB)
-
-julia> payload(rep)
-"OK, I CAN HELP!!!"
-```
-
-## JetStream pull consumer.
-
-```bash
-> nats stream add TEST_STREAM
-? Subjects to consume FOO.*
-...
-
-> nats consumer add
-? Consumer name TestConsumerConsume
-...
-
-> nats pub FOO.bar --count=1 "publication #{{Count}} @ {{TimeStamp}}"
-20:25:18 Published 42 bytes to "FOO.bar"
-```
-
-```julia-repl
-julia> using NATS
-
-julia> nc = NATS.connect("localhost", 4222);
-
-julia> msg = NATS.next(nc,"TEST_STREAM", "TestConsumerConsume");
-
-julia> payload(msg)
-"publication #1 @ 2023-09-15T14:07:03+02:00"
-
-julia> NATS.ack(nc, msg)
-NATS.Pub("\$JS.ACK.TEST_STREAM.TestConsumerConsume.1.27.189.1694542978673374959.1", nothing, 0, nothing)
-```
+Future improvements in this matter might be introduced by https://github.com/JuliaLang/julia/pull/49541
+Current `NATS.jl` approach to handling signals is based on code and discussions from this PR. 
