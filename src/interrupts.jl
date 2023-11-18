@@ -12,6 +12,8 @@ function start_interrupt_handler()
             return
         end
 
+        Base.exit_on_sigint(false)
+
         while true
             try
                 sleep(INTERRUPT_HANDLER_SLEEP_SECONDS)

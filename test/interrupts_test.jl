@@ -20,8 +20,6 @@ function main()
     sleep(10)
 end
 
-Base.exit_on_sigint(false)
-
 disable_sigint() do
     main()
 end
