@@ -11,44 +11,45 @@
 [![codecov](https://codecov.io/gh/jakubwro/NATS.jl/graph/badge.svg?token=8X0HPK1T8E)](https://codecov.io/gh/jakubwro/NATS.jl)
 [![](https://img.shields.io/badge/NATS.jl%20docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
 
-Work in progress.
+Work in progress, API not stable yet.
 
 [![Coverage](https://codecov.io/gh/jakubwro/NATS.jl/graphs/sunburst.svg?token=8X0HPK1T8E)](https://app.codecov.io/gh/jakubwro/NATS.jl)
 
 ## Description
 
-### Using with REPL.
+NATS client for julia.
 
-NATS connection uses asynchronous tasks to handle connection. To make `CTR+C` work smooth in REPL
-start `julia` with at least one interactive thread `JULIA_NUM_THREADS=1,1 julia --project`, otherwise interrupt
-signal might not be delivered to a repl task.
+## Quick examples
+
+Start nats-server:
 
 ```
-julia> using NATS
-
-julia> nc = NATS.connect("localhost", 4222);
-
-julia> request(nc, "some.long.operation")
-^CERROR: InterruptException:
+docker run -p 4222:4222 nats:latest
 ```
 
-## Publish subscribe
+### Publish subscribe
 
 ```julia-repl
 julia> using NATS
 
-julia> nc = NATS.connect("localhost", 4222)
-NATS.Connection(CONNECTED, 0 subs, 0 unsubs, 0 outbox)
+julia> NATS.connect(default = true)
+NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs, 0 outbox)
 
 julia> sub = subscribe(nc, "test_subject") do msg
                   @show payload(msg)
               end
-NATS.Sub("test_subject", nothing, "TeQmd23Z")
+NATS.Sub("test_subject", nothing, "Z8bTW3WlXMTF5lYi640j")
 
-julia> publish(nc, "test_subject"; payload="Hello.")
-NATS.Pub("test_subject", nothing, 6, "Hello.")
+julia> publish("test_subject"; payload="Hello.")
 
 payload(msg) = "Hello."
+
+julia> unsubscribe(sub)
+NATS.Unsub("Z8bTW3WlXMTF5lYi640j", nothing)
+
+julia> publish("test_subject"; payload="Hello.")
+
+julia> 
 ```
 
 ## Request reply
@@ -62,41 +63,12 @@ payload(msg) = "Hello."
 ```julia-repl
 julia> using NATS
 
-julia> nc = NATS.connect("localhost", 4222)
-NATS.Connection(CONNECTED, 0 subs, 0 unsubs, 0 outbox)
+julia> NATS.connect(default = true)
+NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs, 0 outbox)
 
-julia> rep = @time NATS.request(nc, "help.please");
-  0.006738 seconds (88 allocations: 4.969 KiB)
+julia> rep = @time NATS.request("help.please");
+  0.002072 seconds (174 allocations: 10.711 KiB)
 
 julia> payload(rep)
 "OK, I CAN HELP!!!"
-```
-
-## JetStream pull consumer.
-
-```bash
-> nats stream add TEST_STREAM
-? Subjects to consume FOO.*
-...
-
-> nats consumer add
-? Consumer name TestConsumerConsume
-...
-
-> nats pub FOO.bar --count=1 "publication #{{Count}} @ {{TimeStamp}}"
-20:25:18 Published 42 bytes to "FOO.bar"
-```
-
-```julia-repl
-julia> using NATS
-
-julia> nc = NATS.connect("localhost", 4222);
-
-julia> msg = NATS.next(nc,"TEST_STREAM", "TestConsumerConsume");
-
-julia> payload(msg)
-"publication #1 @ 2023-09-15T14:07:03+02:00"
-
-julia> NATS.ack(nc, msg)
-NATS.Pub("\$JS.ACK.TEST_STREAM.TestConsumerConsume.1.27.189.1694542978673374959.1", nothing, 0, nothing)
 ```
