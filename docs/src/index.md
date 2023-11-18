@@ -5,7 +5,7 @@ It allows to implement patterns like [publish-subscribe](https://docs.nats.io/na
 
 > **Warning**
 > NATS is not a reliable communication protocol by design. Just like raw TCP connection it provides just at most once message delivery guarantees.
-> For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See (JetStream.jl)[https://github.com/jakubwro/JetStream.jl] project.
+> For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See [JetStream.jl](https://github.com/jakubwro/JetStream.jl) project.
 
 ## Architecture overview
 
