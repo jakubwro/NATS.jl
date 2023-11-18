@@ -29,6 +29,6 @@ There are several issues with Julia if it comes to handling signals:
 To workaround this behavior all tasks started by `NATS.jl` are started inside `disable_sigint` wrapper, exception to this is special task designated to handling interrupts and scheduled on thread 1 with `sticky` flag set to `true`, what is achieved with `@async` macro.
 Limitation to this approach is that tasks started by user of `NATS.jl` or other packages may start tasks that will intercept `InterruptException` may ignore it or introduce unexpected behavior. On user side this might be mitigated by wrapping tasks functions into `disable_sigint`, also entrypoint to application should do this or handle interrupt correctly, for instance by calling `NATS.drain` to close all connections and wait until it is done.
 
-Future improvements in this matter might be introduced by [](https://github.com/JuliaLang/julia/pull/49541)
+Future improvements in this matter might be introduced by [open PR](https://github.com/JuliaLang/julia/pull/49541)
 
 Current `NATS.jl` approach to handling signals is based on code and discussions from this PR. 
