@@ -22,11 +22,11 @@ Those tasks should be scheduled on interactive threads to ensure fast responses 
 ## Interrupt handling
 
 Gracefull handling of interrupt is important in scenario of deployment in `kubernetes` cluster to handle pods autoscalling.
-Thre are several issues with Julia if it comes to handling signals:
-1. by default when SIGINT is delivered process is exited immediatelly, this can be prevented by calling `Base.exit_on_sigint` with `false` parameter.
-2. even when this is confugured interrupts are delivered to all tasks running on thread 1. Depending on `--threads` configuration this thread might run all tasks (when `--threads 1` which is default) or it can handle tasks scheduled on interactive threadpool (with `--threads M,N` where N is number of interactive threads). 
+There are several issues with Julia if it comes to handling signals:
+1. by default when SIGINT is delivered process is exited immediately, this can be prevented by calling `Base.exit_on_sigint` with `false` parameter.
+2. even when this is configured interrupts are delivered to all tasks running on thread 1. Depending on `--threads` configuration this thread might run all tasks (when `--threads 1` which is default) or it can handle tasks scheduled on interactive threadpool (with `--threads M,N` where N is number of interactive threads). 
 
-To workaround this behavior all tasks started by `NATS.jl` are started inside `disable_sigint` wrapper, exception to this is special task designated to handling interrupts and scheduled on thread 1 with `sticky` flag set to `true`, what `@async` macro does.
+To workaround this behavior all tasks started by `NATS.jl` are started inside `disable_sigint` wrapper, exception to this is special task designated to handling interrupts and scheduled on thread 1 with `sticky` flag set to `true`, what is achieved with `@async` macro.
 Limitation to this approach is that tasks started by user of `NATS.jl` or other packages may start tasks that will intercept `InterruptException` may ignore it or introduce unexpected behavior. On user side this might be mitigated by wrapping tasks functions into `disable_sigint`, also entrypoint to application should do this or handle interrupt correctly, for instance by calling `NATS.drain` to close all connections and wait until it is done.
 
 Future improvements in this matter might be introduced by [](https://github.com/JuliaLang/julia/pull/49541)
