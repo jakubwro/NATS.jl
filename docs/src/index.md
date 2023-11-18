@@ -15,7 +15,7 @@ Each connection creates several asynchronous tasks for monitoring connection sta
 3. Above task spawns two more tasks for inbound and outbound communication
 4. If any of tasks fails monitoring task tries to reconnect by spawning them again
 
-Those tasks should be scheduled on interactive threads to ensure fast responses to server, for instance, in case of `PING` message. To not block them tasks handling actual processing of subscription messages are ran in `:default` threadpool. Implication of this to ensure everything works smoothly user should do one of things:
+Those tasks should be scheduled on interactive threads to ensure fast responses to server, for instance, in case of [PING](/protocol/#NATS.Ping) message. To not block them tasks handling actual processing of subscription messages are ran in `:default` threadpool. Implication of this to ensure everything works smoothly user should do one of things:
  - start `julia` with at least one interactive thread, see `--threads` option
  - ensure all handler methods are not CPU intensive if ran with single thread
 
