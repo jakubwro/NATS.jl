@@ -3,9 +3,8 @@
 NATS.jl allows to connect to [NATS](https://nats.io) cluster from Julia.
 It allows to implement patterns like [publish-subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub), [request-reply](https://docs.nats.io/nats-concepts/core-nats/reqreply), and [queue groups](https://docs.nats.io/nats-concepts/core-nats/queue).
 
-> **Warning**
-> NATS is not a reliable communication protocol by design. Just like raw TCP connection it provides just at most once message delivery guarantees.
-> For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See [JetStream.jl](https://github.com/jakubwro/JetStream.jl) project.
+!!! warn NATS is not a reliable communication protocol by design. Just like raw TCP connection it provides just at most once message delivery guarantees.
+For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See [JetStream.jl](https://github.com/jakubwro/JetStream.jl) project.
 
 ## Architecture overview
 
