@@ -3,8 +3,10 @@
 NATS.jl allows to connect to [NATS](https://nats.io) cluster from Julia.
 It allows to implement patterns like [publish-subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub), [request-reply](https://docs.nats.io/nats-concepts/core-nats/reqreply), and [queue groups](https://docs.nats.io/nats-concepts/core-nats/queue).
 
-!!! warn NATS is not a reliable communication protocol by design. Just like raw TCP connection it provides just at most once message delivery guarantees.
-For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See [JetStream.jl](https://github.com/jakubwro/JetStream.jl) project.
+> **Warning**
+> 
+> NATS is not a reliable communication protocol by design. Just like raw TCP connection it provides just at most once message delivery guarantees.
+> For reliable communication you need to implement message acknowledgements in client applications or use JetStream protocol build on top of NATS. See [JetStream.jl](https://github.com/jakubwro/JetStream.jl) project.
 
 ## Architecture overview
 
@@ -20,7 +22,7 @@ Those tasks should be scheduled on interactive threads to ensure fast responses 
 
 ## Interrupt handling
 
-Gracefull handling of interrupt is important in scenario of deployment in `kubernetes` cluster to handle pods autoscalling.
+Graceful handling of interrupt is important in scenario of deployment in `kubernetes` cluster to handle pods auto scaling.
 There are several issues with Julia if it comes to handling signals:
 1. by default when SIGINT is delivered process is exited immediately, this can be prevented by calling `Base.exit_on_sigint` with `false` parameter.
 2. even when this is configured interrupts are delivered to all tasks running on thread 1. Depending on `--threads` configuration this thread might run all tasks (when `--threads 1` which is default) or it can handle tasks scheduled on interactive threadpool (with `--threads M,N` where N is number of interactive threads). 
