@@ -8,6 +8,7 @@ makedocs(
     pages = [
         "index.md",
         "examples.md",
+        "benchmarks.md",
         "Functions" => [
             "connect.md",
             "pubsub.md",
