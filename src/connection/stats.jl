@@ -20,12 +20,12 @@ mutable struct Stats
 end
 
 function show(io::IO, stats::Stats)
-     print(io, "published: $(stats.msgs_received) \n")
+     print(io, "published: $(stats.msgs_published) \n")
      print(io, " received: $(stats.msgs_received) \n")
      print(io, "   active: $(stats.handlers_running) \n")
      print(io, "  handled: $(stats.msgs_handled) \n")
-     print(io, "  errored: $(stats.msgs_received) \n")
-     print(io, "  dropped: $(stats.msgs_received) \n")
+     print(io, "  errored: $(stats.msgs_errored) \n")
+     print(io, "  dropped: $(stats.msgs_dropped) \n")
 end
 
 
