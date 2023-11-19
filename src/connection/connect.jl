@@ -57,6 +57,7 @@ function init_protocol(host, port, options; nc = nothing)
         host, port = rand(connect_urls(nc))
     end
     sock = Sockets.connect(host, port)
+    Sockets.nagle(sock, false)
     try
         info_msg = next_protocol_message(sock)
         info_msg isa Info || error("Expected INFO, received $info_msg")
