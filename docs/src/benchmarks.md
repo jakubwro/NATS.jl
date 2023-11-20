@@ -234,3 +234,9 @@ julia> subscribe_for_one_second()
 92k messages in NATS.jl vs 1.7M messages.
 
 The problem here may be that received messages are not buffered into Channel, but processed as soon as received.
+
+It causes some warning on `nats-server` side:
+
+```
+[1] 2023/11/19 12:09:48.833073 [INF] 172.17.0.1:33598 - cid:86 - Slow Consumer Detected: WriteDeadline of 10s exceeded with 65193 chunks of 33378582 total bytes.
+```
