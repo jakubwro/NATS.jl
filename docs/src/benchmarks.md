@@ -201,14 +201,25 @@ Error
 
 ```
 function subscribe_for_one_second()
-    tm = Timer(1)
+    tm = Timer(5)
     counter = 0
+    start = nothing
     sub = subscribe("foo") do
+        if isnothing(start)
+            start = time()
+        end
         counter += 1
     end
+    # while counter < 20000000
+    #     sleep(1)
+    # end
     wait(tm)
     unsubscribe(sub)
-    @info "Processed $counter messages"
+    if counter == 0
+        @info "No messages"
+    else
+        @info "Processed $counter messages in $(time() - start) s."
+    end
 end
 
 julia> subscribe_for_one_second()
@@ -240,3 +251,19 @@ It causes some warning on `nats-server` side:
 ```
 [1] 2023/11/19 12:09:48.833073 [INF] 172.17.0.1:33598 - cid:86 - Slow Consumer Detected: WriteDeadline of 10s exceeded with 65193 chunks of 33378582 total bytes.
 ```
+
+function bench_arr()
+    n = 458752
+    arr = repeat([0x44], n)
+
+    sum = 0
+    i = 0
+    @time for b in arr
+        char = Char(b)
+        if char == 'D'
+            sum +=1
+        end
+    end
+
+    @info sum
+end

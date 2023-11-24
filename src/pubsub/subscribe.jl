@@ -82,17 +82,22 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             task_local_storage("sub_stats", sub_stats)
             try
                 while true
-                    msg = take!(ch)
+                    msgs = take!(ch)
+                    if !(msgs isa Vector{Message})
+                        msgs = [msgs]
+                    end
                     Threads.atomic_add!(handlers_running, 1)
-                    try
-                        f(msg)
-                        @inc_stat :msgs_handled sub_stats conn_stats state.stats
-                    catch err
-                        @inc_stat :msgs_errored sub_stats conn_stats state.stats
-                        @lock lock begin
-                            last_error = err
-                            last_error_msg = msg
-                            errors_since_last_log = errors_since_last_log + 1
+                    for msg in msgs
+                        try
+                            f(msg)
+                            @inc_stat :msgs_handled sub_stats conn_stats state.stats
+                        catch err
+                            @inc_stat :msgs_errored sub_stats conn_stats state.stats
+                            @lock lock begin
+                                last_error = err
+                                last_error_msg = msg
+                                errors_since_last_log = errors_since_last_log + 1
+                            end
                         end
                     end
                     Threads.atomic_sub!(handlers_running, 1)

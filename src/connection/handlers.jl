@@ -20,8 +20,40 @@ function process(nc::Connection, pong::Pong)
     @info "Received pong."
 end
 
+function process(nc::Connection, batch::Vector{ProtocolMessage})
+    groups = Dict{String, Vector{Message}}()
+    for msg in batch
+        if msg isa Message
+            arr = get(groups, msg.sid, nothing)
+            if isnothing(arr)
+                arr = Message[]
+                groups[msg.sid] = arr
+            end
+            push!(arr, msg)
+        else
+            process(nc, msg)
+        end
+    end
+
+    for (sid, msgs) in groups
+        ch = lock(state.lock) do
+            get(state.handlers, sid, nothing)
+        end
+
+        if !isnothing(ch)
+            put!(ch, msgs)
+            for _ in msgs
+                @inc_stat :msgs_received state.stats nc.stats
+            end
+        else
+            for _ in msgs
+                @inc_stat :msgs_dropped state.stats nc.stats
+            end
+        end
+    end
+end
+
 function process(nc::Connection, msg::Union{Msg, HMsg})
-    @debug "Received $msg"
     ch = lock(state.lock) do
         get(state.handlers, msg.sid, nothing)
     end

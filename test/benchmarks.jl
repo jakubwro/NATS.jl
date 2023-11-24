@@ -27,7 +27,7 @@ include("util.jl")
     NATS.status()
 end
 
-function msgs_per_second(connection::NATS.Connection, async_handlers = false)
+function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, async_handlers = false)
     empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
     subject = "SOME_SUBJECT"
@@ -48,7 +48,7 @@ function msgs_per_second(connection::NATS.Connection, async_handlers = false)
                 sleep(0.005)
             else
                 # y = y + 1
-                publish(subject; payload = "Hi!", connection)
+                publish(subject; payload = "Hi!", connection = connection2)
                 n = n + 1
             end
         end
@@ -64,12 +64,13 @@ end
 
 @testset "Msgs per second." begin
     connection = NATS.connect(default = false)
-    msgs_per_second(connection)
+    connection2 = NATS.connect(default = false)
+    msgs_per_second(connection, connection2)
 end
 
 @testset "Msgs per second with async handlers." begin
     connection = NATS.connect(default = false)
-    msgs_per_second(connection, true)
+    msgs_per_second(connection, connection, true)
 end
 
 @testset "Requests per second with sync handlers." begin

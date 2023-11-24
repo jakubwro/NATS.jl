@@ -177,7 +177,7 @@ struct Msg <: ProtocolMessage
     "Size of the payload in bytes."
     bytes::Int
     "The message payload data."
-    payload::Union{String, Nothing}
+    payload::Union{AbstractString, Nothing}
 end
 
 """

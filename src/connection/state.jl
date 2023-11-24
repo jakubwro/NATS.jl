@@ -1,7 +1,7 @@
 # Global state.
 
 function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
-    @warn "Unexpected message delivered." msg
+    # @warn "Unexpected message delivered." msg
 end
 
 @kwdef mutable struct State
@@ -67,7 +67,7 @@ end
 # """
 # Update state on message received.
 # """
-function _cleanup_unsub_msg(nc::Connection, sid::String)
+function _cleanup_unsub_msg(nc::Connection, sid::AbstractString)
     lock(state.lock) do
         count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)
