@@ -56,7 +56,8 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                 dropped = ProtocolMessage[]
                 if !isnothing(count)
                     msgs_to_deliver = min(length(msgs), count)
-                    dropped = last(msgs, msgs_to_deliver - count)
+                    dropped = last(msgs, n - msgs_to_deliver)
+                    @inc_stat :msgs_dropped (n - msgs_to_deliver) state.stats nc.stats sub_stats
                     msgs = first(msgs, msgs_to_deliver)
                 end
 
