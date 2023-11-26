@@ -48,6 +48,16 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                 # TODO: drop older msgs?
                 @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
             else
+                count = @lock state.lock begin
+                    get(nc.unsubs, sid, nothing)
+                end
+
+                dropped = ProtocolMessage[]
+                if !isnothing(count)
+                    dropped = last(msgs, n - count)
+                    msgs = first(msgs, count)
+                end
+
                 try
                     put!(ch, msgs)
                     @inc_stat :msgs_received n state.stats nc.stats sub_stats
@@ -57,6 +67,19 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
                 end
                 _cleanup_unsub_msg(nc, sid, n)
+                if !isempty(dropped)
+                    if isnothing(fallbacks)
+                        fallbacks = lock(state.lock) do
+                            collect(state.fallback_handlers)
+                        end
+                    end
+                    for f in fallbacks
+                        for msg in msgs
+                            Base.invokelatest(f, nc, msg)
+                        end
+                    end
+                    @inc_stat :msgs_dropped n state.stats nc.stats
+                end
             end
         else
             if isnothing(fallbacks)
@@ -71,38 +94,6 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
             end
             @inc_stat :msgs_dropped n state.stats nc.stats
         end
-    end
-end
-
-function process(nc::Connection, msg::Union{Msg, HMsg})
-    ch = lock(state.lock) do
-        get(state.handlers, msg.sid, nothing)
-    end
-    if isnothing(ch)
-        fallbacks = lock(state.lock) do
-            collect(state.fallback_handlers)
-        end
-        for f in fallbacks
-            Base.invokelatest(f, nc, msg)
-        end
-        @inc_stat :msgs_dropped 1 state.stats nc.stats
-    else
-        sub_stats = state.sub_stats[msg.sid]
-        if Base.n_avail(ch) == ch.sz_max
-            # This check is safe, as the only task putting in to subs channel is this one.
-            # TODO: drop older msgs?
-            @inc_stat :msgs_dropped 1 state.stats nc.stats sub_stats
-        else
-            try
-                put!(ch, msg)
-                @inc_stat :msgs_received 1 state.stats nc.stats sub_stats
-            catch
-                # TODO: if msg needs ack send nak here
-                # Channel was closed by `unsubscribe`.
-                @inc_stat :msgs_dropped 1 state.stats nc.stats sub_stats
-            end
-        end
-        _cleanup_unsub_msg(nc, msg.sid, 1)
     end
 end
 
