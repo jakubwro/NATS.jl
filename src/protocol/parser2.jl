@@ -2,9 +2,7 @@
 
 @enum ParserState OP_START OP_PLUS OP_PLUS_O OP_PLUS_OK OP_MINUS OP_MINUS_E OP_MINUS_ER OP_MINUS_ERR OP_MINUS_ERR_SPC MINUS_ERR_ARG OP_M OP_MS OP_MSG OP_MSG_SPC MSG_ARG MSG_PAYLOAD MSG_END OP_P OP_H OP_PI OP_PIN OP_PING OP_PO OP_PON OP_PONG OP_I OP_IN OP_INF OP_INFO OP_INFO_SPC INFO_ARG
 
-"""
-Parser state and temporary buffers for parsing subscription messages.
-"""
+# Parser state and temporary buffers for parsing subscription messages.
 @kwdef mutable struct ParserData
     state::ParserState = OP_START
     has_header::Bool = false
@@ -21,38 +19,6 @@ Parser state and temporary buffers for parsing subscription messages.
     headers_bytes_missing::Int64 = 0
     results::Vector{ProtocolMessage} = ProtocolMessage[]
 end
-
-# @kwdef mutable struct ParserData
-#     "Parser state machine"
-#     state::ParserState = OP_START
-#     "Tells if message has headers to parse"
-#     has_header::Bool = false
-#     "Number of headers bytes"
-#     header_bytes::Int64 = 0
-#     "Number of bytes in payload including headers"
-#     total_bytes::Int64 = 0
-#     "Temporary buffers to parse peration args"
-#     arg_buffers::Vector{Vector{UInt8}} = [UInt8[], UInt8[], UInt8[], UInt8[], UInt8[]]
-#     "Current operation argument index"
-#     current_arg_buffer::Int64 = 0
-#     "Buffer for headers data"
-#     headers_buffer::Vector{UInt8} = UInt8[]
-#     "Number of headers bytes not read yet"
-#     headers_bytes_missing::Int64 = 0
-#     "Buffer for payload data"
-#     payload_buffer::Vector{UInt8} = UInt8[]
-#     "Number of payload bytes not read yet"
-#     payload_bytes_missing::Int64 = 0
-#     "Protocol messages extracted from current buffer"
-#     results::Vector{ProtocolMessage} = ProtocolMessage[]
-#     "Current input buffer"
-#     buffer::Vector{UInt8} = UInt8[]
-#     "Position of current byte in `buffer`"
-#     position::Int64 = 0
-#     subject::String = ""
-#     sid::String = ""
-#     replyto = ""
-# end
 
 function next_arg(data::ParserData)
     data.current_arg_buffer += 1
