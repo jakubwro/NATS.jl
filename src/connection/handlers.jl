@@ -50,12 +50,14 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
             else
                 count = @lock state.lock begin
                     get(nc.unsubs, sid, nothing)
+                    # TODO: update unsubs counters in the lock
                 end
 
                 dropped = ProtocolMessage[]
                 if !isnothing(count)
-                    dropped = last(msgs, n - count)
-                    msgs = first(msgs, count)
+                    msgs_to_deliver = min(length(msgs), count)
+                    dropped = last(msgs, msgs_to_deliver - count)
+                    msgs = first(msgs, msgs_to_deliver)
                 end
 
                 try
