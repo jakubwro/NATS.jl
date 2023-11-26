@@ -56,6 +56,7 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     # Channel was closed by `unsubscribe`.
                     @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
                 end
+                _cleanup_unsub_msg(nc, sid, n)
             end
         else
             if isnothing(fallbacks)
@@ -101,7 +102,7 @@ function process(nc::Connection, msg::Union{Msg, HMsg})
                 @inc_stat :msgs_dropped 1 state.stats nc.stats sub_stats
             end
         end
-        _cleanup_unsub_msg(nc, msg.sid)
+        _cleanup_unsub_msg(nc, msg.sid, 1)
     end
 end
 

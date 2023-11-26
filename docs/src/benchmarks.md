@@ -201,7 +201,7 @@ Error
 
 ```
 function subscribe_for_one_second()
-    tm = Timer(5)
+    tm = Timer(1)
     counter = 0
     start = nothing
     sub = subscribe("foo") do

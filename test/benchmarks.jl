@@ -64,8 +64,7 @@ end
 
 @testset "Msgs per second." begin
     connection = NATS.connect(default = false)
-    connection2 = NATS.connect(default = false)
-    msgs_per_second(connection, connection2)
+    msgs_per_second(connection, connection)
 end
 
 @testset "Msgs per second with async handlers." begin
