@@ -16,18 +16,45 @@ function bench_parser()
     msg = "MSG foo 84s6LXpSRziIFL4w5Spm 16\r\n1111111111111111\r\n"
     io = IOBuffer(repeat(msg, 1000000))
     s = 0
+    ret = []
     @time NATS.parser_loop(io) do res
-        @info "res" first(res) length(res)
+        ret = res
+        # @info "res" first(res) length(res)
     end
+    ret
 end
 
-function bench_parser()
+function bench_parser_replyto()
+    msg = "MSG foo 84s6LXpSRziIFL4w5Spm asdf 16\r\n1111111111111111\r\n"
+    io = IOBuffer(repeat(msg, 1000000))
+    s = 0
+    ret = []
+    @time NATS.parser_loop(io) do res
+        ret = res
+        @info "res" first(res) length(res)
+    end
+    ret
+end
+
+function bench_parser_headers()
     msg = "HMSG FOO.BAR 9 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n"
     io = IOBuffer(repeat(msg, 1000000))
     s = 0
     @time NATS.parser_loop(io) do res
         @info "res" first(res) length(res)
     end
+end
+
+function bench_parser_headers_replyto()
+    msg = "HMSG FOO.BAR 9 asdf 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n"
+    io = IOBuffer(repeat(msg, 1000000))
+    s = 0
+    ret = []
+    @time NATS.parser_loop(io) do res
+        ret = res
+        @info "res" first(res) length(res)
+    end
+    ret
 end
 
 function bench()

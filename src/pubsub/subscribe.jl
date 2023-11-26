@@ -43,7 +43,6 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
     last_error = nothing
     last_error_msg = nothing
     errors_since_last_log = 0
-    handlers_running = Threads.Atomic{Int64}(0)
     lock = ReentrantLock()
     ch = Channel(channel_size)
 
@@ -51,27 +50,26 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
         Threads.@spawn :interactive disable_sigint() do
             try
                 while true
-                    msg = take!(ch)
-                    handler_task = Threads.@spawn :default disable_sigint() do
-                        task_local_storage("sub_stats", sub_stats)
-                        Threads.atomic_add!(handlers_running, 1)
-                        try
-                            @inc_stat :handlers_running sub_stats conn_stats state.stats
-                            f(msg)
-                            @inc_stat :msgs_handled sub_stats conn_stats state.stats
-                            @dec_stat :handlers_running sub_stats conn_stats state.stats
-                        catch 
-                            @inc_stat :msgs_errored sub_stats conn_stats state.stats
-                            @dec_stat :handlers_running sub_stats conn_stats state.stats
-                            @lock lock begin
-                                last_error = err
-                                last_error_msg = msg
-                                errors_since_last_log = errors_since_last_log + 1
+                    msgs = take!(ch)
+                    for msg in msgs # TODO: vectoriztion
+                        handler_task = Threads.@spawn :default disable_sigint() do
+                            task_local_storage("sub_stats", sub_stats)
+                            try
+                                @inc_stat :handlers_running 1 sub_stats conn_stats state.stats
+                                f(msg)
+                                @inc_stat :msgs_handled 1 sub_stats conn_stats state.stats
+                                @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                            catch 
+                                @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
+                                @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                                @lock lock begin
+                                    last_error = err
+                                    last_error_msg = msg
+                                    errors_since_last_log = errors_since_last_log + 1
+                                end
                             end
                         end
-                        Threads.atomic_sub!(handlers_running, 1)
                     end
-                    async_handlers || wait(handler_task)
                 end
             catch err
                 err isa InvalidStateException || rethrow()
@@ -83,16 +81,15 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             try
                 while true
                     msgs = take!(ch)
-                    if !(msgs isa Vector{Message})
-                        msgs = [msgs]
-                    end
-                    Threads.atomic_add!(handlers_running, 1)
-                    for msg in msgs
+                    for msg in msgs # TODO do some vectorization
                         try
+                            @inc_stat :handlers_running 1 sub_stats conn_stats state.stats
                             f(msg)
-                            @inc_stat :msgs_handled sub_stats conn_stats state.stats
+                            @inc_stat :msgs_handled 1 sub_stats conn_stats state.stats
+                            @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
                         catch err
-                            @inc_stat :msgs_errored sub_stats conn_stats state.stats
+                            @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                            @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
                             @lock lock begin
                                 last_error = err
                                 last_error_msg = msg
@@ -100,7 +97,6 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                             end
                         end
                     end
-                    Threads.atomic_sub!(handlers_running, 1)
                 end
             catch err
                 err isa InvalidStateException || rethrow()
@@ -125,10 +121,11 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
 
     stats_task = Threads.@spawn :interactive disable_sigint() do
         while isopen(ch) || Base.n_avail(ch) > 0
-            if handlers_running.value > 1000
-                @warn "$(handlers_running[]) handlers running for subscription on $subject."
+            handlers_running = sub_stats.handlers_running
+            if handlers_running > 1000
+                @warn "$(handlers_running) handlers running for subscription on $subject."
             else
-                @debug "$(handlers_running[]) handlers running for subscription on $subject."
+                @debug "$(handlers_running) handlers running for subscription on $subject."
             end
             level = Base.n_avail(ch) / ch.sz_max
             if level > 0.8
