@@ -118,12 +118,23 @@ julia&gt; Logging.LogLevel(Error)
 Error</code></pre><pre><code class="nohighlight hljs">function subscribe_for_one_second()
     tm = Timer(1)
     counter = 0
+    start = nothing
     sub = subscribe(&quot;foo&quot;) do
+        if isnothing(start)
+            start = time()
+        end
         counter += 1
     end
+    # while counter &lt; 20000000
+    #     sleep(1)
+    # end
     wait(tm)
     unsubscribe(sub)
-    @info &quot;Processed $counter messages&quot;
+    if counter == 0
+        @info &quot;No messages&quot;
+    else
+        @info &quot;Processed $counter messages in $(time() - start) s.&quot;
+    end
 end
 
 julia&gt; subscribe_for_one_second()
@@ -132,4 +143,13 @@ julia&gt; subscribe_for_one_second()
 13:50:56 Starting Core NATS pub/sub benchmark [subject=foo, multisubject=false, multisubjectmax=0, msgs=20,000,000, msgsize=16 B, pubs=1, subs=0, pubsleep=0s, subsleep=0s]
 13:50:56 Starting publisher, publishing 20,000,000 messages
 Publishing    3s [==========&gt;-----]  68%</code></pre><pre><code class="nohighlight hljs">julia&gt; subscribe_for_one_second()
-[ Info: Processed 92528 messages</code></pre><p>92k messages in NATS.jl vs 1.7M messages.</p><p>The problem here may be that received messages are not buffered into Channel, but processed as soon as received.</p><p>It causes some warning on <code>nats-server</code> side:</p><pre><code class="nohighlight hljs">[1] 2023/11/19 12:09:48.833073 [INF] 172.17.0.1:33598 - cid:86 - Slow Consumer Detected: WriteDeadline of 10s exceeded with 65193 chunks of 33378582 total bytes.</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Quick examples</a><a class="docs-footer-nextpage" href="../connect/">Connect »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Monday 20 November 2023 23:10">Monday 20 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[ Info: Processed 92528 messages</code></pre><p>92k messages in NATS.jl vs 1.7M messages.</p><p>The problem here may be that received messages are not buffered into Channel, but processed as soon as received.</p><p>It causes some warning on <code>nats-server</code> side:</p><pre><code class="nohighlight hljs">[1] 2023/11/19 12:09:48.833073 [INF] 172.17.0.1:33598 - cid:86 - Slow Consumer Detected: WriteDeadline of 10s exceeded with 65193 chunks of 33378582 total bytes.</code></pre><p>function bench_arr()     n = 458752     arr = repeat([0x44], n)</p><pre><code class="nohighlight hljs">sum = 0
+i = 0
+@time for b in arr
+    char = Char(b)
+    if char == &#39;D&#39;
+        sum +=1
+    end
+end
+
+@info sum</code></pre><p>end</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../examples/">« Quick examples</a><a class="docs-footer-nextpage" href="../connect/">Connect »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Sunday 26 November 2023 15:49">Sunday 26 November 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
