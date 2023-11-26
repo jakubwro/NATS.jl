@@ -75,7 +75,6 @@ function parse_buffer(buffer::Vector{UInt8}, data::ParserData)::Vector{ProtocolM
             elseif byte == @uint8 'I' # || char == 'i'
                 data.state = OP_I
             else
-                @info "here"
                 parse_error(data)
             end
         elseif data.state == OP_PLUS
@@ -206,11 +205,8 @@ function parse_buffer(buffer::Vector{UInt8}, data::ParserData)::Vector{ProtocolM
                 write_arg(byte, data)
             end
         elseif data.state == MSG_PAYLOAD
-            # @show length(data.headers_buffer) length(data.payload_buffer)
-
             if data.payload_bytes_missing == 0
                 data.state = MSG_END
-                # @show String(data.payload_buffer)
             elseif data.headers_bytes_missing == 0
                 push!(data.payload_buffer, byte)
                 data.payload_bytes_missing -= 1
