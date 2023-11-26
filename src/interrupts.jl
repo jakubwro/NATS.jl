@@ -21,7 +21,11 @@ function start_interrupt_handler()
                 if err isa InterruptException
                     disable_sigint() do
                         @info "Handling interrupt."
-                        drain()
+                        if isdefined(Base, :active_repl_backend) && Base.active_repl_backend.in_eval
+                            schedule(Base.roottask, InterruptException(); error = true)
+                        else
+                            drain()
+                        end
                     end
                 end
             end

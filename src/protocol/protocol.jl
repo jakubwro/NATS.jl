@@ -3,6 +3,7 @@ include("structs.jl")
 const Message = Union{Msg, HMsg}
 
 include("parser.jl")
+include("parser2.jl")
 include("payload.jl")
 include("headers.jl")
 include("convert.jl")

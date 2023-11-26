@@ -1,38 +1,45 @@
+function parse_single_message(io)
+    ret = nothing
+    NATS.parser_loop(io) do res
+        ret = only(res)
+    end
+    ret
+end
+
 @testset "Parsing server operations." begin
-    buffer = IOBuffer("""INFO {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
-    @test next_protocol_message(buffer) == Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing)
 
-    buffer = IOBuffer("MSG FOO.BAR 9 11\r\nHello World\r\n")
-    @test next_protocol_message(buffer) == NATS.Msg("FOO.BAR", "9", nothing, 11, "Hello World")
+    data_to_parse = UInt8[]
+    append!(data_to_parse, """INFO {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
+    append!(data_to_parse, "MSG FOO.BAR 9 11\r\nHello World\r\n")
+    append!(data_to_parse, "MSG FOO.BAR 9 GREETING.34 11\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG FOO.BAR 9 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG FOO.BAR 9 BAZ.69 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG FOO.BAR 9 16 16\r\nNATS/1.0 503\r\n\r\n\r\n")
+    append!(data_to_parse, "PING\r\n")
+    append!(data_to_parse, "PONG\r\n")
+    append!(data_to_parse, "+OK\r\n")
+    append!(data_to_parse, "-ERR 'Unknown Protocol Operation'\r\n")
+    io = IOBuffer(data_to_parse)
+    result = NATS.ProtocolMessage[]
+    NATS.parser_loop(io) do msgs
+        append!(result, msgs)
+    end
 
-    buffer = IOBuffer("MSG FOO.BAR 9 GREETING.34 11\r\nHello World\r\n")
-    @test next_protocol_message(buffer) == Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World")
+    @test result == [
+        NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
+        NATS.Msg("FOO.BAR", "9", nothing, 11, "Hello World"),
+        NATS.Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World"),
+        NATS.HMsg("FOO.BAR", "9", nothing, 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World"),
+        NATS.HMsg("FOO.BAR", "9", "BAZ.69", 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World"),
+        NATS.HMsg("FOO.BAR", "9", nothing, 16, 16, "NATS/1.0 503\r\n\r\n", ""),
+        NATS.Ping(),
+        NATS.Pong(),
+        NATS.Ok(),
+        NATS.Err("Unknown Protocol Operation"),
+    ]
 
-    buffer = IOBuffer("HMSG FOO.BAR 9 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
-    @test next_protocol_message(buffer) == HMsg("FOO.BAR", "9", nothing, 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World")
-
-    buffer = IOBuffer("HMSG FOO.BAR 9 BAZ.69 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
-    @test next_protocol_message(buffer) == HMsg("FOO.BAR", "9", "BAZ.69", 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World")
-
-    buffer = IOBuffer("HMSG FOO.BAR 9 16 16\r\nNATS/1.0 503\r\n\r\n\r\n")
-    @test next_protocol_message(buffer) == HMsg("FOO.BAR", "9", nothing, 16, 16, "NATS/1.0 503\r\n\r\n", nothing)
-    @test isempty(read(buffer))
-
-    buffer = IOBuffer("PING\r\n")
-    @test next_protocol_message(buffer) == Ping()
-
-    buffer = IOBuffer("PONG\r\n")
-    @test next_protocol_message(buffer) == Pong()
-
-    buffer = IOBuffer("+OK\r\n")
-    @test next_protocol_message(buffer) == Ok()
-
-    buffer = IOBuffer("-ERR 'Unknown Protocol Operation'\r\n")
-    @test next_protocol_message(buffer) == Err("Unknown Protocol Operation")
-
-    buffer = IOBuffer("this is not expected\r\n")
-    @test_throws ErrorException next_protocol_message(buffer) 
-
+    io = IOBuffer("this is not expected\r\n")
+    @test_throws ErrorException NATS.parser_loop(io) do; end
 end
 
 @testset "Serializing client operations." begin
@@ -67,7 +74,7 @@ end
     @test String(repr(MIME_HEADERS(), headers(hmsg))) == hmsg.headers
     @test isempty(headers(Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World")))
 
-    no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", nothing)
+    no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", "")
     @test NATS.statuscode(no_responder_hmsg) == 503
 
 end

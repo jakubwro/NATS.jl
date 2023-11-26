@@ -56,11 +56,11 @@ function publish(
         send(connection, HPub(subject, reply_to, headers_size, total_size, headers, payload))
     end
 
-    @inc_stat :msgs_published connection.stats state.stats
+    @inc_stat :msgs_published 1 connection.stats state.stats
     t = current_task()
     if !isnothing(t.storage) && haskey(t.storage, "sub_stats")
         sub_stats = task_local_storage("sub_stats")
-        @inc_stat :msgs_published sub_stats
+        @inc_stat :msgs_published 1 sub_stats
     end
     
     

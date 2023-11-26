@@ -29,16 +29,16 @@ function show(io::IO, stats::Stats)
 end
 
 
-macro inc_stat(field, stats...)
+macro inc_stat(field, value, stats...)
     exprs = map(stats) do stat
-        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:+)), 1, :sequentially_consistent))
+        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:+)), $(esc(value)), :sequentially_consistent))
     end
     Expr(:block, exprs...)
 end
 
-macro dec_stat(field, stats...)
+macro dec_stat(field, value, stats...)
     exprs = map(stats) do stat
-        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:-)), 1, :sequentially_consistent))
+        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:-)), $(esc(value)), :sequentially_consistent))
     end
     Expr(:block, exprs...)
 end

@@ -177,7 +177,7 @@ struct Msg <: ProtocolMessage
     "Size of the payload in bytes."
     bytes::Int
     "The message payload data."
-    payload::Union{String, Nothing}
+    payload::String
 end
 
 """
@@ -197,9 +197,9 @@ struct HMsg <: ProtocolMessage
     "The total size of headers and payload sections in bytes."
     total_bytes::Int
     "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
-    headers::Union{String, Nothing}
+    headers::String
     "The message payload data."
-    payload::Union{String, Nothing}
+    payload::String
 end
 
 """
