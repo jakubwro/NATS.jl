@@ -183,7 +183,7 @@ end
     # @info "Replies count is $(cnt.value)."
     @info "Lost msgs: $(n - length(replies))."
     @test length(replies) == n
-    @test all(r -> r.payload == "This is a reply.", replies)
+    @test all(r -> payload(r) == "This is a reply.", replies)
     NATS.status()
 end
 
