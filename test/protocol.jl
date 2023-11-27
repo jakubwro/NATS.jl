@@ -1,10 +1,4 @@
-function parse_single_message(io)
-    ret = nothing
-    NATS.parser_loop(io) do res
-        ret = only(res)
-    end
-    ret
-end
+uint8_vec(s::String) = convert.(UInt8, collect(s))
 
 @testset "Parsing server operations." begin
 
@@ -27,11 +21,11 @@ end
 
     @test result == [
         NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
-        NATS.Msg("FOO.BAR", "9", nothing, 11, "Hello World"),
-        NATS.Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World"),
-        NATS.HMsg("FOO.BAR", "9", nothing, 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World"),
-        NATS.HMsg("FOO.BAR", "9", "BAZ.69", 34, 45, "NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n", "Hello World"),
-        NATS.HMsg("FOO.BAR", "9", nothing, 16, 16, "NATS/1.0 503\r\n\r\n", ""),
+        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", "9", nothing, 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", "9", "BAZ.69", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", "9", nothing, 16, uint8_vec("NATS/1.0 503\r\n\r\n")),
         NATS.Ping(),
         NATS.Pong(),
         NATS.Ok(),
@@ -66,16 +60,16 @@ end
 end
 
 @testset "Serializing headers." begin
-    hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 34, 45, "NATS/1.0\r\nA: B\r\nC: D\r\nC: E\r\n\r\n", "Hello World")
-    @test headers(hmsg) == ["A" => "B", "C" => "D", "C" => "E"]
-    @test headers(hmsg, "C") == ["D", "E"]
-    @test_throws ArgumentError header(hmsg, "C")
-    @test header(hmsg, "A") == "B"
-    @test String(repr(MIME_HEADERS(), headers(hmsg))) == hmsg.headers
-    @test isempty(headers(Msg("FOO.BAR", "9", "GREETING.34", 11, "Hello World")))
+    msg = Msg("FOO.BAR", "9", "BAZ.69", 30, uint8_vec("NATS/1.0\r\nA: B\r\nC: D\r\nC: E\r\n\r\nHello World"))
+    @test headers(msg) == ["A" => "B", "C" => "D", "C" => "E"]
+    @test headers(msg, "C") == ["D", "E"]
+    @test_throws ArgumentError header(msg, "C")
+    @test header(msg, "A") == "B"
+    @test String(repr(MIME_HEADERS(), headers(msg))) == String(msg.payload[begin:msg.headers_length])
+    @test isempty(headers(Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World"))))
 
-    no_responder_hmsg = HMsg("FOO.BAR", "9", "BAZ.69", 16, 16, "NATS/1.0 503\r\n\r\n", "")
-    @test NATS.statuscode(no_responder_hmsg) == 503
+    no_responder_msg = Msg("FOO.BAR", "9", "BAZ.69", 16, uint8_vec("NATS/1.0 503\r\n\r\n"))
+    @test NATS.statuscode(no_responder_msg) == 503
 
 end
 

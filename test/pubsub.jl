@@ -66,7 +66,7 @@ end
     end
     publish("SOME.BAR"; payload = "Hi!", headers = ["A" => "B"])
     result = take!(c)
-    @test result isa NATS.HMsg
+    @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test headers(result) == ["A" => "B"]
     @test length(NATS.state.handlers) == 1

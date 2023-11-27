@@ -13,13 +13,13 @@ res = NATS.parser_loop(io) do res
 end
 
 function bench_parser()
-    msg = "MSG foo 84s6LXpSRziIFL4w5Spm 16\r\n1111111111111111\r\n"
+    msg = "MSG foo 84s6LX 16\r\n1111111111111111\r\n"
     io = IOBuffer(repeat(msg, 1000000))
     s = 0
     ret = []
     @time NATS.parser_loop(io) do res
         ret = res
-        # @info "res" first(res) length(res)
+        @info "res" first(res) length(res)
     end
     ret
 end

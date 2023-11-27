@@ -41,7 +41,7 @@ nc = NATS.connect(default = true)
     sleep(10)
     @test nc.status == NATS.CONNECTED
     resp = request("help.please")
-    @test resp isa NATS.Message
+    @test resp isa NATS.Msg
 end
 
 # @testset "Close outbox when messages pending." begin
@@ -138,7 +138,7 @@ end
     # @info "Replies count is $(cnt.value)."
     @info "Lost msgs: $(n - length(replies))."
     @test length(replies) > 0.8 * n # TODO: it fails a lot for TLS
-    @test all(r -> r.payload == "This is a reply.", replies)
+    @test all(r -> payload(r) == "This is a reply.", replies)
     NATS.status()
 end
 

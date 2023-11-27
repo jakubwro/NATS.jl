@@ -52,7 +52,7 @@ function __init__()
                        ```
                        import Base: convert
 
-                       function convert(::Type{$(argtypes[1])}, msg::Union{NATS.Msg, NATS.HMsg})
+                       function convert(::Type{$(argtypes[1])}, msg::NATS.Msg)
                            # Implement conversion logic here.
                        end
 

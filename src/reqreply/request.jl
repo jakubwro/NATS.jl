@@ -12,7 +12,7 @@ Optional keyword arguments are:
 # Examples
 ```julia-repl
 julia> NATS.request("help.please")
-NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, 17, "OK, I CAN HELP!!!")
+NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, "", "OK, I CAN HELP!!!")
 
 julia> request("help.please"; timer = Timer(0))
 ERROR: No replies received.
@@ -31,7 +31,7 @@ function request(
     first(filter(!has_error_status, replies))
 end
 
-function has_error_status(msg::NATS.Message)
+function has_error_status(msg::NATS.Msg)
     statuscode(msg) in 400:599
 end
 
@@ -60,7 +60,7 @@ function request(
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = new_inbox(connection)
-    replies_channel = Channel{NATS.Message}(nreplies)
+    replies_channel = Channel{NATS.Msg}(nreplies)
     sub = subscribe(reply_to; async_handlers = false, connection) do msg
         put!(replies_channel, msg)
         if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)

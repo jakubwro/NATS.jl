@@ -21,12 +21,12 @@ function process(nc::Connection, pong::Pong)
 end
 
 function process(nc::Connection, batch::Vector{ProtocolMessage})
-    groups = Dict{String, Vector{Message}}()
+    groups = Dict{String, Vector{Msg}}()
     for msg in batch
-        if msg isa Message
+        if msg isa Msg
             arr = get(groups, msg.sid, nothing)
             if isnothing(arr)
-                arr = Message[]
+                arr = Msg[]
                 groups[msg.sid] = arr
             end
             push!(arr, msg)

@@ -28,7 +28,7 @@ end
 # Also allows for use of parameterless handlers for subs that do not need look into msg payload. 
 # """
 function _fast_call(f::Function, arg_t::Type)
-    if arg_t === Any || arg_t === NATS.Message || arg_t == NATS.Msg || arg_t == NATS.HMsg
+    if arg_t === Any || arg_t == NATS.Msg
         f
     elseif arg_t == Nothing
         _ -> f()

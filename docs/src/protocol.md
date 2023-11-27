@@ -9,7 +9,6 @@ NATS.HPub
 NATS.Sub
 NATS.Unsub
 NATS.Msg
-NATS.HMsg
 NATS.Ping
 NATS.Pong
 NATS.Err

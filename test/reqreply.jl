@@ -67,7 +67,7 @@ end
     unsubscribe(sub)
     replies = collect(results)
     @test length(replies) == n
-    @test all(r -> r.payload == "This is a reply.", replies)
+    @test all(r -> payload(r) == "This is a reply.", replies)
     NATS.status()
 end
 
@@ -100,7 +100,7 @@ end
     end
     replies = t.value
     @test length(replies) == n
-    @test all(r -> r.payload == "OK, I CAN HELP!!!", replies)
+    @test all(r -> payload(r) == "OK, I CAN HELP!!!", replies)
     @info "Total time of $n requests is $(t.time) s, average $(1000 * t.time / n) ms per request."
 end
 
@@ -124,7 +124,7 @@ end
     end
     result = request("SOME.REQUESTS")
     unsubscribe(sub)
-    @test result isa NATS.HMsg
+    @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
     @test headers(result) == ["A" => "B"]
 end

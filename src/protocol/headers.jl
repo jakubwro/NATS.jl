@@ -3,23 +3,26 @@
 const Header = Pair{String, String}
 const Headers = Vector{Header}
 
-function headers(msg::Msg)
-    Headers()
+function headers_str(msg::Msg)
+    String(msg.payload[begin:msg.headers_length])
 end
 
-function headers(hmsg::HMsg)
-    hdr = split(hmsg.headers, "\r\n"; keepempty = false)
+function headers(msg::Msg)
+    if msg.headers_length == 0
+        return Headers()
+    end
+    hdr = split(headers_str(msg), "\r\n"; keepempty = false)
     @assert startswith(first(hdr), "NATS/1.0") "Missing protocol version."
     items = hdr[2:end]
     items = split.(items, ": "; keepempty = false)
     map(x -> string(first(x)) => string(last(x)) , items)
 end
 
-function headers(m::Union{Msg,HMsg}, key::String)
+function headers(m::Msg, key::String)
     last.(filter(h -> first(h) == key, headers(m)))
 end
 
-function header(m::Union{Msg,HMsg}, key::String)
+function header(m::Msg, key::String)
     only(headers(m, key))
 end
 
@@ -33,10 +36,10 @@ function statuscode(header_str::String)
     end
 end
 
-function statuscode(::Msg)
-    200
-end
-
-function statuscode(hmsg::HMsg)
-    statuscode(hmsg.headers)
+function statuscode(msg::Msg)
+    if msg.headers_length == 0
+        200
+    else
+        statuscode(headers_str(msg))
+    end
 end

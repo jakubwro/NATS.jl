@@ -120,7 +120,7 @@ function reopen_outbox(nc::Connection)
     subs_count = Base.n_avail(new_outbox)
     for msg in old_outbox
         # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
-        if msg isa Msg || msg isa HMsg || msg isa Pub || msg isa HPub || msg isa Unsub
+        if msg isa Msg || msg isa Pub || msg isa HPub || msg isa Unsub
             put!(new_outbox, msg)
         end
     end

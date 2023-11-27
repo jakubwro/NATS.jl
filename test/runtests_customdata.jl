@@ -9,7 +9,7 @@ struct Person
     age::Int64
 end
 
-function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+function convert(::Type{Person}, msg::NATS.Msg)
     name, age = split(payload(msg), ",")
     Person(name, parse(Int64, age))
 end
@@ -55,6 +55,6 @@ end
     @test supervisor.name == "Zbigniew"
     @test supervisor.age == 44
 
-    hmsg = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33))
-    @test hmsg isa NATS.HMsg
+    msg = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33))
+    @test msg isa NATS.Msg
 end

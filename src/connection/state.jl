@@ -1,6 +1,6 @@
 # Global state.
 
-function default_fallback_handler(::Connection, msg::Union{Msg, HMsg})
+function default_fallback_handler(::Connection, msg::Msg)
     # @warn "Unexpected message delivered." msg
 end
 

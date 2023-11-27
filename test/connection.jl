@@ -19,7 +19,7 @@ end
     #         ```
     #         import Base: convert
             
-    #         function convert(::Type{Type{Float64}}, msg::Union{NATS.Msg, NATS.HMsg})
+    #         function convert(::Type{Type{Float64}}, msg::Msg)
     #             # Implement conversion logic here.
     #         end
     #         """
@@ -31,7 +31,7 @@ end
     #         ```
     #         import Base: convert
             
-    #         function convert(::Type{Type{Integer}}, msg::Union{NATS.Msg, NATS.HMsg})
+    #         function convert(::Type{Type{Integer}}, msg::Msg)
     #             # Implement conversion logic here.
     #         end
     #         """

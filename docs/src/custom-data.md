@@ -12,7 +12,7 @@ end
 
 import Base: convert
 
-function convert(::Type{Person}, msg::NATS.Message)
+function convert(::Type{Person}, msg::NATS.Msg)
     name, age = split(payload(msg), ",")
     Person(name, parse(Int64, age))
 end

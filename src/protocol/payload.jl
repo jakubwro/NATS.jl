@@ -1,2 +1,1 @@
-payload(msg::Msg) = msg.payload
-payload(hmsg::HMsg) = hmsg.payload
+payload(msg::Msg) = String(msg.payload[begin+msg.headers_length+firstindex(msg.payload):end]) # TODO: optimize this

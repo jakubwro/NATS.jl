@@ -174,32 +174,18 @@ struct Msg <: ProtocolMessage
     sid::String
     "The subject on which the publisher is listening for responses."
     reply_to::Union{String, Nothing}
-    "Size of the payload in bytes."
-    bytes::Int
+    "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
+    headers_length::Int64
     "The message payload data."
-    payload::String
+    payload::AbstractVector{UInt8}
 end
 
-"""
-The HMSG message is the same as MSG, but extends the message payload with headers. See also [ADR-4 NATS Message Headers](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-4.md).
-
-$(TYPEDFIELDS)
-"""
-struct HMsg <: ProtocolMessage
-    "Subject name this message was received on."
-    subject::String
-    "The unique alphanumeric subscription ID of the subject."
-    sid::String
-    "The subject on which the publisher is listening for responses."
-    reply_to::Union{String, Nothing}
-    "The size of the headers section in bytes including the `␍␊␍␊` delimiter before the payload."
-    header_bytes::Int
-    "The total size of headers and payload sections in bytes."
-    total_bytes::Int
-    "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
-    headers::String
-    "The message payload data."
-    payload::String
+function Base.:(==)(a::Msg, b::Msg)
+    a.subject == b.subject &&
+    a.sid == b.sid &&
+    a.reply_to == b.reply_to &&
+    a.headers_length == b.headers_length &&
+    a.payload == b.payload
 end
 
 """

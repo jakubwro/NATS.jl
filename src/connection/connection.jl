@@ -45,7 +45,7 @@ function new_inbox(connection::Connection, prefix::String = "")
 end
 
 function new_sid(connection::Connection)
-    @lock connection.lock randstring(connection.rng, 20)
+    @lock connection.lock randstring(connection.rng, 6)
 end
 
 include("state.jl")

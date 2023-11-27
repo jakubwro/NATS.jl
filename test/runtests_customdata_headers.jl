@@ -10,7 +10,7 @@ struct Person
     departament::String
 end
 
-function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+function convert(::Type{Person}, msg::NATS.Msg)
     name, age, departament = split(payload(msg), ",")
     Person(name, parse(Int64, age), departament)
 end
@@ -61,8 +61,8 @@ end
     @test supervisor.name == "Zbigniew"
     @test supervisor.age == 44
 
-    hmsg = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"))
-    @test hmsg isa NATS.HMsg
-    @test headers(hmsg) == ["status" => "error", "message" => "Unexpected departament `ACCOUNTING`"]
+    msg = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"))
+    @test msg isa NATS.Msg
+    @test headers(msg) == ["status" => "error", "message" => "Unexpected departament `ACCOUNTING`"]
     unsubscribe(sub)
 end

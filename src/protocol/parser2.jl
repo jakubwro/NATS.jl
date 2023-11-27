@@ -15,10 +15,13 @@
     current_arg_buffer::Int64 = 0
     payload_buffer::Vector{UInt8} = UInt8[]
     payload_bytes_missing::Int64 = 0
-    headers_buffer::Vector{UInt8} = UInt8[]
-    headers_bytes_missing::Int64 = 0
+    payload_start::Int64 = 0
     results::Vector{ProtocolMessage} = ProtocolMessage[]
 end
+
+# function calc_sid(byte::UInt8)
+#     data.fast_sid = (data.fast_sid << 8) | byte
+# end
 
 function next_arg(data::ParserData)
     data.current_arg_buffer += 1
@@ -38,7 +41,7 @@ function parser_loop(f, io::IO)
         data_read_start = time()
         buffer = readavailable(io) # Sleeps when no data available.
         data_ready_time = time()
-        parse_buffer(buffer, data)
+        parse_buffer(io, buffer, data)
         batch_ready_time = time()
         f(data.results)
         handler_call_time = time()
@@ -47,18 +50,17 @@ function parser_loop(f, io::IO)
     end
 end
 
-function parse_erOP_MINUS_ERR_SPCror(data::ParserData)
-    #TODO: print buffer around pos
-    error("parsing error $(data.state)")
-end
-
 macro uint8(char::Char)
     convert(UInt8, char)
 end
 
-function parse_buffer(buffer::Vector{UInt8}, data::ParserData)::Vector{ProtocolMessage}
+function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)::Vector{ProtocolMessage}
     batch = ProtocolMessage[]
-    for byte in buffer
+    pos = 0
+    len = length(buffer)
+    while pos < length(buffer)
+        pos += 1
+        byte = buffer[pos]
         if data.state == OP_START
             if byte == @uint8 'M'
                 data.state = OP_M
@@ -198,36 +200,33 @@ function parse_buffer(buffer::Vector{UInt8}, data::ParserData)::Vector{ProtocolM
                     end
                 end
                 data.current_arg_buffer = 0
-                data.headers_bytes_missing = data.header_bytes
                 data.payload_bytes_missing = data.total_bytes
-                data.state = MSG_PAYLOAD
+                ending = pos + data.total_bytes + 2
+                if ending > len
+                    append!(buffer, read(io, ending - len))
+                end
+                data.payload_start = pos + 1
+                pos = pos + data.total_bytes + 1
+                data.state = MSG_END
             else
                 write_arg(byte, data)
             end
-        elseif data.state == MSG_PAYLOAD
-            if data.payload_bytes_missing == 0
-                data.state = MSG_END
-            elseif data.headers_bytes_missing == 0
-                push!(data.payload_buffer, byte)
-                data.payload_bytes_missing -= 1
-            else
-                push!(data.headers_buffer, byte)
-                data.headers_bytes_missing -= 1
-                data.payload_bytes_missing -= 1
-            end
+        # elseif data.state == MSG_PAYLOAD
+        #     if data.payload_bytes_missing == 0
+        #         data.state = MSG_END
+        #     else
+        #         data.payload_bytes_missing -= 1
+        #     end
         elseif data.state == MSG_END
-            if byte == @uint8 '\r'
-
-            elseif byte == @uint8 '\n'
-                if data.has_header
-                    push!(data.results, HMsg(data.subject, data.sid, data.replyto, data.header_bytes, data.total_bytes, String(data.headers_buffer), String(data.payload_buffer)))
-                else
-                    push!(data.results, Msg(data.subject, data.sid, data.replyto, data.total_bytes, String(data.payload_buffer)))
-                end
+            # @show Char(byte)
+            # if byte == @uint8 '\r'
+            # elseif byte == @uint8 '\n'
+                payload = @view buffer[data.payload_start:(data.payload_start + data.total_bytes - 1)]
+                push!(data.results, Msg(data.subject, data.sid, data.replyto, data.header_bytes, payload))
                 data.state = OP_START
-            else
-                parse_error(data)
-            end
+            # else
+                # parse_error(data)
+            # end
         elseif data.state == OP_P
             if byte == @uint8 'I'
                 data.state = OP_PI
