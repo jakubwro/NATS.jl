@@ -49,7 +49,19 @@ function publish(
 
     # TODO: validate with connection.info.max_payload
     if isnothing(headers)
-        send(connection, Pub(subject, reply_to, sizeof(payload), payload))
+        @lock connection.send_buffer_lock begin
+            write(connection.send_buffer, "PUB ")
+            write(connection.send_buffer, subject)
+            if !isnothing(reply_to)
+                write(connection.send_buffer, " ")
+                write(connection.send_buffer, reply_to)
+            end
+            write(connection.send_buffer, " $(ncodeunits(payload))")
+            write(connection.send_buffer, "\r\n")
+            write(connection.send_buffer, payload)
+            write(connection.send_buffer, "\r\n")
+            # @show String(take!(connection.send_buffer))
+        end
     else
         headers_size = sizeof(headers)
         total_size = headers_size + sizeof(payload)

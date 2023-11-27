@@ -43,7 +43,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
         # y = 0
         # s = 0
         while isopen(tm)
-            if Base.n_avail(c) < n - 5000
+            if Base.n_avail(c) < n - 20000
                 # s = s + 1
                 sleep(0.005)
             else

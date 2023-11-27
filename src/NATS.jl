@@ -30,7 +30,7 @@ const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
 const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false
-const SEND_BATCH_SIZE = 5000
+const SEND_BATCH_SIZE = 10000
 
 
 include("protocol/protocol.jl")

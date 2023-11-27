@@ -173,7 +173,10 @@ Threads.threadid() = 1
 julia> 
 
 julia> while true
-           publish("foo"; payload = "This is a payload")
+           for i in 1:100000
+            publish("foo"; payload = "This is a payload")
+           end
+           sleep(0.001)
        end
 ```
 

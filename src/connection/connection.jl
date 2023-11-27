@@ -25,6 +25,8 @@ include("stats.jl")
     rng::AbstractRNG = MersenneTwister()
     subs::Dict{String, Sub} = Dict{String, Sub}()
     unsubs::Dict{String, Int64} = Dict{String, Int64}()
+    send_buffer::IO = IOBuffer()
+    send_buffer_lock::ReentrantLock = ReentrantLock()
 end
 
 info(c::Connection)::Info = @lock c.lock c.info
@@ -80,5 +82,5 @@ show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
 
 function ping(nc)
-    send(nc, Ping())
+    @lock nc.send_buffer_lock show(nc.send_buffer, MIME_PROTOCOL(), Ping())
 end
