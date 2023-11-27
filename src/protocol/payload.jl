@@ -1,1 +1,1 @@
-payload(msg::Msg) = String(msg.payload[begin+msg.headers_length+firstindex(msg.payload):end]) # TODO: optimize this
+payload(msg::Msg) = String(msg.payload[begin+msg.headers_length:end]) # TODO: optimize this
