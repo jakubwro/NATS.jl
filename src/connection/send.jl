@@ -29,25 +29,23 @@ end
 
 function sendloop(nc::Connection, io::IO)
     @show Threads.threadid()
-    try
-        out = outbox(nc)
-        while isopen(out) # @show !eof(io) && !isdrained(nc)
-            buf = @lock nc.send_buffer_cond begin
-                taken = take!(nc.send_buffer)
-                if isempty(taken)
-                    wait(nc.send_buffer_cond)
-                    take!(nc.send_buffer)
-                else
-                    taken
+    while isopen(nc.send_buffer) # @show !eof(io) && !isdrained(nc)
+        buf = @lock nc.send_buffer_cond begin
+            taken = take!(nc.send_buffer)
+            if isempty(taken)
+                wait(nc.send_buffer_cond)
+                if !isopen(nc.send_buffer)
+                    break
                 end
+                take!(nc.send_buffer)
+            else
+                taken
             end
-            write(io, buf)
-            flush(io)
         end
-        @info "Sender task finished at $(time())" #TODO: bytes in buffer
-catch err
-    @error err
-end
+        write(io, buf)
+        flush(io)
+    end
+    @info "Sender task finished at $(time())" #TODO: bytes in buffer
 end
 
 

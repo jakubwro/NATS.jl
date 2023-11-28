@@ -205,7 +205,8 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
-                    close(outbox(nc))
+                    close(nc.send_buffer)
+                    @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
                     @info "Wait end time: $(time())"
                     close(sock)
                     break
@@ -216,8 +217,9 @@ function connect(
                 break
             end
             try wait(sender_task) catch end
-            # TODO: add flag to decide at which pont reopen outbox.
-            reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
+            # TODO: add flag to decide at which pont reopen send buffer.
+            nc.send_buffer = IOBuffer() # TODO: add sizehint
+            # TODO: add subs and unsubs to send buffer first
             # try wait(receiver_task) catch end
 
             @warn "Reconnecting..."
