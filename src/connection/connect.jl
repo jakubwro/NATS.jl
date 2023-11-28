@@ -189,7 +189,6 @@ function connect(
             bind(err_channel, receiver_task)
             bind(err_channel, sender_task)
             
-            data = UInt8[] # TODO: refactor
             while true
                 try
                     wait(err_channel)
@@ -198,7 +197,13 @@ function connect(
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
                     @lock nc.send_buffer_cond begin
                         data = take!(nc.send_buffer)
-                        close(nc.send_buffer)
+                        # TODO: add flag to decide at which pont reopen send buffer.
+                        old_buffer = nc.send_buffer
+                        nc.send_buffer = IOBuffer() # TODO: add sizehint
+                        restore_subs(nc)
+                        @info "Restored data length $(length(data))"
+                        write(nc.send_buffer, data)
+                        close(old_buffer)
                         notify(nc.send_buffer_cond)
                     end
                     @info "Wait end time: $(time())"
@@ -211,13 +216,7 @@ function connect(
                 break
             end
             try wait(sender_task) catch end
-            # TODO: add flag to decide at which pont reopen send buffer.
-            nc.send_buffer = IOBuffer() # TODO: add sizehint
-            # TODO: add subs and unsubs to send buffer first
             # try wait(receiver_task) catch end
-            restore_subs(nc)
-            @info "Restored data length $(length(data))"
-            write(nc.send_buffer, data)
 
             @warn "Reconnecting..."
             status(nc, CONNECTING)

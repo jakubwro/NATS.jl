@@ -29,15 +29,16 @@ end
 
 function sendloop(nc::Connection, io::IO)
     @show Threads.threadid()
-    while isopen(nc.send_buffer) # @show !eof(io) && !isdrained(nc)
+    send_buffer = nc.send_buffer
+    while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         buf = @lock nc.send_buffer_cond begin
-            taken = take!(nc.send_buffer)
+            taken = take!(send_buffer)
             if isempty(taken)
                 wait(nc.send_buffer_cond)
-                if !isopen(nc.send_buffer)
+                if !isopen(send_buffer)
                     break
                 end
-                take!(nc.send_buffer)
+                take!(send_buffer)
             else
                 taken
             end
