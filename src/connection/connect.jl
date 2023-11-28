@@ -106,6 +106,18 @@ function init_protocol(host, port, options; nc = nothing)
     end
 end
 
+function restore_subs(nc)
+    # sids = Set{String}()
+    for (sid, sub) in pairs(nc.subs)
+        show(nc.send_buffer, MIME_PROTOCOL(), sub)
+        # push!(sids, sid)
+        unsub_max_msgs = get(nc.unsubs, sid, nothing)
+        if !isnothing(unsub_max_msgs)
+            show(nc.send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
+        end
+    end
+end
+
 function reopen_outbox(nc::Connection)
     old_outbox = outbox(nc)
     new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
@@ -221,6 +233,7 @@ function connect(
             nc.send_buffer = IOBuffer() # TODO: add sizehint
             # TODO: add subs and unsubs to send buffer first
             # try wait(receiver_task) catch end
+            restore_subs(nc)
 
             @warn "Reconnecting..."
             status(nc, CONNECTING)
