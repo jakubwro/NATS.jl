@@ -83,7 +83,8 @@ end
 end
 
 @testset "Should reconnect on outbox closed" begin
-    close(nc.outbox)
+    close(nc.send_buffer)
+    @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
     sleep(5)
     @test nc.status == NATS.CONNECTED
 end

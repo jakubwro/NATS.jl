@@ -47,8 +47,7 @@ if have_nats
         for nc in NATS.state.connections
             @test isempty(nc.subs)
             @test isempty(nc.unsubs)
-            @show nc.outbox.data
-            @test Base.n_avail(nc.outbox) == 0
+            @test nc.send_buffer.size == 0
         end
     end
 

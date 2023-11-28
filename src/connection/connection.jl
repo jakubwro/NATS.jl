@@ -35,8 +35,6 @@ info(c::Connection, info::Info) = @lock c.lock c.info = info
 clustername(c::Connection) = @something info(c).cluster "unnamed"
 status(c::Connection)::ConnectionStatus = @lock c.lock c.status
 status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
-outbox(c::Connection) = @lock c.lock c.outbox
-outbox(c::Connection, ch::Channel{ProtocolMessage}) = @lock c.lock c.outbox = ch
 
 function new_inbox(connection::Connection, prefix::String = "")
     random_suffix = @lock connection.lock randstring(connection.rng, 10)
@@ -65,12 +63,12 @@ function status()
     if !isnothing(state.default_connection)
         print("  [default]:  ")
         nc = state.default_connection
-        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox             ")
+        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs             ") # TODO add info about msgs in send_buffer
         println()
     end
     for (i, nc) in enumerate(state.connections)
         print("       [#$i]:  ")
-        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox             ")
+        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs             ")
         println()
     end
     println("subscriptions:  $(length(state.handlers))           ")
@@ -80,7 +78,7 @@ function status()
 end
 
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs, ", Base.n_avail(outbox(nc::Connection)) ," outbox)")
+    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs")
 
 function ping(nc)
     send(nc, Ping())

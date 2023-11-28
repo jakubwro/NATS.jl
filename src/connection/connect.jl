@@ -118,28 +118,6 @@ function restore_subs(nc)
     end
 end
 
-function reopen_outbox(nc::Connection)
-    old_outbox = outbox(nc)
-    new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
-    # sids = Set{String}()
-    # for (sid, sub) in pairs(nc.subs)
-    #     put!(new_outbox, sub)
-    #     push!(sids, sid)
-    #     if haskey(nc.unsubs, sid)
-    #         put!(new_outbox, Unsub(sid, nc.unsubs[sid]))
-    #     end
-    # end
-    # subs_count = Base.n_avail(new_outbox)
-    # for msg in old_outbox
-    #     # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
-    #     if msg isa Msg || msg isa Pub || msg isa Unsub
-    #         put!(new_outbox, msg)
-    #     end
-    # end
-    # @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
-    outbox(nc, new_outbox)
-end
-
 function receiver(nc::Connection, io::IO)
     @show Threads.threadid()
     while true
@@ -211,14 +189,18 @@ function connect(
             bind(err_channel, receiver_task)
             bind(err_channel, sender_task)
             
+            data = UInt8[] # TODO: refactor
             while true
                 try
                     wait(err_channel)
                 catch err
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
-                    close(nc.send_buffer)
-                    @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
+                    @lock nc.send_buffer_cond begin
+                        data = take!(nc.send_buffer)
+                        close(nc.send_buffer)
+                        notify(nc.send_buffer_cond)
+                    end
                     @info "Wait end time: $(time())"
                     close(sock)
                     break
@@ -234,6 +216,8 @@ function connect(
             # TODO: add subs and unsubs to send buffer first
             # try wait(receiver_task) catch end
             restore_subs(nc)
+            @info "Restored data length $(length(data))"
+            write(nc.send_buffer, data)
 
             @warn "Reconnecting..."
             status(nc, CONNECTING)

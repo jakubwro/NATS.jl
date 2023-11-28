@@ -20,7 +20,8 @@ function drain(nc::Connection)
     sleep(3)
     length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
     status(nc, DRAINED)
-    close(outbox(nc))
+    close(nc.send_buffer)
+    @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
     @warn "connection drained"
 end
 
