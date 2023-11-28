@@ -122,10 +122,15 @@ end
 
     tm = Timer(1.0)
     counter = 0
+    c = 0
     while isopen(tm)
         publish("zxc"; payload = "Hello world!!!!!", connection)
         counter = counter + 1
-        yield()
+        c += 1
+        if c == 10000
+            c = 0
+            yield()
+        end
     end
 
     @info "Published $counter messages."
