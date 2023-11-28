@@ -33,6 +33,10 @@ function unsubscribe(
     send(connection, usnub)
     if isnothing(max_msgs) || max_msgs == 0
         _cleanup_sub(connection, sid)
+    else
+        @lock connection.lock begin
+            connection.unsubs[sid] = max_msgs
+        end
     end
     usnub
 end

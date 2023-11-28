@@ -33,12 +33,13 @@ function sendloop(nc::Connection, io::IO)
         out = outbox(nc)
         while isopen(out) # @show !eof(io) && !isdrained(nc)
             buf = @lock nc.send_buffer_cond begin
-                buf = take!(nc.send_buffer)
-                if isempty(buf)
+                taken = take!(nc.send_buffer)
+                if isempty(taken)
                     wait(nc.send_buffer_cond)
-                    buf = take!(nc.send_buffer)
+                    take!(nc.send_buffer)
+                else
+                    taken
                 end
-                buf
             end
             write(io, buf)
             flush(io)
