@@ -4,7 +4,7 @@ using JSON3
 using Sockets
 
 using NATS: next_protocol_message
-using NATS: Info, Msg, Ping, Pong, Ok, Err, Pub, HPub, Sub, Unsub, Connect
+using NATS: Info, Msg, Ping, Pong, Ok, Err, Pub, Sub, Unsub, Connect
 using NATS: Headers, headers, header
 using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
 

@@ -109,22 +109,22 @@ end
 function reopen_outbox(nc::Connection)
     old_outbox = outbox(nc)
     new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
-    sids = Set{String}()
-    for (sid, sub) in pairs(nc.subs)
-        put!(new_outbox, sub)
-        push!(sids, sid)
-        if haskey(nc.unsubs, sid)
-            put!(new_outbox, Unsub(sid, nc.unsubs[sid]))
-        end
-    end
-    subs_count = Base.n_avail(new_outbox)
-    for msg in old_outbox
-        # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
-        if msg isa Msg || msg isa Pub || msg isa HPub || msg isa Unsub
-            put!(new_outbox, msg)
-        end
-    end
-    @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
+    # sids = Set{String}()
+    # for (sid, sub) in pairs(nc.subs)
+    #     put!(new_outbox, sub)
+    #     push!(sids, sid)
+    #     if haskey(nc.unsubs, sid)
+    #         put!(new_outbox, Unsub(sid, nc.unsubs[sid]))
+    #     end
+    # end
+    # subs_count = Base.n_avail(new_outbox)
+    # for msg in old_outbox
+    #     # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
+    #     if msg isa Msg || msg isa Pub || msg isa Unsub
+    #         put!(new_outbox, msg)
+    #     end
+    # end
+    # @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
     outbox(nc, new_outbox)
 end
 
@@ -189,7 +189,11 @@ function connect(
         @show Threads.threadid()
         while true
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
+            @info "starting sender"
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
+
+            errormonitor(receiver_task)
+            errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)

@@ -43,31 +43,8 @@ function publish(
     reply_to::Union{String, Nothing} = nothing
 )
     payload_bytes = repr(MIME_PAYLOAD(), data)
-    payload = isempty(payload_bytes) ? nothing : String(payload_bytes)
     headers_bytes = repr(MIME_HEADERS(), data)
-    headers = isempty(headers_bytes) ? nothing : String(headers_bytes)
-
-    # TODO: validate with connection.info.max_payload
-    if isnothing(headers)
-        @lock connection.send_buffer_lock begin
-            write(connection.send_buffer, "PUB ")
-            write(connection.send_buffer, subject)
-            if !isnothing(reply_to)
-                write(connection.send_buffer, " ")
-                write(connection.send_buffer, reply_to)
-            end
-            write(connection.send_buffer, " $(ncodeunits(payload))")
-            write(connection.send_buffer, "\r\n")
-            write(connection.send_buffer, payload)
-            write(connection.send_buffer, "\r\n")
-            # @show String(take!(connection.send_buffer))
-        end
-    else
-        headers_size = sizeof(headers)
-        total_size = headers_size + sizeof(payload)
-        send(connection, HPub(subject, reply_to, headers_size, total_size, headers, payload))
-    end
-
+    send(connection, Pub(subject, reply_to, headers_bytes, payload_bytes))
     @inc_stat :msgs_published 1 connection.stats state.stats
     t = current_task()
     if !isnothing(t.storage) && haskey(t.storage, "sub_stats")

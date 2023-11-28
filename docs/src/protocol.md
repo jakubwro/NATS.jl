@@ -5,7 +5,6 @@
 NATS.Info
 NATS.Connect
 NATS.Pub
-NATS.HPub
 NATS.Sub
 NATS.Unsub
 NATS.Msg

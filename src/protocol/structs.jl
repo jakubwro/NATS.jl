@@ -110,30 +110,10 @@ struct Pub <: ProtocolMessage
     subject::String
     "The reply subject that subscribers can use to send a response back to the publisher/requestor."
     reply_to::Union{String, Nothing}
-    "The payload size in bytes."
-    bytes::Int
-    "The message payload data."
-    payload::Union{String, Nothing}
-end
-
-"""
-The HPUB message is the same as PUB but extends the message payload to include NATS headers. Note that the payload itself is optional. To omit the payload, set the total message size equal to the size of the headers. Note that the trailing CR+LF is still required.
-
-$(TYPEDFIELDS)
-"""
-struct HPub <: ProtocolMessage
-    "The destination subject to publish to."
-    subject::String
-    "The reply subject that subscribers can use to send a response back to the publisher/requestor."
-    reply_to::Union{String, Nothing}
-    "The size of the headers section in bytes including the `␍␊␍␊` delimiter before the payload."
-    header_bytes::Int
-    "The total size of headers and payload sections in bytes."
-    total_bytes::Int
     "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
-    headers::Union{String, Nothing}
+    headers::Vector{UInt8}
     "The message payload data."
-    payload::Union{String, Nothing}
+    payload::Vector{UInt8}
 end
 
 """

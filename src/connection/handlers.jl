@@ -13,7 +13,7 @@ end
 
 function process(nc::Connection, ping::Ping)
     @debug "Sending PONG."
-    @lock nc.send_buffer_lock show(nc.send_buffer, MIME_PROTOCOL(), Pong())
+    send(nc, Pong())
 end
 
 function process(nc::Connection, pong::Pong)
