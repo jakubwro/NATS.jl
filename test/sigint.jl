@@ -48,4 +48,6 @@ sleep(5)
 NATS.status()
 if NATS.status(NATS.connection(1)) == NATS.DRAINED
     @info "Test passed correctly."
+else
+    @error "Test failed, connection status is not DRAINED"
 end
