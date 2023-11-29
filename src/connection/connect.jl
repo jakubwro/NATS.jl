@@ -96,7 +96,7 @@ function init_protocol(host, port, options; nc = nothing)
                 error(msg.message)
             elseif msg isa Pong
                 break # This is what we waiting for.
-            elseif msg isa Ok()
+            elseif msg isa Ok
                 # Do nothing, verbose protocol.
             else
                 error("Unexpected message received $msg")
