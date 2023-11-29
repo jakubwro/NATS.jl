@@ -88,12 +88,20 @@ function init_protocol(host, port, options; nc = nothing)
         flush(write_stream)
 
         msg = next_protocol_message(read_stream)
-        msg isa Union{Ok, Err, Pong} || error("Expected +OK, -ERR or PONG , received $msg")
-        if msg isa Err
-            error(msg.message)
-        elseif msg isa Ok
-            # Client opted for a verbose connection, consume PONG to not mess logs.
-            next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
+        msg isa Union{Ok, Err, Pong, Ping} || error("Expected +OK, -ERR, PING or PONG , received $msg")
+        while true
+            if msg isa Ping
+                show(write_stream, MIME_PROTOCOL(), Pong())
+            elseif msg isa Err
+                error(msg.message)
+            elseif msg isa Pong
+                break # This is what we waiting for.
+            elseif msg isa Ok()
+                # Do nothing, verbose protocol.
+            else
+                error("Unexpected message received $msg")
+            end
+            msg = next_protocol_message(read_stream)
         end
 
         if !isnothing(nc)
