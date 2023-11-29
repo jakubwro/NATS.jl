@@ -106,18 +106,6 @@ function init_protocol(host, port, options; nc = nothing)
     end
 end
 
-function restore_subs(nc)
-    # sids = Set{String}()
-    for (sid, sub) in pairs(nc.subs)
-        show(nc.send_buffer, MIME_PROTOCOL(), sub)
-        # push!(sids, sid)
-        unsub_max_msgs = get(nc.unsubs, sid, nothing)
-        if !isnothing(unsub_max_msgs)
-            show(nc.send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
-        end
-    end
-end
-
 function receiver(nc::Connection, io::IO)
     @show Threads.threadid()
     while true
@@ -195,17 +183,7 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
-                    @lock nc.send_buffer_cond begin
-                        data = take!(nc.send_buffer)
-                        # TODO: add flag to decide at which pont reopen send buffer.
-                        old_buffer = nc.send_buffer
-                        nc.send_buffer = IOBuffer() # TODO: add sizehint
-                        restore_subs(nc)
-                        @info "Restored data length $(length(data))"
-                        write(nc.send_buffer, data)
-                        close(old_buffer)
-                        notify(nc.send_buffer_cond)
-                    end
+                    reopen_send_buffer(nc)
                     @info "Wait end time: $(time())"
                     close(sock)
                     break

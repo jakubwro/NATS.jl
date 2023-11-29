@@ -12,6 +12,9 @@ end
 
 function send(nc::Connection, message::ProtocolMessage)
     can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
+
+    # TODO: throttle send if buffer grows too much
+
     @lock nc.send_buffer_cond begin
         show(nc.send_buffer, MIME_PROTOCOL(), message)
         notify(nc.send_buffer_cond)
@@ -23,6 +26,24 @@ function send(nc::Connection, msgs::Vector{ProtocolMessage})
         for msg in msgs
             show(nc.send_buffer, MIME_PROTOCOL(), msg)
         end
+        notify(nc.send_buffer_cond)
+    end
+end
+
+function reopen_send_buffer(nc::Connection)
+    @lock nc.send_buffer_cond begin
+        new_send_buffer = IOBuffer()
+        data = take!(nc.send_buffer)
+        for (sid, sub) in pairs(nc.subs)
+            show(new_send_buffer, MIME_PROTOCOL(), sub)
+            unsub_max_msgs = get(nc.unsubs, sid, nothing)
+            isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
+        end
+        @info "Restored subs buffer length $(length(data))"
+        write(new_send_buffer, data)
+        @info "Total restored buffer length $(length(data))"
+        close(nc.send_buffer)
+        nc.send_buffer = new_send_buffer
         notify(nc.send_buffer_cond)
     end
 end
@@ -47,6 +68,7 @@ function sendloop(nc::Connection, io::IO)
         flush(io)
     end
     @info "Sender task finished at $(time())" #TODO: bytes in buffer
+    error("sender task finished")
 end
 
 
