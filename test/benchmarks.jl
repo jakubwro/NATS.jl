@@ -39,16 +39,12 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
         end
     end
     pub = NATS.Pub(subject, nothing, UInt8[], uint8_vec("Hi!"))
-    batch = repeat(NATS.ProtocolMessage[pub], 15000)
+    batch = repeat([pub], 15000)
     t = Threads.@spawn :default begin
-        n = 0
-        # y = 0
-        # s = 0
         while isopen(tm)
-            NATS.send(connection2, batch)
-            sleep(0.001)
+            # Using `try_send` to not grow send buffer too much.
+            NATS.try_send(connection2, batch)
         end
-        # @show y/5000 s
         unsubscribe(sub; connection)
     end
     errormonitor(t)
