@@ -107,7 +107,7 @@ function init_protocol(host, port, options; nc = nothing)
 end
 
 function receiver(nc::Connection, io::IO)
-    @show Threads.threadid()
+    # @show Threads.threadid()
     while true
         eof(io) && break
         parser_loop(io) do msg
@@ -164,10 +164,9 @@ function connect(
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
-        @show Threads.threadid()
+        # @show Threads.threadid()
         while true
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
-            @info "starting sender"
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             # errormonitor(receiver_task)
             # errormonitor(sender_task)

@@ -10,7 +10,9 @@ using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
 
 include("util.jl")
 
-@info "Running with $(Threads.nthreads()) threads."
+@show Threads.nthreads()
+@show Threads.nthreads(:interactive)
+@show Threads.nthreads(:default)
 
 include("protocol.jl")
 

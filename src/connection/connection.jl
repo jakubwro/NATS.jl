@@ -26,7 +26,6 @@ include("stats.jl")
     subs::Dict{String, Sub} = Dict{String, Sub}()
     unsubs::Dict{String, Int64} = Dict{String, Int64}()
     send_buffer::IO = IOBuffer()
-    send_buffer_lock::ReentrantLock = ReentrantLock()
     send_buffer_cond::Threads.Condition = Threads.Condition()
 end
 

@@ -64,7 +64,7 @@ function reopen_send_buffer(nc::Connection)
 end
 
 function sendloop(nc::Connection, io::IO)
-    @show Threads.threadid()
+    # @show Threads.threadid()
     send_buffer = nc.send_buffer
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         buf = @lock nc.send_buffer_cond begin
@@ -84,11 +84,4 @@ function sendloop(nc::Connection, io::IO)
     end
     @info "Sender task finished at $(time())" #TODO: bytes in buffer
     error("sender task finished")
-end
-
-
-for i in 1:1000
-    Threads.@spawn for j in 1:1000
-        publish("foo"; payload = "This is a payload")
-    end
 end

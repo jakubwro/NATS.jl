@@ -105,7 +105,6 @@ function show(io::IO, ::MIME_PROTOCOL, unsub::Unsub)
 end
 
 function show(io::IO, ::MIME_PROTOCOL, unsub::Ping)
-    @info "writing"
     write(io, "PING\r\n")
 end
 
