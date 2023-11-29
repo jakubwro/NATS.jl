@@ -39,11 +39,14 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
         end
     end
     pub = NATS.Pub(subject, nothing, UInt8[], uint8_vec("Hi!"))
-    batch = repeat([pub], 15000)
+    # TLS connection is much slower, give it smaller batches.
+    batch_size = if connection2.info.tls_required 150 else 15000 end
+    batch = repeat([pub], batch_size)
     t = Threads.@spawn :default begin
         while isopen(tm)
             # Using `try_send` to not grow send buffer too much.
             NATS.try_send(connection2, batch)
+            sleep(0.01)
         end
         unsubscribe(sub; connection)
     end
