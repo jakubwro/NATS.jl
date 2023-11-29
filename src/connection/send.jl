@@ -1,3 +1,6 @@
+const SEND_BUFFER_SOFT_SIZE_LIMIT = 2 * 1024 * 1024 # 2 MB
+const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
+
 function can_send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
         if message isa Unsub || message isa Pong
@@ -10,39 +13,42 @@ function can_send(nc::Connection, message::ProtocolMessage)
     end
 end
 
-function send(nc::Connection, message::ProtocolMessage)
-    can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
-
-    delays = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
-
-    for d in delays
-        @lock nc.send_buffer_cond begin
-            if nc.send_buffer.size < 2 * 1024 * 1024
-                show(nc.send_buffer, MIME_PROTOCOL(), message)
-                notify(nc.send_buffer_cond)
-                return
+function try_send(nc::Connection, msgs::Vector{<:ProtocolMessage})::Bool
+    all(msg -> can_send(nc, msg), msgs) || error("Cannot send on connection with status $(status(nc))")
+    @lock nc.send_buffer_cond begin
+        if nc.send_buffer.size < SEND_BUFFER_SOFT_SIZE_LIMIT
+            for msg in msgs
+                show(nc.send_buffer, MIME_PROTOCOL(), msg)
             end
+            notify(nc.send_buffer_cond)
+            true
+        else
+            false
+        end
+    end
+end
+
+function try_send(nc::Connection, msg::ProtocolMessage)
+    can_send(nc, msg) || error("Cannot send on connection with status $(status(nc))")
+    @lock nc.send_buffer_cond begin
+        if nc.send_buffer.size < SEND_BUFFER_SOFT_SIZE_LIMIT
+            show(nc.send_buffer, MIME_PROTOCOL(), msg)
+            notify(nc.send_buffer_cond)
+            true
+        else
+            false
+        end
+    end
+end
+
+function send(nc::Connection, message::Union{ProtocolMessage, Vector{<:ProtocolMessage}})
+    for d in SEND_RETRY_DELAYS
+        if try_send(nc, message)
+            return
         end
         sleep(d)
     end
     error("Cannot send, send buffer too large.")
-end
-
-function send(nc::Connection, msgs::Vector{ProtocolMessage})
-    delays = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
-
-    for d in delays
-        @lock nc.send_buffer_cond begin
-            if nc.send_buffer.size < 2 * 1024 * 1024
-                for msg in msgs
-                    show(nc.send_buffer, MIME_PROTOCOL(), msg)
-                end
-                notify(nc.send_buffer_cond)
-                return
-            end
-        end
-        sleep(d)
-    end
 end
 
 function reopen_send_buffer(nc::Connection)
