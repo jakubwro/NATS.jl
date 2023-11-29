@@ -169,9 +169,8 @@ function connect(
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             @info "starting sender"
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
-
-            errormonitor(receiver_task)
-            errormonitor(sender_task)
+            # errormonitor(receiver_task)
+            # errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)

@@ -13,20 +13,35 @@ end
 function send(nc::Connection, message::ProtocolMessage)
     can_send(nc, message) || error("Cannot send on connection with status $(status(nc))")
 
-    # TODO: throttle send if buffer grows too much
+    delays = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
 
-    @lock nc.send_buffer_cond begin
-        show(nc.send_buffer, MIME_PROTOCOL(), message)
-        notify(nc.send_buffer_cond)
+    for d in delays
+        @lock nc.send_buffer_cond begin
+            if nc.send_buffer.size < 2 * 1024 * 1024
+                show(nc.send_buffer, MIME_PROTOCOL(), message)
+                notify(nc.send_buffer_cond)
+                return
+            end
+        end
+        sleep(d)
     end
+    error("Cannot send, send buffer too large.")
 end
 
 function send(nc::Connection, msgs::Vector{ProtocolMessage})
-    @lock nc.send_buffer_cond begin
-        for msg in msgs
-            show(nc.send_buffer, MIME_PROTOCOL(), msg)
+    delays = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
+
+    for d in delays
+        @lock nc.send_buffer_cond begin
+            if nc.send_buffer.size < 2 * 1024 * 1024
+                for msg in msgs
+                    show(nc.send_buffer, MIME_PROTOCOL(), msg)
+                end
+                notify(nc.send_buffer_cond)
+                return
+            end
         end
-        notify(nc.send_buffer_cond)
+        sleep(d)
     end
 end
 
@@ -65,7 +80,7 @@ function sendloop(nc::Connection, io::IO)
             end
         end
         write(io, buf)
-        flush(io)
+        # flush(io)
     end
     @info "Sender task finished at $(time())" #TODO: bytes in buffer
     error("sender task finished")
