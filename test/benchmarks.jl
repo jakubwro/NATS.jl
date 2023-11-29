@@ -59,12 +59,12 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
 end
 
 @testset "Msgs per second." begin
-    sleep(5)
     connection = NATS.connect(default = false)
     msgs_per_second(connection, connection)
 end
 
 @testset "Msgs per second with async handlers." begin
+    sleep(5)
     connection = NATS.connect(default = false)
     msgs_per_second(connection, connection, true)
 end
