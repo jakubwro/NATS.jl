@@ -88,12 +88,20 @@ function init_protocol(host, port, options; nc = nothing)
         flush(write_stream)
 
         msg = next_protocol_message(read_stream)
-        msg isa Union{Ok, Err, Pong} || error("Expected +OK, -ERR or PONG , received $msg")
-        if msg isa Err
-            error(msg.message)
-        elseif msg isa Ok
-            # Client opted for a verbose connection, consume PONG to not mess logs.
-            next_protocol_message(read_stream) isa Pong || error("Expected PONG, received $msg")
+        msg isa Union{Ok, Err, Pong, Ping} || error("Expected +OK, -ERR, PING or PONG , received $msg")
+        while true
+            if msg isa Ping
+                show(write_stream, MIME_PROTOCOL(), Pong())
+            elseif msg isa Err
+                error(msg.message)
+            elseif msg isa Pong
+                break # This is what we waiting for.
+            elseif msg isa Ok
+                # Do nothing, verbose protocol.
+            else
+                error("Unexpected message received $msg")
+            end
+            msg = next_protocol_message(read_stream)
         end
 
         if !isnothing(nc)
@@ -106,30 +114,8 @@ function init_protocol(host, port, options; nc = nothing)
     end
 end
 
-function reopen_outbox(nc::Connection)
-    old_outbox = outbox(nc)
-    new_outbox = Channel{ProtocolMessage}(old_outbox.sz_max)
-    sids = Set{String}()
-    for (sid, sub) in pairs(nc.subs)
-        put!(new_outbox, sub)
-        push!(sids, sid)
-        if haskey(nc.unsubs, sid)
-            put!(new_outbox, Unsub(sid, nc.unsubs[sid]))
-        end
-    end
-    subs_count = Base.n_avail(new_outbox)
-    for msg in old_outbox
-        # No need to sens subs, as they are in `nc.subs` structures before put to outbox. 
-        if msg isa Msg || msg isa Pub || msg isa HPub || msg isa Unsub
-            put!(new_outbox, msg)
-        end
-    end
-    @debug "New outbox have $(Base.n_avail(new_outbox)) protocol messages including $subs_count restored subs/unsubs."
-    outbox(nc, new_outbox)
-end
-
 function receiver(nc::Connection, io::IO)
-    @show Threads.threadid()
+    # @show Threads.threadid()
     while true
         eof(io) && break
         parser_loop(io) do msg
@@ -186,10 +172,12 @@ function connect(
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
-        @show Threads.threadid()
+        # @show Threads.threadid()
         while true
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
+            # errormonitor(receiver_task)
+            # errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
@@ -201,7 +189,7 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
-                    close(outbox(nc))
+                    reopen_send_buffer(nc)
                     @info "Wait end time: $(time())"
                     close(sock)
                     break
@@ -212,8 +200,6 @@ function connect(
                 break
             end
             try wait(sender_task) catch end
-            # TODO: add flag to decide at which pont reopen outbox.
-            reopen_outbox(nc) # Reopen outbox immediately old sender stops to prevent `send` blocking too long.
             # try wait(receiver_task) catch end
 
             @warn "Reconnecting..."

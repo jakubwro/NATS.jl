@@ -14,3 +14,5 @@ function interactive_status(cond = nothing)
         end
     end
 end
+
+uint8_vec(s::String) = convert.(UInt8, collect(s))

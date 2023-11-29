@@ -74,20 +74,24 @@ function show(io::IO, ::MIME_PROTOCOL, connect::Connect)
 end
 
 function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
-    payload = isnothing(pub.payload) ? "" : pub.payload
-    nbytes = sizeof(payload)
-    reply_to = isnothing(pub.reply_to) ? "" : " $(pub.reply_to)"
-    write(io, "PUB $(pub.subject)$reply_to $nbytes\r\n$(payload)\r\n")
-end
-
-function show(io::IO, ::MIME_PROTOCOL, hpub::HPub)
-    hbytes = sizeof(hpub.headers)
-    pbytes = sizeof(hpub.payload)
-    nbytes = pbytes + hbytes
-    reply_to = isnothing(hpub.reply_to) ? "" : " $(hpub.reply_to)"
-    payload = isnothing(hpub.payload) ? "" : hpub.payload
-    headers = isnothing(hpub.headers) ? "" : hpub.headers
-    write(io, "HPUB $(hpub.subject)$reply_to $hbytes $nbytes\r\n$(hpub.headers)$(payload)\r\n")
+    hbytes = length(pub.headers)
+    nbytes = length(pub.payload)
+    if hbytes > 0
+        write(io, "H")
+    end
+    write(io, "PUB ")
+    write(io, pub.subject)
+    if !isnothing(pub.reply_to) && !isempty(pub.reply_to)
+        write(io, " ")
+        write(io, pub.reply_to)
+    end
+    if hbytes > 0
+        write(io, " $hbytes")
+    end
+    write(io, " $(hbytes + nbytes)\r\n")
+    write(io, pub.headers)
+    write(io, pub.payload)
+    write(io, "\r\n")
 end
 
 function show(io::IO, ::MIME_PROTOCOL, sub::Sub)
@@ -100,7 +104,7 @@ function show(io::IO, ::MIME_PROTOCOL, unsub::Unsub)
     write(io, "UNSUB $(unsub.sid)$max_msgs\r\n")
 end
 
-function show(io::IO, ::MIME_PROTOCOL, unsub::Ping) 
+function show(io::IO, ::MIME_PROTOCOL, unsub::Ping)
     write(io, "PING\r\n")
 end
 

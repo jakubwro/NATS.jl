@@ -83,7 +83,7 @@ end
 end
 
 @testset "Should reconnect on outbox closed" begin
-    close(nc.outbox)
+    NATS.reopen_send_buffer(nc)
     sleep(5)
     @test nc.status == NATS.CONNECTED
 end
@@ -121,6 +121,7 @@ end
 end
 
 @testset "Subscription warnings" begin
+    NATS.status()
     sub1 = subscribe("too_many_handlers", async_handlers = true) do msg
         sleep(21)
     end

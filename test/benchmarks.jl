@@ -38,23 +38,20 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
             try put!(c, msg) catch err @error err end
         end
     end
+    pub = NATS.Pub(subject, nothing, UInt8[], uint8_vec("Hi!"))
+    batch = repeat(NATS.ProtocolMessage[pub], 15000)
     t = Threads.@spawn :default begin
         n = 0
         # y = 0
         # s = 0
         while isopen(tm)
-            if Base.n_avail(c) < n - 5000
-                # s = s + 1
-                sleep(0.005)
-            else
-                # y = y + 1
-                publish(subject; payload = "Hi!", connection = connection2)
-                n = n + 1
-            end
+            NATS.send(connection2, batch)
+            sleep(0.001)
         end
         # @show y/5000 s
         unsubscribe(sub; connection)
     end
+    errormonitor(t)
     # @async interactive_status(tm)
     wait(t)
     received = Base.n_avail(c)
@@ -121,15 +118,19 @@ end
 @testset "Publisher benchmark." begin
     connection = NATS.connect(default = false)
 
+    # pub = NATS.Pub("zxc", nothing, UInt8[], uint8_vec("Hello world!!!!!"))
+
     tm = Timer(1.0)
     counter = 0
+    c = 0
     while isopen(tm)
-        if Base.n_avail(connection.outbox) > 5000
-            sleep(0.001)
-            continue
-        end
         publish("zxc"; payload = "Hello world!!!!!", connection)
         counter = counter + 1
+        c += 1
+        if c == 10000
+            c = 0
+            yield()
+        end
     end
 
     @info "Published $counter messages."

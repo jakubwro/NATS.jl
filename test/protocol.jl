@@ -42,15 +42,15 @@ end
     json = """{"verbose":false,"pedantic":false,"tls_required":false,"lang":"julia","version":"0.0.1"}"""
     @test serialize(JSON3.read(json, NATS.Connect)) == """CONNECT $json\r\n"""
 
-    @test serialize(Pub("FOO", nothing, 11, "Hello NATS!")) == "PUB FOO 11\r\nHello NATS!\r\n"
-    @test serialize(Pub("FRONT.DOOR", "JOKE.22", 11, "Knock Knock")) == "PUB FRONT.DOOR JOKE.22 11\r\nKnock Knock\r\n"
-    @test serialize(Pub("NOTIFY", nothing, 0, "")) == "PUB NOTIFY 0\r\n\r\n"
+    @test serialize(Pub("FOO", nothing, UInt8[], uint8_vec("Hello NATS!"))) == "PUB FOO 11\r\nHello NATS!\r\n"
+    @test serialize(Pub("FRONT.DOOR", "JOKE.22", UInt8[], uint8_vec("Knock Knock"))) == "PUB FRONT.DOOR JOKE.22 11\r\nKnock Knock\r\n"
+    @test serialize(Pub("NOTIFY", nothing, UInt8[], UInt8[])) == "PUB NOTIFY 0\r\n\r\n"
 
-    @test serialize(HPub("FOO", nothing, 22, 33, "NATS/1.0\r\nBar: Baz\r\n\r\n", "Hello NATS!")) == "HPUB FOO 22 33\r\nNATS/1.0\r\nBar: Baz\r\n\r\nHello NATS!\r\n"
-    @test serialize(HPub("FRONT.DOOR", "JOKE.22", 45, 56, "NATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\n", "Knock Knock")) == "HPUB FRONT.DOOR JOKE.22 45 56\r\nNATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\nKnock Knock\r\n"
+    @test serialize(Pub("FOO", nothing, uint8_vec("NATS/1.0\r\nBar: Baz\r\n\r\n"), uint8_vec("Hello NATS!"))) == "HPUB FOO 22 33\r\nNATS/1.0\r\nBar: Baz\r\n\r\nHello NATS!\r\n"
+    @test serialize(Pub("FRONT.DOOR", "JOKE.22", uint8_vec("NATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\n"), uint8_vec("Knock Knock"))) == "HPUB FRONT.DOOR JOKE.22 45 56\r\nNATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\nKnock Knock\r\n"
 
-    @test serialize(HPub("NOTIFY", nothing, 22, 22, "NATS/1.0\r\nBar: Baz\r\n\r\n", "")) == "HPUB NOTIFY 22 22\r\nNATS/1.0\r\nBar: Baz\r\n\r\n\r\n"
-    @test serialize(HPub("MORNING.MENU", nothing, 47, 51, "NATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\n", "Yum!")) == "HPUB MORNING.MENU 47 51\r\nNATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\nYum!\r\n"
+    @test serialize(Pub("NOTIFY", nothing, uint8_vec("NATS/1.0\r\nBar: Baz\r\n\r\n"), UInt8[])) == "HPUB NOTIFY 22 22\r\nNATS/1.0\r\nBar: Baz\r\n\r\n\r\n"
+    @test serialize(Pub("MORNING.MENU", nothing, uint8_vec("NATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\n"), uint8_vec("Yum!"))) == "HPUB MORNING.MENU 47 51\r\nNATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\nYum!\r\n"
 
     @test serialize(Sub("FOO", nothing, "1")) == "SUB FOO 1\r\n"
     @test serialize(Sub("BAR", "G1", "44")) == "SUB BAR G1 44\r\n"

@@ -4,13 +4,15 @@ using JSON3
 using Sockets
 
 using NATS: next_protocol_message
-using NATS: Info, Msg, Ping, Pong, Ok, Err, Pub, HPub, Sub, Unsub, Connect
+using NATS: Info, Msg, Ping, Pong, Ok, Err, Pub, Sub, Unsub, Connect
 using NATS: Headers, headers, header
 using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
 
 include("util.jl")
 
-@info "Running with $(Threads.nthreads()) threads."
+@show Threads.nthreads()
+@show Threads.nthreads(:interactive)
+@show Threads.nthreads(:default)
 
 include("protocol.jl")
 
@@ -47,8 +49,7 @@ if have_nats
         for nc in NATS.state.connections
             @test isempty(nc.subs)
             @test isempty(nc.unsubs)
-            @show nc.outbox.data
-            @test Base.n_avail(nc.outbox) == 0
+            @test nc.send_buffer.size == 0
         end
     end
 
