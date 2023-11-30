@@ -14,6 +14,10 @@ nc = NATS.connect(default = true)
     @test true # TODO: add pong count to connection stats
 end
 
+@testset "Show connection status" begin
+    @test startswith(repr(nc), "NATS.Connection(")
+end
+
 @testset "Method error hints." begin
     # hint = """To use `Type{Float64}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
     #         ```
