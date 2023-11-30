@@ -2,6 +2,21 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
 
 @testset "Parsing server operations." begin
 
+    expected = [
+        NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
+        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", "9", nothing, 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", "9", "BAZ.69", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", "9", nothing, 16, uint8_vec("NATS/1.0 503\r\n\r\n")),
+        NATS.Ping(),
+        NATS.Pong(),
+        NATS.Ok(),
+        NATS.Err("Unknown Protocol Operation"),
+        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
+    ]
+
+    # Basic protocol parsing
     data_to_parse = UInt8[]
     append!(data_to_parse, """INFO {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
     append!(data_to_parse, "MSG FOO.BAR 9 11\r\nHello World\r\n")
@@ -13,26 +28,58 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     append!(data_to_parse, "PONG\r\n")
     append!(data_to_parse, "+OK\r\n")
     append!(data_to_parse, "-ERR 'Unknown Protocol Operation'\r\n")
+    append!(data_to_parse, "MSG FOO.BAR 9 11\r\nHello World\r\n")
     io = IOBuffer(data_to_parse)
     result = NATS.ProtocolMessage[]
     NATS.parser_loop(io) do msgs
         append!(result, msgs)
     end
+    @test result == expected
 
-    @test result == [
-        NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
-        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
-        NATS.Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World")),
-        NATS.Msg("FOO.BAR", "9", nothing, 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
-        NATS.Msg("FOO.BAR", "9", "BAZ.69", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
-        NATS.Msg("FOO.BAR", "9", nothing, 16, uint8_vec("NATS/1.0 503\r\n\r\n")),
-        NATS.Ping(),
-        NATS.Pong(),
-        NATS.Ok(),
-        NATS.Err("Unknown Protocol Operation"),
-    ]
+    # Test case insensivity of protocol parser.
+    data_to_parse = UInt8[]
+    append!(data_to_parse, """info {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
+    append!(data_to_parse, "msg FOO.BAR 9 11\r\nHello World\r\n")
+    append!(data_to_parse, "msg FOO.BAR 9 GREETING.34 11\r\nHello World\r\n")
+    append!(data_to_parse, "hmsg FOO.BAR 9 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "hmsg FOO.BAR 9 BAZ.69 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "hmsg FOO.BAR 9 16 16\r\nNATS/1.0 503\r\n\r\n\r\n")
+    append!(data_to_parse, "ping\r\n")
+    append!(data_to_parse, "pong\r\n")
+    append!(data_to_parse, "+ok\r\n")
+    append!(data_to_parse, "-err 'Unknown Protocol Operation'\r\n")
+    append!(data_to_parse, "msg FOO.BAR 9 11\r\nHello World\r\n")
+    io = IOBuffer(data_to_parse)
+    result = NATS.ProtocolMessage[]
+    NATS.parser_loop(io) do msgs
+        append!(result, msgs)
+    end
+    @test result == expected
 
+    # Test multiple whitespaces parsing.
+    data_to_parse = UInt8[]
+    append!(data_to_parse, """INFO   {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
+    append!(data_to_parse, "MSG\tFOO.BAR\t9\t11\r\nHello World\r\n")
+    append!(data_to_parse, "MSG   FOO.BAR  9     GREETING.34  11\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG \t FOO.BAR\t \t9\t   \t34  \t \t 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG\t FOO.BAR\t 9\t BAZ.69\t 34\t 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World\r\n")
+    append!(data_to_parse, "HMSG \tFOO.BAR \t9 \t16 \t16\r\nNATS/1.0 503\r\n\r\n\r\n")
+    append!(data_to_parse, "PING\r\n")
+    append!(data_to_parse, "PONG\r\n")
+    append!(data_to_parse, "+OK\r\n")
+    append!(data_to_parse, "-ERR  'Unknown Protocol Operation'\r\n")
+    append!(data_to_parse, "MSG   FOO.BAR    9    11\r\nHello World\r\n")
+    io = IOBuffer(data_to_parse)
+    result = NATS.ProtocolMessage[]
+    NATS.parser_loop(io) do msgs
+        append!(result, msgs)
+    end
+    @test result == expected
+
+    # Test malformed messages.
     io = IOBuffer("this is not expected\r\n")
+    @test_throws ErrorException NATS.parser_loop(io) do; end
+    io = IOBuffer("MSG FOO.BAR 9 test 11 11\r\nToo long payload\r\n")
     @test_throws ErrorException NATS.parser_loop(io) do; end
 end
 

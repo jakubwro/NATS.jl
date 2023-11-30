@@ -64,12 +64,12 @@ end
 end
 
 @testset "Msgs per second with async handlers." begin
-    sleep(5)
     connection = NATS.connect(default = false)
     msgs_per_second(connection, connection, true)
 end
 
 @testset "Requests per second with sync handlers." begin
+    sleep(5) # Wait for buffers flush from previous tests.
     connection = NATS.connect(default = false)
     subject = randstring(5)
     sub = reply(subject; connection) do msg

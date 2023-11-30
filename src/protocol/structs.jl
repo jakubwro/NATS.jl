@@ -103,6 +103,8 @@ end
 """
 The PUB message publishes the message payload to the given subject name, optionally supplying a reply subject. If a reply subject is supplied, it will be delivered to eligible subscribers along with the supplied payload. Note that the payload itself is optional. To omit the payload, set the payload size to 0, but the second CRLF is still required.
 
+The HPUB message is the same as PUB but extends the message payload to include NATS headers. Note that the payload itself is optional. To omit the payload, set the total message size equal to the size of the headers. Note that the trailing CR+LF is still required.
+
 $(TYPEDFIELDS)
 """
 struct Pub <: ProtocolMessage
@@ -145,6 +147,8 @@ end
 """
 The `MSG` protocol message is used to deliver an application message to the client.
 
+The HMSG message is the same as MSG, but extends the message payload with headers. See also [ADR-4 NATS Message Headers](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-4.md).
+
 $(TYPEDFIELDS)
 """
 struct Msg <: ProtocolMessage
@@ -158,14 +162,6 @@ struct Msg <: ProtocolMessage
     headers_length::Int64
     "The message payload data."
     payload::AbstractVector{UInt8}
-end
-
-function Base.:(==)(a::Msg, b::Msg)
-    a.subject == b.subject &&
-    a.sid == b.sid &&
-    a.reply_to == b.reply_to &&
-    a.headers_length == b.headers_length &&
-    a.payload == b.payload
 end
 
 """
@@ -200,4 +196,9 @@ When the `verbose` connection option is set to `true` (the default value), the s
 $(TYPEDFIELDS)
 """
 struct Ok <: ProtocolMessage
+end
+
+# This allows structural equality on protocol messages with `==` and `isequal` functions.
+function Base.:(==)(a::M, b::M) where {M <: ProtocolMessage}
+    all(field -> getfield(a, field) == getfield(b, field), fieldnames(M))
 end
