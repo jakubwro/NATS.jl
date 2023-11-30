@@ -113,6 +113,7 @@ end
     nc = NATS.connection(:default)
     @test_throws ErrorException NATS.connection(:something, nc)
     @test_throws ErrorException NATS.connection(10000000)
+    @test_throws ErrorException NATS.connect(default = true) # Cannot have more than one default connection.
 end
 
 @testset "Connect error from protocol init when options are wrong" begin
