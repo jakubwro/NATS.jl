@@ -48,19 +48,6 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                 # TODO: drop older msgs?
                 @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
             else
-                count = @lock state.lock begin
-                    get(nc.unsubs, sid, nothing)
-                    # TODO: update unsubs counters in the lock
-                end
-
-                dropped = ProtocolMessage[]
-                if !isnothing(count)
-                    msgs_to_deliver = min(length(msgs), count)
-                    dropped = last(msgs, n - msgs_to_deliver)
-                    @inc_stat :msgs_dropped (n - msgs_to_deliver) state.stats nc.stats sub_stats
-                    msgs = first(msgs, msgs_to_deliver)
-                end
-
                 try
                     put!(ch, msgs)
                     @inc_stat :msgs_received n state.stats nc.stats sub_stats
@@ -70,19 +57,6 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
                 end
                 _cleanup_unsub_msg(nc, sid, n)
-                if !isempty(dropped)
-                    if isnothing(fallbacks)
-                        fallbacks = lock(state.lock) do
-                            collect(state.fallback_handlers)
-                        end
-                    end
-                    for f in fallbacks
-                        for msg in msgs
-                            Base.invokelatest(f, nc, msg)
-                        end
-                    end
-                    @inc_stat :msgs_dropped n state.stats nc.stats
-                end
             end
         else
             if isnothing(fallbacks)
