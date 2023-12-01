@@ -2,6 +2,10 @@
 
 const INTERRUPT_HANDLER_SLEEP_SECONDS = 0.1
 
+function can_interrupt_repl()
+    isdefined(Base, :active_repl_backend) && Base.active_repl_backend.in_eval
+end
+
 function start_interrupt_handler(interactive = isinteractive())
     interrupt_handler_task = @async begin
 
@@ -23,10 +27,8 @@ function start_interrupt_handler(interactive = isinteractive())
                 if err isa InterruptException
                     disable_sigint() do
                         @info "Handling interrupt."
-                        if interactive 
-                            if isdefined(Base, :active_repl_backend) && Base.active_repl_backend.in_eval
-                                schedule(Base.roottask, InterruptException(); error = true)
-                            end
+                        if interactive
+                            can_interrupt_repl() && schedule(Base.roottask, InterruptException(); error = true)
                         else
                             drain()
                         end

@@ -75,7 +75,7 @@ function request(
         sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
     end
     bind(replies_channel, timeout_task)
-    # errormonitor(timeout_task)
+    errormonitor(timeout_task)
     # @info "waiting"
     replies = collect(replies_channel) # Waits until channel closed.
     # @show replies
