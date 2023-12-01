@@ -139,6 +139,7 @@ end
     end
     for _ in 1:82
         publish("overload_channel")
+        sleep(0.01) # Sleep causes that msga are not batches.
     end
     sleep(21)
 
