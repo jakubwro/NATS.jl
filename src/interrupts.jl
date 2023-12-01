@@ -2,7 +2,7 @@
 
 const INTERRUPT_HANDLER_SLEEP_SECONDS = 0.1
 
-function start_interrupt_handler()
+function start_interrupt_handler(interactive = isinteractive())
     interrupt_handler_task = @async begin
 
         if Threads.threadid() != 1
@@ -12,7 +12,9 @@ function start_interrupt_handler()
             return
         end
 
-        Base.exit_on_sigint(false)
+        if interactive && !isinteractive()
+            @warn "Interrupt handler was started with `interactive` in non interactive session. Interrupts might be ignored."
+        end
 
         while true
             try
@@ -21,8 +23,10 @@ function start_interrupt_handler()
                 if err isa InterruptException
                     disable_sigint() do
                         @info "Handling interrupt."
-                        if isdefined(Base, :active_repl_backend) && Base.active_repl_backend.in_eval
-                            schedule(Base.roottask, InterruptException(); error = true)
+                        if interactive 
+                            if isdefined(Base, :active_repl_backend) && Base.active_repl_backend.in_eval
+                                schedule(Base.roottask, InterruptException(); error = true)
+                            end
                         else
                             drain()
                         end
