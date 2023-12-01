@@ -146,4 +146,15 @@ end
     unsubscribe(sub1)
     unsubscribe(sub2)
 
+    NATS.status()
+    sub3 = subscribe("overload_channel", async_handlers = false, channel_size = 10) do msg
+        sleep(5)
+    end
+    for _ in 1:15
+        publish("overload_channel")
+        sleep(0.01) # Sleep causes that msga are not batches.
+    end
+    sleep(5)
+    unsubscribe(sub3)
+    NATS.status()
 end
