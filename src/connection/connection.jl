@@ -35,13 +35,9 @@ clustername(c::Connection) = @something info(c).cluster "unnamed"
 status(c::Connection)::ConnectionStatus = @lock c.lock c.status
 status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
 
-function new_inbox(connection::Connection, prefix::String = "")
+function new_inbox(connection::Connection, prefix::String = "inbox.")
     random_suffix = @lock connection.lock randstring(connection.rng, 10)
-    if !isnothing(prefix) && !isempty(prefix)
-        "$prefix.$random_suffix"
-    else
-        "inbox.$random_suffix"
-    end
+    "inbox.$random_suffix"
 end
 
 function new_sid(connection::Connection)
