@@ -186,4 +186,7 @@ end
     @async NATS.drain(connection)
     sleep(0.1)
     @test_throws ErrorException publish("test_publish_on_drained"; connection)
+
+    pub = NATS.Pub("test_publish_on_drained", nothing, UInt8[], UInt8[])
+    @test_throws ErrorException NATS.send(connection, repeat([pub], 10))
 end
