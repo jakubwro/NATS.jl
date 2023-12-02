@@ -1,5 +1,3 @@
-const SEND_BUFFER_SOFT_SIZE_LIMIT = 2 * 1024 * 1024 # 2 MB
-const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
 
 function can_send(nc::Connection, message::ProtocolMessage)
     if isdrained(nc)
@@ -19,7 +17,7 @@ function try_send(nc::Connection, msgs::Vector{Pub})::Bool
     end
     
     @lock nc.send_buffer_cond begin
-        if nc.send_buffer.size < SEND_BUFFER_SOFT_SIZE_LIMIT
+        if nc.send_buffer.size < nc.send_buffer_size
             for msg in msgs
                 show(nc.send_buffer, MIME_PROTOCOL(), msg)
             end
@@ -35,7 +33,7 @@ function try_send(nc::Connection, msg::ProtocolMessage)
     can_send(nc, msg) || error("Cannot send on connection with status $(status(nc))")
 
     @lock nc.send_buffer_cond begin
-        if msg isa Pub && nc.send_buffer.size > SEND_BUFFER_SOFT_SIZE_LIMIT
+        if msg isa Pub && nc.send_buffer.size > nc.send_buffer_size
             # Apply limits only for publications, to allow unsubs and subs be done with higher priority.
             false
         else
@@ -47,11 +45,14 @@ function try_send(nc::Connection, msg::ProtocolMessage)
 end
 
 function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
-    for d in SEND_RETRY_DELAYS
+    if try_send(nc, message)
+        return
+    end
+    for d in nc.send_retry_delays
+        sleep(d)
         if try_send(nc, message)
             return
         end
-        sleep(d)
     end
     error("Cannot send, send buffer too large.")
 end

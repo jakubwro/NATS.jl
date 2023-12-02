@@ -312,7 +312,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
     end
 end
 
-# Simple interactive parser for pretocol initialization.
+# Simple interactive parser for protocol initialization.
 
 function next_protocol_message(io::IO)::ProtocolMessage
     headline = readuntil(io, "\r\n")

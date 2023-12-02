@@ -135,7 +135,7 @@ Connect to NATS server. The function is blocking until connection is initialized
 Options are:
 - `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
-- `outbox_size`: size of outbox buffer for cient messages. Default is `$OUTBOX_SIZE`, if too small operations that send messages to server (e.g. `publish`) may throw an exception
+- `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required`: indicates whether the client requires an SSL connection
@@ -157,7 +157,8 @@ function connect(
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
     default = false,
     reconnect_delays = RECONNECT_DELAYS,
-    outbox_size = OUTBOX_SIZE,
+    send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
+    send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
     if default && !isnothing(state.default_connection)
@@ -168,7 +169,7 @@ function connect(
     options = merge(default_connect_options(), options)
     sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
 
-    nc = Connection(; host, port, info = info_msg, outbox = Channel{ProtocolMessage}(outbox_size))
+    nc = Connection(; host, port, send_buffer_size, send_retry_delays, info = info_msg)
     status(nc, CONNECTED)
     # TODO: task monitoring, warn about broken connection after n reconnects.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do

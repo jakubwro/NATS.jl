@@ -13,13 +13,15 @@
 
 include("stats.jl")
 
+const DEFAULT_SEND_BUFFER_SIZE = 2 * 2^20
+const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
+
 @kwdef mutable struct Connection
     host::String
     port::Int64
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
     info::Info
-    outbox::Channel{ProtocolMessage}
     reconnect_count::Int64 = 0
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
@@ -27,6 +29,8 @@ include("stats.jl")
     unsubs::Dict{String, Int64} = Dict{String, Int64}()
     send_buffer::IO = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
+    send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
+    send_retry_delays::Any = SEND_RETRY_DELAYS
 end
 
 info(c::Connection)::Info = @lock c.lock c.info
