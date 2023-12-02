@@ -160,18 +160,30 @@ end
 end
 
 @testset "Send buffer overflow" begin
-    connection = NATS.connect(default = false, send_buffer_size = 50, send_retry_delays = [])
+    connection = NATS.connect(default = false, send_buffer_size = 5, send_retry_delays = [])
 
-    @test_throws ErrorException for _ in 1:10
-        publish("overload_channel"; connection)
+    @test_throws ErrorException for _ in 1:100
+        publish("overflow_buffer"; payload = "some long payload to overflow buffer", connection)
     end
-    NATS.ping(connection) # Ping should work even when buffer is g4HDazX_ZZig_FOFBzhorLSYCEDRlv20Y5vErFjDlTRZMqaaF27ImP16es_GI83Fn59xr9V98Ux5GlEvvaeADQ
+    NATS.ping(connection) # Ping should work even when buffer is overflown
+    
+    connection = NATS.connect(default = false, send_buffer_size = 5)
+    counter = 0
+    sub = subscribe("overflow_buffer"; connection) do msg
+        counter += 1
+    end
+    for _ in 1:100
+        publish("overflow_buffer"; payload = "test retry path", connection)
+    end
+    sleep(1)
+    unsubscribe(sub; connection)
+    @test counter > 90
 end
 
 @testset "Publish on drained connection fails" begin
     connection = NATS.connect(default = false)
 
     @async NATS.drain(connection)
-    sleep(0.05)
+    sleep(0.1)
     @test_throws ErrorException publish("test_publish_on_drained"; connection)
 end
