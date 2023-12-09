@@ -26,9 +26,9 @@ end
 nc = NATS.connect()
 sleep(5)
 @assert nc.status == NATS.CONNECTED "Cannot establish connection."
+nc = NATS.connect(default = true)
 
 @testset "Publish subscribe with custom data" begin
-    nc = NATS.connect()
     c = Channel()
     sub = subscribe("EMPLOYEES") do person::Person
         put!(c, person)
@@ -45,7 +45,6 @@ sleep(5)
 end
 
 @testset "Request reply with custom data" begin
-    nc = NATS.connect()
     sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
         if person.departament == "IT"
             Person("Zbigniew", 44, "IT"), ["status" => "ok"]
