@@ -35,24 +35,26 @@ julia> using NATS
 julia> NATS.connect(default = true)
 NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs, 0 outbox)
 
-julia> sub = subscribe(nc, "test_subject") do msg
-                  @show payload(msg)
-              end
-NATS.Sub("test_subject", nothing, "Z8bTW3WlXMTF5lYi640j")
+julia> sub = subscribe("test_subject") do msg
+                         @show payload(msg)
+                     end
+NATS.Sub("test_subject", nothing, "4sWlOE")
 
-julia> publish("test_subject"; payload="Hello.")
+julia> publish("test_subject", "Hello.")
 
 payload(msg) = "Hello."
 
 julia> unsubscribe(sub)
-NATS.Unsub("Z8bTW3WlXMTF5lYi640j", nothing)
+NATS.Unsub("4sWlOE", nothing)
 
-julia> publish("test_subject"; payload="Hello.")
+julia> publish("test_subject", "Hello.")
 
 julia> 
 ```
 
 ## Request reply
+
+### Connecting to external service
 
 ```bash
 > nats reply help.please 'OK, I CAN HELP!!!'
@@ -64,11 +66,26 @@ julia>
 julia> using NATS
 
 julia> NATS.connect(default = true)
-NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs, 0 outbox)
+NATS.Connection(unnamed cluster, CONNECTED, 0 subs, 0 unsubs)
 
 julia> rep = @time NATS.request("help.please");
-  0.002072 seconds (174 allocations: 10.711 KiB)
+  0.006377 seconds (160 allocations: 10.547 KiB)
 
 julia> payload(rep)
 "OK, I CAN HELP!!!"
+```
+
+### Reply to requests from julia
+
+```
+julia> reply("some.service") do msg
+           "This is response"
+       end
+NATS.Sub("some.service", nothing, "P6mANG")
+
+julia> rep = @time NATS.request("some.service");
+  0.003101 seconds (220 allocations: 14.125 KiB)
+
+julia> payload(rep)
+"This is response"
 ```
