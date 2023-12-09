@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains data structure definitoins and aggregates utilities for handling connection to NATS server.
+# This file contains data structure definitions and aggregates utilities for handling connection to NATS server.
 #
 ### Code:
 
