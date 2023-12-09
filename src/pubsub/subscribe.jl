@@ -45,7 +45,7 @@ end
     lock::ReentrantLock = Threads.ReentrantLock()
 end
 
-function register_error!(data::SubscriptionMonitoringData, err::ErrorException, msg::Msg)
+function report_error!(data::SubscriptionMonitoringData, err::ErrorException, msg::Msg)
     @lock data.lock begin
         data.last_error = err
         data.last_error_msg = msg
