@@ -1,3 +1,20 @@
+### crc16.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains implementations of CRC16 checksum used by NATS nkeys authentication.
+#
+### Code:
+
 const CRC16 = [
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
     0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,

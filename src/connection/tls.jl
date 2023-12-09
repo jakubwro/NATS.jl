@@ -1,4 +1,19 @@
-# Returns read and write streams.
+### tls.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains utilities for handling TLS handshake.
+#
+### Code:
 
 function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing})
     entropy = MbedTLS.Entropy()

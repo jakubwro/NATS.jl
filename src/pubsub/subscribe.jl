@@ -1,3 +1,20 @@
+### subscribe.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains implementation of functions for subscribing to subjects.
+#
+### Code:
+
 include("sub_sync.jl")
 include("sub_async.jl")
 

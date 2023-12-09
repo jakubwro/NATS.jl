@@ -1,4 +1,19 @@
-# NATS authentication
+### nkeys.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains implementations nkeys signingature which is one of methods of authentication used by NATS protocol.
+#
+### Code:
 
 const PUBLIC_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_PUBLICKEYBYTES
 const SECRET_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_SECRETKEYBYTES

@@ -1,4 +1,19 @@
-# Global state.
+### state.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains utilities for maintaining global state of NATS.jl package.
+#
+### Code:
 
 function default_fallback_handler(::Connection, msg::Msg)
     # @warn "Unexpected message delivered." msg

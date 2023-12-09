@@ -1,4 +1,19 @@
-
+### utils.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains utilities for managing NATS connection that do not fit anywhere else.
+#
+### Code:
 
 function argtype(handler)
     signature = first(methods(handler)).sig # TODO: handle multi methods.
