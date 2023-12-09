@@ -11,7 +11,7 @@ Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
 - `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 - `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$SUBSCRIPTION_CHANNEL_SIZE`
-- `error_throttling_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
+- `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
 """
 function subscribe(
     f,
@@ -20,7 +20,7 @@ function subscribe(
     queue_group::Union{String, Nothing} = nothing,
     async_handlers = false,
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,
-    error_throttling_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
+    monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
 )
     arg_t = argtype(f)
     find_msg_conversion_or_throw(arg_t)
@@ -28,7 +28,7 @@ function subscribe(
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
-    channel = _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, error_throttling_seconds)
+    channel = _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, monitoring_throttle_seconds)
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
         state.sub_stats[sid] = sub_stats
@@ -38,19 +38,39 @@ function subscribe(
     sub
 end
 
-# TODO: recactor this
-function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_handlers::Bool, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
-    last_error = nothing
-    last_error_msg = nothing
-    errors_since_last_log = 0
-    lock = ReentrantLock()
-    ch = Channel(channel_size)
+@kwdef mutable struct SubscriptionMonitoringData
+    last_error::Union{ErrorException, Nothing} = nothing
+    last_error_msg::Union{Msg, Nothing} = nothing
+    errors_since_last_report::Int64 = 0
+    lock::ReentrantLock = Threads.ReentrantLock()
+end
 
+function register_error!(data::SubscriptionMonitoringData, err::ErrorException, msg::Msg)
+    @lock data.lock begin
+        data.last_error = err
+        data.last_error_msg = msg
+        data.errors_since_last_report += 1
+    end
+end
+
+# Resets errors counter and obtains current state.
+function reset_counter!(data::SubscriptionMonitoringData)
+    @lock data.lock begin
+        save = data.errors_since_last_report
+        data.errors_since_last_report = 0
+        save, data.last_error, data.last_error_msg
+    end
+end
+
+# TODO: recactor this
+function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_handlers::Bool, subject::String, channel_size::Int64, monitoring_throttle_seconds::Float64)
+    subscription_channel = Channel(channel_size)
+    monitoring_data = SubscriptionMonitoringData()
     if async_handlers == true
         Threads.@spawn :interactive disable_sigint() do
             try
                 while true
-                    msgs = take!(ch)
+                    msgs = take!(subscription_channel)
                     for msg in msgs # TODO: vectoriztion
                         handler_task = Threads.@spawn :default disable_sigint() do
                             task_local_storage("sub_stats", sub_stats)
@@ -62,11 +82,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                             catch 
                                 @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
                                 @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
-                                @lock lock begin
-                                    last_error = err
-                                    last_error_msg = msg
-                                    errors_since_last_log = errors_since_last_log + 1
-                                end
+                                report_error!(monitoring_data, err, msg)
                             end
                         end
                     end
@@ -80,7 +96,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
             task_local_storage("sub_stats", sub_stats)
             try
                 while true
-                    msgs = take!(ch)
+                    msgs = take!(subscription_channel)
                     for msg in msgs # TODO do some vectorization
                         try
                             @inc_stat :handlers_running 1 sub_stats conn_stats state.stats
@@ -90,11 +106,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                         catch err
                             @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
                             @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
-                            @lock lock begin
-                                last_error = err
-                                last_error_msg = msg
-                                errors_since_last_log = errors_since_last_log + 1
-                            end
+                            report_error!(monitoring_data, err, msg)
                         end
                     end
                 end
@@ -104,39 +116,29 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
         end
     end
 
-    monitor_task = Threads.@spawn :interactive disable_sigint() do
-        while isopen(ch)
-            sleep(error_throttling_seconds) # TODO: check diff and adjust
-            errs, err, msg = @lock lock begin
-                errors_since_last_log_save = errors_since_last_log
-                errors_since_last_log = 0
-                errors_since_last_log_save, last_error, last_error_msg
-            end
-            if errs > 0
-                @error "$errs handler errors on \"$subject\" in last $error_throttling_seconds s." err msg
-            end
-        end
-    end
-    errormonitor(monitor_task)
-
-    stats_task = Threads.@spawn :interactive disable_sigint() do
-        while isopen(ch) || Base.n_avail(ch) > 0
+    subscription_monitoring_task = Threads.@spawn :interactive begin
+        while isopen(subscription_channel) || Base.n_avail(subscription_channel) > 0
+            sleep(monitoring_throttle_seconds)
+            # Warn about too many handlers running.
             handlers_running = sub_stats.handlers_running
-            if handlers_running > 1000
+            if handlers_running > 1000 # TODO: add to config.
                 @warn "$(handlers_running) handlers running for subscription on $subject."
-            else
-                @debug "$(handlers_running) handlers running for subscription on $subject."
             end
-            level = Base.n_avail(ch) / ch.sz_max
-            if level > 0.8
+            # Warn if subscription channel is too small.
+            level = Base.n_avail(subscription_channel) / subscription_channel.sz_max
+            if level > 0.8 # TODO: add to config.
                 @warn "Subscription on $subject channel full in $(100 * level) %"
-            else
-                @debug "Subscription on $subject channel full in $(100 * level) %"
             end
-            sleep(20) # TODO: configure it
-        end
-    end
-    errormonitor(stats_task)
+            # Report errors thrown by the handler function.
+            errs, err, msg = reset_counter!(monitoring_data)
+            if errs > 0
+                @error "$errs handler errors on \"$subject\" in last $monitoring_throttle_seconds s." err msg
+            end
 
-    ch
+        end
+        @debug "Subscription monitoring task finished."
+    end
+    errormonitor(subscription_monitoring_task)
+
+    subscription_channel
 end

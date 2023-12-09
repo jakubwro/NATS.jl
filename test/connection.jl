@@ -127,14 +127,14 @@ end
 
 @testset "Subscription warnings" begin
     NATS.status()
-    sub1 = subscribe("too_many_handlers", async_handlers = true) do msg
+    sub1 = subscribe("too_many_handlers", async_handlers = true, monitoring_throttle_seconds = 15.0) do msg
         sleep(21)
     end
     for _ in 1:1001
         publish("too_many_handlers")
     end
 
-    sub2 = subscribe("overload_channel", async_handlers = false, channel_size = 100) do msg
+    sub2 = subscribe("overload_channel", async_handlers = false, channel_size = 100, monitoring_throttle_seconds = 15.0) do msg
         sleep(21)
     end
     for _ in 1:82

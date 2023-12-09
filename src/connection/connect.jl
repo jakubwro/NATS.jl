@@ -171,7 +171,6 @@ function connect(
 
     nc = Connection(; host, port, send_buffer_size, send_retry_delays, info = info_msg)
     status(nc, CONNECTED)
-    # TODO: task monitoring, warn about broken connection after n reconnects.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
         while true

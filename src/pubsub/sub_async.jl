@@ -1,5 +1,5 @@
 
-# function _start_async_handler(f::Function, subject::String, channel_size::Int64, error_throttling_seconds::Float64)
+# function _start_async_handler(f::Function, subject::String, channel_size::Int64, monitoring_throttle_seconds::Float64)
 #     error_ch = Channel(channel_size)
 #     ch = Channel(channel_size)
 #     Threads.@spawn begin
@@ -28,7 +28,7 @@
 #     end
 #     Threads.@spawn :default begin
 #         while true
-#             sleep(error_throttling_seconds) # TODO: check diff and adjust
+#             sleep(monitoring_throttle_seconds) # TODO: check diff and adjust
 #             avail = Base.n_avail(error_ch)
 #             errors = [ take!(error_ch) for _ in 1:avail ]
 #             if !isempty(errors)
