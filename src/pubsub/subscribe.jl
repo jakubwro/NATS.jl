@@ -15,9 +15,6 @@
 #
 ### Code:
 
-include("sub_sync.jl")
-include("sub_async.jl")
-
 """
 $(SIGNATURES)
 
