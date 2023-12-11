@@ -22,7 +22,7 @@ function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Not
     ctx = MbedTLS.SSLContext()
     conf = MbedTLS.SSLConfig()
     MbedTLS.config_defaults!(conf)
-    MbedTLS.authmode!(conf, MbedTLS.MBEDTLS_SSL_VERIFY_REQUIRED)
+    # MbedTLS.authmode!(conf, MbedTLS.MBEDTLS_SSL_VERIFY_REQUIRED)
     MbedTLS.rng!(conf, rng)
 
     # function show_debug(level, filename, number, msg)
