@@ -53,13 +53,13 @@ function subscribe(
 end
 
 @kwdef mutable struct SubscriptionMonitoringData
-    last_error::Union{ErrorException, Nothing} = nothing
+    last_error::Union{Any, Nothing} = nothing
     last_error_msg::Union{Msg, Nothing} = nothing
     errors_since_last_report::Int64 = 0
     lock::ReentrantLock = Threads.ReentrantLock()
 end
 
-function report_error!(data::SubscriptionMonitoringData, err::ErrorException, msg::Msg)
+function report_error!(data::SubscriptionMonitoringData, err, msg::Msg)
     @lock data.lock begin
         data.last_error = err
         data.last_error_msg = msg
@@ -81,7 +81,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
     subscription_channel = Channel(channel_size)
     monitoring_data = SubscriptionMonitoringData()
     if async_handlers == true
-        Threads.@spawn :interactive disable_sigint() do
+        subscription_task = Threads.@spawn :interactive disable_sigint() do
             try
                 while true
                     msgs = take!(subscription_channel)
@@ -93,20 +93,22 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                                 f(msg)
                                 @inc_stat :msgs_handled 1 sub_stats conn_stats state.stats
                                 @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
-                            catch 
+                            catch err
                                 @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
                                 @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
                                 report_error!(monitoring_data, err, msg)
                             end
                         end
+                        # errormonitor(handler_task) # TODO: enable this on debug.
                     end
                 end
             catch err
                 err isa InvalidStateException || rethrow()
             end
         end
+        errormonitor(subscription_task)
     else
-        Threads.@spawn :default disable_sigint() do
+        subscription_task = Threads.@spawn :default disable_sigint() do
             task_local_storage("sub_stats", sub_stats)
             try
                 while true
@@ -128,6 +130,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                 err isa InvalidStateException || rethrow()
             end
         end
+        errormonitor(subscription_task)
     end
 
     subscription_monitoring_task = Threads.@spawn :interactive begin

@@ -39,7 +39,6 @@ const MIME_PROTOCOL = MIME"application/nats"
 const MIME_PAYLOAD  = MIME"application/nats-payload"
 const MIME_HEADERS  = MIME"application/nats-headers"
 
-const OUTBOX_SIZE = 10000000
 const RECONNECT_DELAYS = Base.ExponentialBackOff(n=220752000000000000, first_delay=0.0001, max_delay=1) # 7 bilion years.
 const SUBSCRIPTION_CHANNEL_SIZE = 10000000
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
@@ -47,6 +46,7 @@ const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
 const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false
+const INVOKE_LATEST_CONVERSIONS = false
 
 include("protocol/protocol.jl")
 include("connection/connection.jl")

@@ -2,7 +2,7 @@
 
 ## Using custom types as handler input.
 
-It is possible to use and return custom types inside subscription handlers if `convert` method from `Union{Msg, HMsg}` is provided.
+It is possible to use and return custom types inside subscription handlers if `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for example implementation for `String`.
 
 ```
 struct Person
@@ -22,6 +22,11 @@ end
 sub = subscribe("EMPLOYEES") do person::Person
     @show person
 end
+
+julia> publish("EMPLOYEES", "John,44")
+
+person = Person("John", 44)
+
 ```
 
 ## Returning custom types from handler.
@@ -39,6 +44,8 @@ const MIME_HEADERS  = MIME"application/nats-headers"
 Conversion method should look like this.
 
 ```
+import Base: show
+
 function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, person.name)
     print(io, ",")
@@ -54,6 +61,9 @@ sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
         Person("Unknown", 0)
     end
 end
+
+julia> request(Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
+Person("Bob", 44)
 
 ```
 
@@ -72,7 +82,7 @@ struct Person
     departament::String
 end
 
-function convert(::Type{Person}, msg::Union{NATS.Msg, NATS.HMsg})
+function convert(::Type{Person}, msg::NATS.Msg)
     name, age, departament = split(payload(msg), ",")
     Person(name, parse(Int64, age), departament)
 end
@@ -86,18 +96,20 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
 end
 
 
-nc = NATS.connect()
+nc = NATS.connect(default = true)
 sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+    
     if person.name == "Alice"
-        Person("Bob", 44), ["status" => "ok"]
+        Person("Bob", 44, "IT"), ["status" => "ok"]
     else
-        Person("Unknown", 0), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
+        Person("Unknown", 0, ""), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
     end
 end
 supervisor = request(Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
 @show supervisor
 
-hmsg = request(Person, "EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"))
+error_response = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"));
+@show headers(error_response)
 
 unsubscribe(sub)
 ```
