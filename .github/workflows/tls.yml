@@ -29,7 +29,7 @@ jobs:
       - name: "Start TLS enabled NATS server."
         run: |
           echo $PWD
-          name=`docker create -v $(pwd)/test/certs:/certs --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} --tls --tlscert /certs/nats.crt --tlskey /certs/nats.key`
+          name=`docker create -v $(pwd)/test/certs:/certs -v $(pwd)/test/configs:/configs --network ${{ job.container.network }} --name nats --network-alias nats -p 4222:4222 -e GITHUB_ACTIONS=true -e CI=true nats:${{ matrix.nats-version }} -c /configs/nats-server-tls-auth.conf`
           docker container start $name
           sleep 2
           docker logs $name
