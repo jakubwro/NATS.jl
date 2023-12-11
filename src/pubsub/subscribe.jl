@@ -76,7 +76,6 @@ function reset_counter!(data::SubscriptionMonitoringData)
     end
 end
 
-# TODO: recactor this
 function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_handlers::Bool, subject::String, channel_size::Int64, monitoring_throttle_seconds::Float64)
     subscription_channel = Channel(channel_size)
     monitoring_data = SubscriptionMonitoringData()

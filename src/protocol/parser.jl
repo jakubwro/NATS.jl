@@ -67,7 +67,6 @@ macro uint8(char::Char)
     convert(UInt8, char)
 end
 
-# TODO: handle multiple spaces
 function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
     pos = 0
     len = length(buffer)

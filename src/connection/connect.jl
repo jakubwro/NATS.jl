@@ -36,9 +36,9 @@ function default_connect_options()
         nkey = get(ENV, "NATS_NKEY", nothing),
         # Options used only on client side, never sent to server.
         nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
-        tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", "test/certs/nats.crt"), # TODO: remove this hardcoded paths
-        tls_client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", "test/certs/client.crt"),
-        tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", "test/certs/client.key")
+        tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", nothing),
+        tls_client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", nothing),
+        tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", nothing)
     )
 end
 
