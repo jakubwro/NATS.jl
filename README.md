@@ -11,13 +11,28 @@
 [![codecov](https://codecov.io/gh/jakubwro/NATS.jl/graph/badge.svg?token=8X0HPK1T8E)](https://codecov.io/gh/jakubwro/NATS.jl)
 [![](https://img.shields.io/badge/NATS.jl%20docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
 
-Work in progress, API not stable yet.
-
-[![Coverage](https://codecov.io/gh/jakubwro/NATS.jl/graphs/sunburst.svg?token=8X0HPK1T8E)](https://app.codecov.io/gh/jakubwro/NATS.jl)
-
 ## Description
 
-NATS client for julia.
+[NATS](https://nats.io) client for Julia.
+
+This client is feature complete in terms of `Core NATS` protocol (without [JetStream](https://docs.nats.io/nats-concepts/jetstream))
+- [x] All `NATS` authentication methods
+- [x] TLS support
+- [x] Zero copy protocol parser
+
+Performance is matching reference `go` implementation.
+
+For [JetStream](https://docs.nats.io/nats-concepts/jetstream) check [NATS.jl](https://github.com/jakubwro/JetStream.jl) - work in progress.
+
+## Compatibility
+
+### Julia
+
+It was tested in `julia` `1.9` and `1.10-beta`
+
+### NATS
+
+It was tested on `NATS` `2.10`.
 
 ## Quick examples
 
