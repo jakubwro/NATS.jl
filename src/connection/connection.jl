@@ -83,7 +83,7 @@ function status()
 end
 
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs")
+    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs)")
 
 function ping(nc)
     send(nc, Ping())

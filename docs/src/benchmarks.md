@@ -242,31 +242,7 @@ Publishing    3s [==========>-----]  68%
 
 ```
 julia> subscribe_for_one_second()
-[ Info: Processed 92528 messages
+[ Info: Processed 1680882 messages in 0.9680750370025635 s.
 ```
 
-92k messages in NATS.jl vs 1.7M messages.
-
-The problem here may be that received messages are not buffered into Channel, but processed as soon as received.
-
-It causes some warning on `nats-server` side:
-
-```
-[1] 2023/11/19 12:09:48.833073 [INF] 172.17.0.1:33598 - cid:86 - Slow Consumer Detected: WriteDeadline of 10s exceeded with 65193 chunks of 33378582 total bytes.
-```
-
-function bench_arr()
-    n = 458752
-    arr = repeat([0x44], n)
-
-    sum = 0
-    i = 0
-    @time for b in arr
-        char = Char(b)
-        if char == 'D'
-            sum +=1
-        end
-    end
-
-    @info sum
-end
+1,68M messages in NATS.jl vs 1.7M messages by go client.
