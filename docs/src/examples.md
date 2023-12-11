@@ -52,7 +52,35 @@ julia> payload(rep)
 "OK, I CAN HELP!!!"
 ```
 
-# Work queues
+### Reliable message delivery with request-reply pattern
+
+NATS protocol does not guarantee message delivery. Simple ack mechanism may be implemented like this.
+
+```julia
+
+function try_publish(subject::String, data; connection = NATS.connection(:default))
+    resp = NATS.request(subject, data; connection)
+    if NATS.payload(resp) != "ack"
+        error("No ack received")
+    end
+end
+
+function reliable_publish(subject::String, data; connection = NATS.connection(:default))
+    retry_request = retry(try_publish, delays=zeros(10)) # Retry 10 times without delay.
+    retry_request(subject, data; connection)
+end
+```
+
+On receiver "ack" payload is returned on success.
+
+```julia
+reply("some_subject") do msg
+    # Do some stuff with message here.
+    "ack"
+end
+```
+
+## Work queues
 
 If `subscription` or `reply` is configured with `queue_group`, messages will be distributed equally between subscriptions with the same group.
 
