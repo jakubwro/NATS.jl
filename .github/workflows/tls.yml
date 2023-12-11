@@ -46,7 +46,7 @@ jobs:
           arch: ${{ matrix.julia-arch }}
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt tls_client_key_path=test/certs/client.key julia --color=yes --code-coverage=user --project test/runtests.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt NATS_CLIENT_KEY_PATH=test/certs/client.key julia --color=yes --code-coverage=user --project test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov
@@ -55,10 +55,10 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt tls_client_key_path=test/certs/client.key julia --color=yes --code-coverage=user --project test/benchmarks.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt NATS_CLIENT_KEY_PATH=test/certs/client.key julia --color=yes --code-coverage=user --project test/benchmarks.jl
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
-          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt tls_client_key_path=test/certs/client.key julia --color=yes --code-coverage=user --project test/chaos.jl
+          JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CA_CERT_PATH=test/certs/nats.crt NATS_CLIENT_CERT_PATH=test/certs/client.crt NATS_CLIENT_KEY_PATH=test/certs/client.key julia --color=yes --code-coverage=user --project test/chaos.jl
       - name: "Stop services"
         run: |
           docker kill $(docker ps -q )
