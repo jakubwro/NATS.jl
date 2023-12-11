@@ -22,7 +22,7 @@ This client is feature complete in terms of `Core NATS` protocol (without [JetSt
 
 Performance is matching reference `go` implementation.
 
-For [JetStream](https://docs.nats.io/nats-concepts/jetstream) check [NATS.jl](https://github.com/jakubwro/JetStream.jl) - work in progress.
+For [JetStream](https://docs.nats.io/nats-concepts/jetstream) check [JetStream.jl](https://github.com/jakubwro/JetStream.jl) - work in progress.
 
 ## Compatibility
 
