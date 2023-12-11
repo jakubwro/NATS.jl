@@ -7,6 +7,8 @@ using Random
     @test_throws ErrorException publish("SOME_SUBJECT"; payload = "Hi!")
 end
 
+NATS.status()
+
 nc = NATS.connect(default = true)
 
 @testset "Ping" begin
@@ -14,9 +16,13 @@ nc = NATS.connect(default = true)
     @test true # TODO: add pong count to connection stats
 end
 
+NATS.status()
+
 @testset "Show connection status" begin
     @test startswith(repr(nc), "NATS.Connection(")
 end
+
+NATS.status()
 
 @testset "Method error hints." begin
     # hint = """To use `Type{Float64}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
@@ -44,6 +50,8 @@ end
     end
 end
 
+NATS.status()
+
 @testset "Handler error throttling." begin
     subject = randstring(8)
     sub = subscribe(subject) do msg
@@ -60,6 +68,8 @@ end
     unsubscribe(sub)
     sleep(0.1)
 end
+
+NATS.status()
 
 @testset "Handler error throttling async." begin
     subject = randstring(8)
@@ -78,6 +88,8 @@ end
     sleep(0.1)
 end
 
+NATS.status()
+
 @testset "Should reconnect on malformed msg" begin
     options = merge(NATS.default_connect_options(), (protocol=100,) )
     con_msg = NATS.from_options(NATS.Connect, options)
@@ -86,11 +98,15 @@ end
     @test nc.status == NATS.CONNECTED
 end
 
+NATS.status()
+
 @testset "Should reconnect on outbox closed" begin
     NATS.reopen_send_buffer(nc)
     sleep(5)
     @test nc.status == NATS.CONNECTED
 end
+
+NATS.status()
 
 @testset "Draining connection." begin
     nc = NATS.connect(default = false)
@@ -109,6 +125,8 @@ end
     @test isempty(NATS.state.handlers)
 end
 
+NATS.status()
+
 @testset "Connections API" begin
     @test NATS.connection(:default) isa NATS.Connection
     @test NATS.connection(1) isa NATS.Connection
@@ -120,10 +138,14 @@ end
     @test_throws ErrorException NATS.connect(default = true) # Cannot have more than one default connection.
 end
 
+NATS.status()
+
 @testset "Connect error from protocol init when options are wrong" begin
     @test_throws "invalid client protocol" NATS.connect(default = false, protocol = 100)
     @test_throws "Client requires TLS but it is not available for the server." NATS.connect(default = false, tls_required = true)
 end
+
+NATS.status()
 
 @testset "Subscription warnings" begin
     NATS.status()
@@ -159,6 +181,8 @@ end
     NATS.status()
 end
 
+NATS.status()
+
 @testset "Send buffer overflow" begin
     connection = NATS.connect(default = false, send_buffer_size = 5, send_retry_delays = [])
 
@@ -180,6 +204,8 @@ end
     @test counter > 90
 end
 
+NATS.status()
+
 @testset "Publish on drained connection fails" begin
     connection = NATS.connect(default = false)
 
@@ -190,3 +216,5 @@ end
     pub = NATS.Pub("test_publish_on_drained", nothing, UInt8[], UInt8[])
     @test_throws ErrorException NATS.send(connection, repeat([pub], 10))
 end
+
+NATS.status()

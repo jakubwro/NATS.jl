@@ -15,6 +15,8 @@ using Random
     @test payload(result) == "This is a reply."
 end
 
+NATS.status()
+
 @testset "Request multiple replies." begin
     subject = randstring(10)
     sub1 = reply(subject) do msg
@@ -33,6 +35,8 @@ end
     @test "Reply from service 1." in payloads
     @test "Reply from service 2." in payloads
 end
+
+NATS.status()
 
 @testset "4K requests" begin
     n = 4000
@@ -71,6 +75,8 @@ end
     NATS.status()
 end
 
+NATS.status()
+
 @testset "4K requests external" begin
     
     try
@@ -104,9 +110,13 @@ end
     @info "Total time of $n requests is $(t.time) s, average $(1000 * t.time / n) ms per request."
 end
 
+NATS.status()
+
 @testset "No responders." begin
     @test_throws ErrorException request("SOME.NULL")
 end
+
+NATS.status()
 
 @testset "Typed request reply tests" begin
     sub = reply("SOME.REQUESTS") do msg::String
@@ -118,6 +128,8 @@ end
     @test result == "Received Hi!"
 end
 
+NATS.status()
+
 @testset "Request reply with headers" begin
     sub = reply("SOME.REQUESTS") do msg
         "This is a reply.", ["A" => "B"]
@@ -128,3 +140,5 @@ end
     @test payload(result) == "This is a reply."
     @test headers(result) == ["A" => "B"]
 end
+
+NATS.status()

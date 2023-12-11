@@ -18,6 +18,8 @@ using Random
     @test length(NATS.state.handlers) == 0
 end
 
+NATS.status()
+
 @testset "Publish subscribe with sync handlers" begin
     connection = NATS.connect(default = false)
     c = Channel()
@@ -43,6 +45,8 @@ end
     @test result == "Hi!"
 end
 
+NATS.status()
+
 @testset "Typed subscription handlers" begin
     c = Channel()
 
@@ -58,6 +62,7 @@ end
     @test length(NATS.state.handlers) == 0
 end
 
+NATS.status()
 
 @testset "Publish subscribe with headers" begin
     c = Channel()
@@ -75,6 +80,8 @@ end
     @test length(NATS.state.handlers) == 0
 end
 
+NATS.status()
+
 @testset "Subscription without argument" begin
     subject = randstring(8)
     was_delivered = false
@@ -88,6 +95,8 @@ end
     @test was_delivered
 end
 
+NATS.status()
+
 @testset "Subscription with multiple arguments" begin
     subject = randstring(8)
     # TODO: test if error message is clear.
@@ -95,3 +104,5 @@ end
         "nothing to do"
     end
 end
+
+NATS.status()

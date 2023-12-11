@@ -13,6 +13,8 @@ using NATS
     unsubscribe(sub)
 end
 
+NATS.status()
+
 @testset "Test custom fallback handler" begin
     empty!(NATS.state.fallback_handlers)
     was_called = false
