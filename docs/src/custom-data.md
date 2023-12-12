@@ -1,6 +1,6 @@
-# Custom transport types.
+# Custom transport data structures
 
-## Using custom types as handler input.
+## Using custom types as handler input
 
 It is possible to use and return custom types inside subscription handlers if `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for example implementation for `String`.
 
@@ -29,7 +29,7 @@ person = Person("John", 44)
 
 ```
 
-## Returning custom types from handler.
+## Returning custom types from handler
 
 It is also possible to return any type from a handler in `reply` and put any type as `publish` argument if conversion to `UTF-8` string is provided.  
 Note that both Julia and NATS protocol use `UTF-8` encoding, so no additional conversions are needed.

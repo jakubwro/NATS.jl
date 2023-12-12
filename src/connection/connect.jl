@@ -155,7 +155,7 @@ Options are:
 - `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
-- `tls_required`: indicates whether the client requires an SSL connection
+- `tls_required`: indicates whether the client requires SSL connection
 - `tls_ca_cert_path`: CA certuficate file path
 - `tls_client_cert_path`: client public certificate file
 - `tls_client_key_path`: client private certificate file

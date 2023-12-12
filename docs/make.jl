@@ -9,13 +9,13 @@ makedocs(
         "index.md",
         "examples.md",
         "benchmarks.md",
+        "custom-data.md",
         "Functions" => [
             "connect.md",
             "pubsub.md",
             "reqreply.md",
         ],
         "Internals" => [
-            "design.md",
             "protocol.md",
             "interrupt_handling.md"
         ]

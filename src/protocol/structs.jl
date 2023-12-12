@@ -84,7 +84,7 @@ struct Connect <: ProtocolMessage
     verbose::Bool
     "Turns on additional strict format checking, e.g. for properly formed subjects."
     pedantic::Bool
-    "Indicates whether the client requires an SSL connection."
+    "Indicates whether the client requires SSL connection."
     tls_required::Bool
     "Client authorization token."
     auth_token::Union{String, Nothing}
