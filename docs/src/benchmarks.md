@@ -195,14 +195,14 @@ Sub stats: 904,350 msgs/sec ~ 13.80 MB/sec
 
 Supress warnings
 
-```
+```julia
 julia> using Logging
 
 julia> Logging.LogLevel(Error)
 Error
 ```
 
-```
+```julia
 function subscribe_for_one_second()
     tm = Timer(1)
     counter = 0
@@ -240,7 +240,7 @@ Start publisher:
 Publishing    3s [==========>-----]  68%
 ```
 
-```
+```julia
 julia> subscribe_for_one_second()
 [ Info: Processed 1680882 messages in 0.9680750370025635 s.
 ```

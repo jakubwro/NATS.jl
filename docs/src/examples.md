@@ -8,7 +8,7 @@ docker run -p 4222:4222 nats:latest
 
 ## Publish subscribe
 
-```julia-repl
+```julia
 julia> using NATS
 
 julia> NATS.connect(default = true)
@@ -84,7 +84,7 @@ end
 
 If `subscription` or `reply` is configured with `queue_group`, messages will be distributed equally between subscriptions with the same group.
 
-```
+```julia
 julia> reply("some_subject"; queue_group="group1") do
            "Reply from worker 1"
        end

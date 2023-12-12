@@ -4,7 +4,7 @@
 
 It is possible to use and return custom types inside subscription handlers if `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for example implementation for `String`.
 
-```
+```julia
 struct Person
     name::String
     age::Int64
@@ -18,7 +18,7 @@ function convert(::Type{Person}, msg::NATS.Msg)
 end
 ```
 
-```
+```julia
 sub = subscribe("EMPLOYEES") do person::Person
     @show person
 end
@@ -36,14 +36,14 @@ Note that both Julia and NATS protocol use `UTF-8` encoding, so no additional co
 
 NATS module defines custom MIME types for payload and headers serialization:
 
-```
+```julia
 const MIME_PAYLOAD  = MIME"application/nats-payload"
 const MIME_HEADERS  = MIME"application/nats-headers"
 ```
 
 Conversion method should look like this.
 
-```
+```julia
 import Base: show
 
 function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
@@ -53,7 +53,7 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
 end
 ```
 
-```
+```julia
 sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
     if person.name == "Alice"
         Person("Bob", 44)
@@ -71,7 +71,7 @@ Person("Bob", 44)
 
 Errors can be handled with custom headers.
 
-```
+```julia
 using NATS
 
 import Base: convert, show
