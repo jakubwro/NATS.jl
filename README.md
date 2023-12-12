@@ -44,7 +44,7 @@ docker run -p 4222:4222 nats:latest
 
 ### Publish subscribe
 
-```julia-repl
+```julia
 julia> using NATS
 
 julia> NATS.connect(default = true)
@@ -77,7 +77,7 @@ julia>
 20:35:19 Listening on "help.please" in group "NATS-RPLY-22"
 ```
 
-```julia-repl
+```julia
 julia> using NATS
 
 julia> NATS.connect(default = true)
@@ -92,7 +92,7 @@ julia> payload(rep)
 
 ### Reply to requests from julia
 
-```
+```julia
 julia> reply("some.service") do msg
            "This is response"
        end
