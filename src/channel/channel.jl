@@ -43,11 +43,14 @@ function take!(ch::NATSChannel{T}) where T
     try
         sub = reply(subject; queue_group, connection) do msg
             @lock cond begin
-                received = msg
-                resp = canceled ? "nak" : "ack"
-                canceled = true # After first msg do not accept another one.
-                notify(cond)
-                resp
+                if canceled
+                    "nak"
+                else
+                    received = msg
+                    canceled = true # After first msg do not accept another one.
+                    notify(cond)
+                    "ack"
+                end
             end
         end
         unsubscribe(sub; max_msgs = 1, connection)
