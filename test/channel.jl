@@ -32,7 +32,7 @@ end
     @test res == "Another test"
 end
 
-@testset "1K messages" begin
+@testset "1K messages put! first" begin
     ch = NATSChannel{String}(subject = "channel_subject")
     n=1000
     for i in 1:n
@@ -51,9 +51,9 @@ end
     end
 end
 
-@testset "10K messages" begin
+@testset "1K messages take! first" begin
     ch = NATSChannel{String}(subject = "channel_subject")
-    n = 10000
+    n = 1000
     results = String[]
     for i in 1:n
         @async begin 

@@ -8,6 +8,8 @@ const NATS_CHANNEL_PUT_REQUEST_TIMEOUT = 2
 @kwdef struct NATSChannel{T} <: AbstractChannel{T}
     subject::String
     connection::NATS.Connection = NATS.connection(:default)
+    put_retry_delays = NATS_CHANNEL_PUT_DELAYS
+    put_request_timeout = NATS_CHANNEL_PUT_REQUEST_TIMEOUT
 end
 
 function NATSChannel(subject::String; connection::NATS.Connection = NATS.connection(:default))
@@ -17,7 +19,7 @@ end
 function put_or_throw(ch::NATSChannel, data)
     subject = "$(NATS_CHANNEL_SUBJECT_PREFIX).$(ch.subject)"
     connection = ch.connection
-    timer = Timer(NATS_CHANNEL_PUT_REQUEST_TIMEOUT)
+    timer = Timer(ch.put_request_timeout)
     res = request(subject, data; connection, timer)
     if payload(res) != "ack"
         error("No ack received.")
@@ -28,7 +30,7 @@ function put!(ch::NATSChannel{T}, data) where T
     if T != Msg && !(data isa T)
         error("Cannot put $(typeof(data)) to channel of type $T")
     end
-    retry_put = retry(put_or_throw, delays = NATS_CHANNEL_PUT_DELAYS)
+    retry_put = retry(put_or_throw, delays = ch.put_retry_delays)
     retry_put(ch, data)
 end
 
