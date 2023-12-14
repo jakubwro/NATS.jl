@@ -40,6 +40,7 @@ if have_nats
     include("connection.jl")
     include("pubsub.jl")
     include("reqreply.jl")
+    include("channel.jl")
     include("fallback_handler.jl")
 
     @testset "All subs should be closed" begin

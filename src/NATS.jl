@@ -28,9 +28,10 @@ using BufferedStreams
 using Sodium
 using CodecBase
 
-import Base: show, convert, close
+import Base: show, convert, close, put!, take!
 
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
+export NATSChannel
 
 const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"
@@ -52,6 +53,7 @@ include("protocol/protocol.jl")
 include("connection/connection.jl")
 include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
+include("channel/channel.jl")
 include("interrupts.jl")
 
 function __init__()

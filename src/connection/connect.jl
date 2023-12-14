@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains inplementation of estabilishing connection and maintaining connectivity when TCP connection fails.
+# This file contains functions for estabilishing connection and maintaining connectivity when TCP connection fails.
 #
 ### Code:
 
