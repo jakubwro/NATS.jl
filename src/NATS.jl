@@ -27,11 +27,12 @@ using DocStringExtensions
 using BufferedStreams
 using Sodium
 using CodecBase
+using ScopedValues
 
 import Base: show, convert, close, put!, take!
 
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
-export NATSChannel
+export sconnection
 
 const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"
@@ -54,6 +55,7 @@ include("connection/connection.jl")
 include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
 include("interrupts.jl")
+include("experimental/experimental.jl")
 
 function __init__()
 
