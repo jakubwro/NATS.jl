@@ -87,7 +87,7 @@ end
     n = 1500
     start_time = time()
     for i in 1:n
-        publish("a_topic"; payload = "$i", connection = pub_conn)
+        publish(pub_conn, "a_topic"; payload = "$i")
         sleep(0.001)
     end
     @info "Published $n messages in $(time() - start_time) seconds."

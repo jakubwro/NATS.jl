@@ -15,13 +15,13 @@ include("util.jl")
     subject = "SOME_SUBJECT"
     time_to_wait_s = 1.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(subject; connection) do msg
+    sub = subscribe(connection, subject) do msg
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
     end
-    publish(subject; payload = "Hi!", connection)
-    unsubscribe(sub; connection)
+    publish(connection, subject; payload = "Hi!")
+    unsubscribe(connection, sub)
     sleep(2)
     close(c)
     NATS.status()
@@ -33,7 +33,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(subject; connection, async_handlers) do msg
+    sub = subscribe(connection, subject; async_handlers) do msg
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
@@ -48,7 +48,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
             NATS.try_send(connection2, batch)
             sleep(0.01)
         end
-        unsubscribe(sub; connection)
+        unsubscribe(connection, sub)
     end
     errormonitor(t)
     # @async interactive_status(tm)
@@ -72,16 +72,16 @@ end
     sleep(5) # Wait for buffers flush from previous tests.
     connection = NATS.connect()
     subject = randstring(5)
-    sub = reply(subject; connection) do msg
+    sub = reply(connection, subject) do msg
         "This is a reply."
     end
     counter = 0
     tm = Timer(1.0)
     while isopen(tm)
-        res = request(subject; connection)
+        res = request(connection, subject)
         counter = counter + 1
     end
-    unsubscribe(sub; connection)
+    unsubscribe(connection, sub)
     @info "Sync handlers: $counter requests / second."
     NATS.status()
 end
@@ -89,16 +89,16 @@ end
 @testset "Requests per second with async handlers." begin
     connection = NATS.connect()
     subject = randstring(5)
-    sub = reply(subject; connection, async_handlers = true) do msg
+    sub = reply(connection, subject; async_handlers = true) do msg
         "This is a reply."
     end
     counter = 0
     tm = Timer(1.0)
     while isopen(tm)
-        res = request(subject; connection)
+        res = request(connection, subject)
         counter = counter + 1
     end
-    unsubscribe(sub; connection)
+    unsubscribe(connection, sub)
     @info "Async handlers: $counter requests / second."
     NATS.status()
 end
@@ -108,7 +108,7 @@ end
     counter = 0
     tm = Timer(1.0)
     while isopen(tm)
-        res = request("help.please"; connection)
+        res = request(connection, "help.please")
         counter = counter + 1
     end
     @info "Exteranal service: $counter requests / second."
@@ -124,7 +124,7 @@ end
     counter = 0
     c = 0
     while isopen(tm)
-        publish("zxc"; payload = "Hello world!!!!!", connection)
+        publish(connection, "zxc"; payload = "Hello world!!!!!")
         counter = counter + 1
         c += 1
         if c == 10000
