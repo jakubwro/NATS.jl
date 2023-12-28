@@ -33,9 +33,9 @@ function start_container(container_id)
 end
 
 @testset "Request during node switch" begin
-    connection = NATS.connect("localhost", 5222, default=false)
+    connection = NATS.connect("localhost", 5222)
 
-    sub = reply("a_topic"; async_handlers = true, connection) do msg
+    sub = reply(connection, "a_topic"; async_handlers = true) do msg
         sleep(7)
         "This is a reply."
     end
@@ -46,7 +46,7 @@ end
     end)
 
     start_time = time()
-    response = request(String, "a_topic", timer = Timer(15); connection)
+    response = request(connection, String, "a_topic", timer = Timer(15))
     @info "Response time was $(time() - start_time)"
 
     @test response == "This is a reply."
@@ -60,19 +60,19 @@ end
 end
 
 @testset "No messages lost during node switch." begin
-    pub_conn = NATS.connect("localhost", 5222, default=false) # TODO: unclear why echo needs to be false to not have doubled msgs.
-    sub_conn = NATS.connect("localhost", 5223, default=false) 
+    pub_conn = NATS.connect("localhost", 5222) # TODO: unclear why echo needs to be false to not have doubled msgs.
+    sub_conn = NATS.connect("localhost", 5223) 
     
     sub_conn_received_count = 0
     sub_conn_results = []
-    sub1 = subscribe("a_topic"; async_handlers = false, connection = sub_conn) do msg
+    sub1 = subscribe(sub_conn, "a_topic"; async_handlers = false) do msg
         sub_conn_received_count = sub_conn_received_count + 1
         push!(sub_conn_results, payload(msg))
     end
 
     pub_conn_received_count = 0
     pub_conn_results = []
-    sub2 = subscribe("a_topic"; async_handlers = false, connection = pub_conn) do msg
+    sub2 = subscribe(pub_conn, "a_topic"; async_handlers = false) do msg
         pub_conn_received_count = pub_conn_received_count + 1
         push!(pub_conn_results, payload(msg))
     end
@@ -117,13 +117,13 @@ end
 end
 
 @testset "Lame Duck Mode during heavy publications" begin
-    connection = NATS.connect("localhost", 5222, default=false)
-    subscription_connection = NATS.connect("localhost", 5224, default=false)
+    connection = NATS.connect("localhost", 5222)
+    subscription_connection = NATS.connect("localhost", 5224)
 
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
-    sub = subscribe(subject; connection = subscription_connection) do msg
+    sub = subscribe(subscription_connection, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
     sleep(0.5)
@@ -150,7 +150,7 @@ end
         @info "Published: $(published_count.value), received: $(received_count.value)."
     end
     sleep(5) # Wait all messages delivered
-    unsubscribe(sub; connection)
+    unsubscribe(connection, sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 
     @test published_count[] == received_count.value[]
@@ -164,8 +164,8 @@ end
 
 
 # @testset "Switch sub connection." begin
-#     conn_a = NATS.connect("localhost", 5222, default=false)
-#     conn_b = NATS.connect("localhost", 5223, default=false) 
+#     conn_a = NATS.connect("localhost", 5222)
+#     conn_b = NATS.connect("localhost", 5223) 
 
 #     subject = "switch"
 
