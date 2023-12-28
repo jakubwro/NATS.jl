@@ -21,7 +21,6 @@ $(SIGNATURES)
 Subscribe to a subject.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `queue_group`: NATS server will distribute messages across queue group members
 - `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 - `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$SUBSCRIPTION_CHANNEL_SIZE`
@@ -29,8 +28,8 @@ Optional keyword arguments are:
 """
 function subscribe(
     f,
+    connection::Connection,
     subject::String;
-    connection::Connection = connection(:default),
     queue_group::Union{String, Nothing} = nothing,
     async_handlers = false,
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,

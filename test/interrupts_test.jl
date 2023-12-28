@@ -2,16 +2,16 @@
 using NATS
 
 function main()
-    NATS.connect(default = true)
+    nc = NATS.connect()
 
-    subscribe("test_subject") do x
+    subscribe(nc, "test_subject") do x
         @show x
     end
 
     while true
         sleep(5)
         try
-            publish("test_subject")
+            publish(nc, "test_subject")
         catch
             break
         end

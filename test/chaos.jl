@@ -34,13 +34,13 @@ function stop_nats_server(container_id = find_nats_container_id())
     result.exitcode
 end
 
-nc = NATS.connect(default = true)
+nc = NATS.connect()
 
 @testset "Reconnecting." begin
     @test restart_nats_server() == 0
     sleep(10)
     @test nc.status == NATS.CONNECTED
-    resp = request("help.please")
+    resp = request(nc, "help.please")
     @test resp isa NATS.Msg
 end
 
@@ -68,21 +68,21 @@ end
 @testset "Subscribtion survive reconnect." begin
     c = Channel(100)
     subject = randstring(5)
-    sub = subscribe(subject) do msg
+    sub = subscribe(nc, subject) do msg
         put!(c, msg)
     end
     sleep(0.5)
     @test restart_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.CONNECTED
-    publish(subject; payload = "Hi!")
+    publish(nc, subject; payload = "Hi!")
     sleep(5)
     @test Base.n_avail(c) == 1
 end
 
 @testset "Reconnect during request." begin
     subject = randstring(5)
-    sub = reply(subject) do msg
+    sub = reply(nc, subject) do msg
         sleep(5)
         "This is a reply."
     end
@@ -90,10 +90,10 @@ end
         sleep(1)
         restart_nats_server()
     end
-    rep = request(subject; timer = Timer(20))
+    rep = request(nc, subject; timer = Timer(20))
     @test payload(rep) == "This is a reply."
     @test nc.status == NATS.CONNECTED
-    rep = request(subject; timer = Timer(20))
+    rep = request(nc, subject; timer = Timer(20))
     @test payload(rep) == "This is a reply."
     @test t.result == 0
 end
@@ -107,7 +107,7 @@ end
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
-    sub = reply(subject, async_handlers = true) do msg
+    sub = reply(nc, subject, async_handlers = true) do msg
         sleep(10 * rand())
         Threads.atomic_add!(cnt, 1)
         "This is a reply."
@@ -116,7 +116,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request(subject; timer=Timer(20))
+            msg = request(nc, subject; timer=Timer(20))
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -133,7 +133,7 @@ end
         @async interactive_status(cond)
     end
     try take!(cond) catch end
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     replies = collect(results)
     # @info "Replies count is $(cnt.value)."
     @info "Lost msgs: $(n - length(replies))."
@@ -151,7 +151,7 @@ end
 
     subject = @lock NATS.state.lock randstring(5)
     cnt = Threads.Atomic{Int64}(0)
-    sub = reply(subject, async_handlers = true) do msg
+    sub = reply(nc, subject, async_handlers = true) do msg
         # sleep(2 * rand())
         Threads.atomic_add!(cnt, 1)
         "This is a reply."
@@ -161,7 +161,7 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
                 delays = rand(3.0:0.1:5.0, 15)
-                msg = retry(request; delays)(subject; timer=Timer(5))
+                msg = retry(request; delays)(nc, subject; timer=Timer(5))
                 put!(results, msg)
                 if Base.n_avail(results) == n
                     close(cond)
@@ -178,7 +178,7 @@ end
         @async interactive_status(cond)
     end
     try take!(cond) catch end
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     replies = collect(results)
     # @info "Replies count is $(cnt.value)."
     @info "Lost msgs: $(n - length(replies))."
@@ -191,7 +191,7 @@ end
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
-    sub = subscribe(subject) do msg
+    sub = subscribe(nc, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
     sleep(0.5)
@@ -200,7 +200,7 @@ end
         for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:10
-                publish(subject; payload = "Hi!")
+                publish(nc, subject; payload = "Hi!")
             end
             Threads.atomic_add!(published_count, 10)
             try wait(timer) catch end
@@ -218,12 +218,12 @@ end
     # @test restart_nats_server() == 0
     wait(pub_task)
     sleep(4) # wait for published messages 
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 end
 
 @testset "Disconnecting when retries exhausted." begin
-    nc = NATS.connect(; default = false, reconnect_delays = [])
+    nc = NATS.connect(; reconnect_delays = [])
     @test stop_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED

@@ -19,11 +19,11 @@ end
 ```
 
 ```julia
-sub = subscribe("EMPLOYEES") do person::Person
+sub = subscribe(connection, "EMPLOYEES") do person::Person
     @show person
 end
 
-julia> publish("EMPLOYEES", "John,44")
+julia> publish(connection, "EMPLOYEES", "John,44")
 
 person = Person("John", 44)
 
@@ -54,7 +54,7 @@ end
 ```
 
 ```julia
-sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+sub = reply(connection, "EMPLOYEES.SUPERVISOR") do person::Person
     if person.name == "Alice"
         Person("Bob", 44)
     else
@@ -62,7 +62,7 @@ sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
     end
 end
 
-julia> request(Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
+julia> request(connection, Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
 Person("Bob", 44)
 
 ```
@@ -96,8 +96,8 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
 end
 
 
-nc = NATS.connect(default = true)
-sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+nc = NATS.connect()
+sub = reply(nc, "EMPLOYEES.SUPERVISOR") do person::Person
     
     if person.name == "Alice"
         Person("Bob", 44, "IT"), ["status" => "ok"]
@@ -105,11 +105,11 @@ sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
         Person("Unknown", 0, ""), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
     end
 end
-supervisor = request(Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
+supervisor = request(nc, Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
 @show supervisor
 
-error_response = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"));
+error_response = request(nc, "EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"));
 @show headers(error_response)
 
-unsubscribe(sub)
+unsubscribe(nc, sub)
 ```

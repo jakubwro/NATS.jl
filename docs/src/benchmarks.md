@@ -80,8 +80,8 @@ Start reply service
 
 ```
 julia> using NATS
-julia> NATS.connect(default = true);
-julia> reply("foo") do
+julia> nc = NATS.connect(default = true);
+julia> reply(nc, "foo") do
            "This is a reply."
        end
 NATS.Sub("foo", nothing, "PDrH5FOxIgBpcnLO4xHD")
@@ -165,7 +165,7 @@ NATS Pub/Sub stats: 2,251,521 msgs/sec ~ 34.36 MB/sec
 ```
 julia> using NATS
 
-julia> NATS.connect(default = true);
+julia> nc = NATS.connect(default = true);
 Threads.threadid() = 
 julia> 
 julia> Threads.threadid() = 1
@@ -174,7 +174,7 @@ julia>
 
 julia> while true
            for i in 1:100000
-            publish("foo"; payload = "This is a payload")
+            publish(nc, "foo"; payload = "This is a payload")
            end
            sleep(0.001)
        end

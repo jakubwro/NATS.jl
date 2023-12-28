@@ -20,7 +20,6 @@ function default_fallback_handler(::Connection, msg::Msg)
 end
 
 @kwdef mutable struct State
-    default_connection::Union{Connection, Nothing} = nothing
     connections::Vector{Connection} = Connection[]
     handlers::Dict{String, Channel} = Dict{String, Function}()
     "Handlers of messages for which handler was not found."
@@ -37,24 +36,6 @@ const state = State()
 function install_fallback_handler(f)
     @lock state.lock begin
         push!(state.fallback_handlers, f)
-    end
-end
-
-function connection(id::Symbol)
-    if id === :default
-        nc = @lock state.lock state.default_connection
-        isnothing(nc) && error("No default connection availabe. Call `NATS.connect(default = true)` before. See https://jakubwro.github.io/NATS.jl/dev/connect") #TODO: move docs url to consts
-        nc
-    else
-        error("Connection `:$id` does not exits.")
-    end
-end
-
-function connection(id::Symbol, nc::Connection)
-    if id === :default
-        @lock state.lock state.default_connection = nc
-    else
-        error("Cannot set connection `:$id`, expected `:default`.")
     end
 end
 

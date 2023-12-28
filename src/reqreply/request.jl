@@ -23,7 +23,6 @@ Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply)
 Default timeout is $REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timer`.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `timer`: error will be thrown if no replies received until `timer` expires
 
 # Examples
@@ -36,12 +35,12 @@ ERROR: No replies received.
 ```
 """
 function request(
+    connection::Connection,
     subject::String,
     data = nothing;
-    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    replies = request(subject, data, 1; connection, timer)
+    replies = request(connection, subject, data, 1; timer)
     if isempty(replies) || all(has_error_status, replies)
         error("No replies received.")
     end
@@ -58,7 +57,6 @@ $(SIGNATURES)
 Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `timer`: error will be thrown if no replies received until `timer` expires
 
 # Examples
@@ -68,27 +66,27 @@ NATS.Msg[]
 ```
 """
 function request(
+    connection::Connection,
     subject::String,
     data,
     nreplies::Integer;
-    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = new_inbox(connection)
     replies_channel = Channel{NATS.Msg}(nreplies)
-    sub = subscribe(reply_to; async_handlers = false, connection) do msg
+    sub = subscribe(connection, reply_to; async_handlers = false) do msg
         put!(replies_channel, msg)
         if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
             close(replies_channel)
         end
     end
-    unsubscribe(sub; connection, max_msgs = nreplies)
-    publish(subject, data; connection, reply_to)
+    unsubscribe(connection, sub; max_msgs = nreplies)
+    publish(connection, subject, data; reply_to)
     timeout_task = Threads.@spawn :interactive disable_sigint() do
         try wait(timer) catch end
-        unsubscribe(sub; connection, max_msgs = 0)
+        unsubscribe(connection, sub; max_msgs = 0)
         sleep(0.05) # Some grace period to minimize undelivered messages. TODO: maybe can be removed?
     end
     bind(replies_channel, timeout_task)
@@ -101,12 +99,12 @@ function request(
 end
 
 function request(
+    connection::Connection,
     T::Type,
     subject::String,
     data = nothing;
-    connection::Connection = connection(:default),
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    result = request(subject, data; connection, timer)
+    result = request(connection, subject, data; timer)
     convert(T, result)
 end

@@ -47,22 +47,22 @@ docker run -p 4222:4222 nats:latest
 ```julia
 julia> using NATS
 
-julia> NATS.connect(default = true)
+julia> nc = NATS.connect()
 NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs, 0 outbox)
 
-julia> sub = subscribe("test_subject") do msg
+julia> sub = subscribe(nc, "test_subject") do msg
                          @show payload(msg)
                      end
 NATS.Sub("test_subject", nothing, "4sWlOE")
 
-julia> publish("test_subject", "Hello.")
+julia> publish(nc, "test_subject", "Hello.")
 
 payload(msg) = "Hello."
 
-julia> unsubscribe(sub)
+julia> unsubscribe(nc, sub)
 NATS.Unsub("4sWlOE", nothing)
 
-julia> publish("test_subject", "Hello.")
+julia> publish(nc, "test_subject", "Hello.")
 
 julia> 
 ```
@@ -80,10 +80,10 @@ julia>
 ```julia
 julia> using NATS
 
-julia> NATS.connect(default = true)
+julia> nc = NATS.connect()
 NATS.Connection(unnamed cluster, CONNECTED, 0 subs, 0 unsubs)
 
-julia> rep = @time NATS.request("help.please");
+julia> rep = @time NATS.request(nc, "help.please");
   0.006377 seconds (160 allocations: 10.547 KiB)
 
 julia> payload(rep)
@@ -93,12 +93,12 @@ julia> payload(rep)
 ### Reply to requests from julia
 
 ```julia
-julia> reply("some.service") do msg
+julia> reply(nc, "some.service") do msg
            "This is response"
        end
 NATS.Sub("some.service", nothing, "P6mANG")
 
-julia> rep = @time NATS.request("some.service");
+julia> rep = @time NATS.request(nc, "some.service");
   0.003101 seconds (220 allocations: 14.125 KiB)
 
 julia> payload(rep)
