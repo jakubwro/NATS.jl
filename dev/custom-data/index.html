@@ -9,11 +9,11 @@ import Base: convert
 function convert(::Type{Person}, msg::NATS.Msg)
     name, age = split(payload(msg), &quot;,&quot;)
     Person(name, parse(Int64, age))
-end</code></pre><pre><code class="language-julia hljs">sub = subscribe(&quot;EMPLOYEES&quot;) do person::Person
+end</code></pre><pre><code class="language-julia hljs">sub = subscribe(connection, &quot;EMPLOYEES&quot;) do person::Person
     @show person
 end
 
-julia&gt; publish(&quot;EMPLOYEES&quot;, &quot;John,44&quot;)
+julia&gt; publish(connection, &quot;EMPLOYEES&quot;, &quot;John,44&quot;)
 
 person = Person(&quot;John&quot;, 44)
 </code></pre><h2 id="Returning-custom-types-from-handler"><a class="docs-heading-anchor" href="#Returning-custom-types-from-handler">Returning custom types from handler</a><a id="Returning-custom-types-from-handler-1"></a><a class="docs-heading-anchor-permalink" href="#Returning-custom-types-from-handler" title="Permalink"></a></h2><p>It is also possible to return any type from a handler in <code>reply</code> and put any type as <code>publish</code> argument if conversion to <code>UTF-8</code> string is provided.   Note that both Julia and NATS protocol use <code>UTF-8</code> encoding, so no additional conversions are needed.</p><p>NATS module defines custom MIME types for payload and headers serialization:</p><pre><code class="language-julia hljs">const MIME_PAYLOAD  = MIME&quot;application/nats-payload&quot;
@@ -23,7 +23,7 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, person.name)
     print(io, &quot;,&quot;)
     print(io, person.age)
-end</code></pre><pre><code class="language-julia hljs">sub = reply(&quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
+end</code></pre><pre><code class="language-julia hljs">sub = reply(connection, &quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
     if person.name == &quot;Alice&quot;
         Person(&quot;Bob&quot;, 44)
     else
@@ -31,7 +31,7 @@ end</code></pre><pre><code class="language-julia hljs">sub = reply(&quot;EMPLOYE
     end
 end
 
-julia&gt; request(Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 22))
+julia&gt; request(connection, Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 22))
 Person(&quot;Bob&quot;, 44)
 </code></pre><h2 id="Error-handling"><a class="docs-heading-anchor" href="#Error-handling">Error handling</a><a id="Error-handling-1"></a><a class="docs-heading-anchor-permalink" href="#Error-handling" title="Permalink"></a></h2><p>Errors can be handled with custom headers.</p><pre><code class="language-julia hljs">using NATS
 
@@ -57,8 +57,8 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
 end
 
 
-nc = NATS.connect(default = true)
-sub = reply(&quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
+nc = NATS.connect()
+sub = reply(nc, &quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
     
     if person.name == &quot;Alice&quot;
         Person(&quot;Bob&quot;, 44, &quot;IT&quot;), [&quot;status&quot; =&gt; &quot;ok&quot;]
@@ -66,10 +66,10 @@ sub = reply(&quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
         Person(&quot;Unknown&quot;, 0, &quot;&quot;), [&quot;status&quot; =&gt; &quot;error&quot;, &quot;message&quot; =&gt; &quot;Supervisor not defined for $(person.name)&quot; ]
     end
 end
-supervisor = request(Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 33, &quot;IT&quot;))
+supervisor = request(nc, Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 33, &quot;IT&quot;))
 @show supervisor
 
-error_response = request(&quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Anna&quot;, 33, &quot;ACCOUNTING&quot;));
+error_response = request(nc, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Anna&quot;, 33, &quot;ACCOUNTING&quot;));
 @show headers(error_response)
 
-unsubscribe(sub)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../benchmarks/">« Benchmarks</a><a class="docs-footer-nextpage" href="../connect/">Connect »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Thursday 14 December 2023 21:30">Thursday 14 December 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+unsubscribe(nc, sub)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../benchmarks/">« Benchmarks</a><a class="docs-footer-nextpage" href="../connect/">Connect »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Thursday 28 December 2023 22:01">Thursday 28 December 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
