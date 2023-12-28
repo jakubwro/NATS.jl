@@ -19,7 +19,7 @@ include("protocol.jl")
 function is_nats_available()
     try
         Sockets.getaddrinfo(get(ENV, "NATS_HOST", "localhost"))
-        nc = NATS.connect(default = false)
+        nc = NATS.connect()
         sleep(5)
         @assert nc.status == NATS.CONNECTED
         @info "NATS avaliable, running connected tests."
@@ -40,7 +40,7 @@ if have_nats
     include("connection.jl")
     include("pubsub.jl")
     include("reqreply.jl")
-    include("channel.jl")
+    # include("channel.jl")
     include("fallback_handler.jl")
 
     @testset "All subs should be closed" begin

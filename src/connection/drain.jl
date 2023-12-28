@@ -32,7 +32,7 @@ function drain(nc::Connection)
     end
     status(nc, DRAINING)
     for (_, sub) in nc.subs
-        unsubscribe(sub; max_msgs = 0, connection = nc)
+        unsubscribe(nc, sub; max_msgs = 0)
     end
     # TODO: wait for handlers running == 0
     sleep(3)

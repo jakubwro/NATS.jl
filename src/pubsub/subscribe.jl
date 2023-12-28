@@ -29,8 +29,8 @@ Optional keyword arguments are:
 """
 function subscribe(
     f,
+    connection::Connection,
     subject::String;
-    connection::Connection = connection(:default),
     queue_group::Union{String, Nothing} = nothing,
     async_handlers = false,
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,

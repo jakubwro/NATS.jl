@@ -150,7 +150,6 @@ end
 Connect to NATS server. The function is blocking until connection is initialized.
 
 Options are:
-- `default`: boolean flag that indicated if a connection should be set as default which will be used when no connection specified
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
 - `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose`: turns on protocol acknowledgements
@@ -172,16 +171,11 @@ Options are:
 function connect(
     host::String = get(ENV, "NATS_HOST", "localhost"),
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
-    default = false,
     reconnect_delays = RECONNECT_DELAYS,
     send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
     send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
-    if default && !isnothing(state.default_connection)
-        dc = connection(:default)
-        isdrained(dc) || error("Default connection already exists. To set new default connection or `drain` the old one first.")
-    end
 
     options = merge(default_connect_options(), options)
     sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
@@ -248,7 +242,6 @@ function connect(
         end
     end
 
-    default && connection(:default, nc)
     @lock state.lock push!(state.connections, nc)
     nc
 end

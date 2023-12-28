@@ -65,12 +65,6 @@ include("connect.jl")
 function status()
     println("=== Connection status ====================")
     println("connections:    $(length(state.connections))        ")
-    if !isnothing(state.default_connection)
-        print("  [default]:  ")
-        nc = state.default_connection
-        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs             ") # TODO add info about msgs in send_buffer
-        println()
-    end
     for (i, nc) in enumerate(state.connections)
         print("       [#$i]:  ")
         print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs             ")

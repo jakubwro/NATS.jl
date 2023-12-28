@@ -3,14 +3,14 @@ using NATS
 using Random
 
 @testset "Request reply" begin
-    sub = reply("SOME.REQUESTS") do msg
+    sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply."
     end
-    result, tm = @timed request("SOME.REQUESTS")
+    result, tm = @timed request(nc, "SOME.REQUESTS")
     @info "First reply time was $(1000 * tm) ms."
-    result, tm = @timed request("SOME.REQUESTS")
+    result, tm = @timed request(nc, "SOME.REQUESTS")
     @info "Second reply time was $(1000 * tm) ms."
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
 end
@@ -19,16 +19,16 @@ NATS.status()
 
 @testset "Request multiple replies." begin
     subject = randstring(10)
-    sub1 = reply(subject) do msg
+    sub1 = reply(nc, subject) do msg
         "Reply from service 1."
     end
-    sub2 = reply(subject) do msg
+    sub2 = reply(nc, subject) do msg
         "Reply from service 2."
     end
-    results = request(subject, "This is request payload", 2)
+    results = request(nc, subject, "This is request payload", 2)
     sleep(1)
-    unsubscribe(sub1)
-    unsubscribe(sub2)
+    unsubscribe(nc, sub1)
+    unsubscribe(nc, sub2)
     sleep(0.1)
     @test length(results) == 2
     payloads = payload.(results)
@@ -43,7 +43,7 @@ NATS.status()
 
     subject = @lock NATS.state.lock randstring(5)
 
-    sub = reply(subject) do msg
+    sub = reply(nc, subject) do msg
         "This is a reply."
     end
     results = Channel(n)
@@ -51,9 +51,9 @@ NATS.status()
     for _ in 1:n
         t = Threads.@spawn :default begin
             msg =   if haskey(ENV, "CI")
-                        request(subject; timer=Timer(20))
+                        request(nc, subject; timer=Timer(20))
                     else
-                        request(subject)
+                        request(nc, subject)
                     end
             put!(results, msg)
             if Base.n_avail(results) == n
@@ -68,7 +68,7 @@ NATS.status()
         @async interactive_status(cond)
     end
     try take!(cond) catch end
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     replies = collect(results)
     @test length(replies) == n
     @test all(r -> payload(r) == "This is a reply.", replies)
@@ -80,7 +80,7 @@ NATS.status()
 @testset "4K requests external" begin
     
     try
-        request("help.please")
+        request(nc, "help.please")
     catch
         @info "Skipping \"4K requests external\" testset. Ensure `nats reply help.please 'OK, I CAN HELP!!!'` is running."
         return
@@ -92,7 +92,7 @@ NATS.status()
     t = @timed begin
         for _ in 1:n
             t = @async begin #TODO: add error monitor.
-                msg = request("help.please")
+                msg = request(nc, "help.please")
                 put!(results, msg)
                 if Base.n_avail(results) == n
                     close(cond)
@@ -113,17 +113,17 @@ end
 NATS.status()
 
 @testset "No responders." begin
-    @test_throws ErrorException request("SOME.NULL")
+    @test_throws ErrorException request(nc, "SOME.NULL")
 end
 
 NATS.status()
 
 @testset "Typed request reply tests" begin
-    sub = reply("SOME.REQUESTS") do msg::String
+    sub = reply(nc, "SOME.REQUESTS") do msg::String
         "Received $msg"
     end
-    result = request(String, "SOME.REQUESTS", "Hi!")
-    unsubscribe(sub)
+    result = request(nc, String, "SOME.REQUESTS", "Hi!")
+    unsubscribe(nc, sub)
     @test result isa String
     @test result == "Received Hi!"
 end
@@ -131,11 +131,11 @@ end
 NATS.status()
 
 @testset "Request reply with headers" begin
-    sub = reply("SOME.REQUESTS") do msg
+    sub = reply(nc, "SOME.REQUESTS") do msg
         "This is a reply.", ["A" => "B"]
     end
-    result = request("SOME.REQUESTS")
-    unsubscribe(sub)
+    result = request(nc, "SOME.REQUESTS")
+    unsubscribe(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
     @test headers(result) == ["A" => "B"]

@@ -34,7 +34,7 @@ function stop_nats_server(container_id = find_nats_container_id())
     result.exitcode
 end
 
-nc = NATS.connect(default = true)
+nc = NATS.connect()
 
 @testset "Reconnecting." begin
     @test restart_nats_server() == 0
@@ -223,7 +223,7 @@ end
 end
 
 @testset "Disconnecting when retries exhausted." begin
-    nc = NATS.connect(; default = false, reconnect_delays = [])
+    nc = NATS.connect(; reconnect_delays = [])
     @test stop_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED

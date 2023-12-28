@@ -42,16 +42,16 @@ julia> unsubscribe(sub)
 """
 function reply(
     f,
+    connection::Connection,
     subject::String;
-    connection::Connection = connection(:default),
     queue_group::Union{Nothing, String} = nothing,
     async_handlers = false
 )
     T = argtype(f)
     find_msg_conversion_or_throw(T)
     fast_f = _fast_call(f, T)
-    subscribe(subject; connection, queue_group, async_handlers) do msg
+    subscribe(connection, subject; queue_group, async_handlers) do msg
         data = fast_f(msg)
-        publish(msg.reply_to, data; connection)
+        publish(connection, msg.reply_to, data)
     end
 end

@@ -9,7 +9,7 @@ using NATS
 include("util.jl")
 
 @testset "Warmup" begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     empty!(NATS.state.fallback_handlers)
     c = Channel(1000000)
     subject = "SOME_SUBJECT"
@@ -59,18 +59,18 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
 end
 
 @testset "Msgs per second." begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     msgs_per_second(connection, connection)
 end
 
 @testset "Msgs per second with async handlers." begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     msgs_per_second(connection, connection, true)
 end
 
 @testset "Requests per second with sync handlers." begin
     sleep(5) # Wait for buffers flush from previous tests.
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     subject = randstring(5)
     sub = reply(subject; connection) do msg
         "This is a reply."
@@ -87,7 +87,7 @@ end
 end
 
 @testset "Requests per second with async handlers." begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     subject = randstring(5)
     sub = reply(subject; connection, async_handlers = true) do msg
         "This is a reply."
@@ -104,7 +104,7 @@ end
 end
 
 @testset "External requests per second." begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
     counter = 0
     tm = Timer(1.0)
     while isopen(tm)
@@ -116,7 +116,7 @@ end
 end
 
 @testset "Publisher benchmark." begin
-    connection = NATS.connect(default = false)
+    connection = NATS.connect()
 
     # pub = NATS.Pub("zxc", nothing, UInt8[], uint8_vec("Hello world!!!!!"))
 

@@ -25,11 +25,11 @@ Optional keyword arguments are:
 - `max_msgs`: maximum number of messages server will send after `unsubscribe` message received in server side, what can occur after some time lag
 """
 function unsubscribe(
+    connection::Connection,
     sub::Sub;
-    connection::Connection = connection(:default),
     max_msgs::Union{Int, Nothing} = nothing
 )
-    unsubscribe(sub.sid; connection, max_msgs)
+    unsubscribe(connection, sub.sid; max_msgs)
 end
 
 """
@@ -42,8 +42,8 @@ Optional keyword arguments are:
 - `max_msgs`: maximum number of messages server will send after `unsubscribe` message received in server side, what can occur after some time lag
 """
 function unsubscribe(
-    sid::String;
     connection::Connection,
+    sid::String;
     max_msgs::Union{Int, Nothing} = nothing
 )
     usnub = Unsub(sid, max_msgs)

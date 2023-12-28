@@ -53,7 +53,7 @@ include("protocol/protocol.jl")
 include("connection/connection.jl")
 include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
-include("channel/channel.jl")
+# include("channel/channel.jl")
 include("interrupts.jl")
 
 function __init__()
