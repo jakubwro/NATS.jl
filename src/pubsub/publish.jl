@@ -41,7 +41,6 @@ $(SIGNATURES)
 Publish `data` to a `subject`, payload is obtained with `show` method taking `mime` `$(MIME_PAYLOAD())`, headers are obtained wth `show` method taking `mime` `$(MIME_HEADERS())`.
 
 Optional parameters:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `reply_to`: subject to which a result should be published
 
 It is equivalent to:

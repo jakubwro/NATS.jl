@@ -21,7 +21,6 @@ $(SIGNATURES)
 Reply for messages for a `subject`. Works like `subscribe` with automatic `publish` to the subject from `reply_to` field.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `queue_group`: NATS server will distribute messages across queue group members
 - `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 

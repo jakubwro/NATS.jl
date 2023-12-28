@@ -23,7 +23,6 @@ Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply)
 Default timeout is $REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timer`.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `timer`: error will be thrown if no replies received until `timer` expires
 
 # Examples
@@ -58,7 +57,6 @@ $(SIGNATURES)
 Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
 
 Optional keyword arguments are:
-- `connection`: connection to be used, if not specified `default` connection is taken
 - `timer`: error will be thrown if no replies received until `timer` expires
 
 # Examples
