@@ -36,6 +36,8 @@ mutable struct Stats
     end
 end
 
+const scoped_subscription_stats = ScopedValue{Stats}()
+
 function show(io::IO, stats::Stats)
      print(io, "published: $(stats.msgs_published) \n")
      print(io, " received: $(stats.msgs_received) \n")
@@ -45,17 +47,22 @@ function show(io::IO, stats::Stats)
      print(io, "  dropped: $(stats.msgs_dropped) \n")
 end
 
-
-macro inc_stat(field, value, stats...)
-    exprs = map(stats) do stat
-        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:+)), $(esc(value)), :sequentially_consistent))
+function inc_stats(field, value, stats...)
+    for stat in stats
+        inc_stat(stat, field, value)
     end
-    Expr(:block, exprs...)
 end
 
-macro dec_stat(field, value, stats...)
-    exprs = map(stats) do stat
-        :($(esc(Base.modifyproperty!))($(esc(stat)), $field, $(esc(Base.:-)), $(esc(value)), :sequentially_consistent))
+function dec_stats(field, value, stats...)
+    for stat in stats
+        dec_stat(stat, field, value)
     end
-    Expr(:block, exprs...)
+end
+
+function inc_stat(stat, field, value)
+    Base.modifyproperty!(stat, field, +, value, :sequentially_consistent)
+end
+
+function dec_stat(stat, field, value)
+    Base.modifyproperty!(stat, field, -, value, :sequentially_consistent)
 end

@@ -41,7 +41,9 @@ function subscribe(
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
-    channel = _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, monitoring_throttle_seconds)
+    channel = with(scoped_subscription_stats => sub_stats) do
+        _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, monitoring_throttle_seconds)
+    end
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
         state.sub_stats[sid] = sub_stats
@@ -85,15 +87,14 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
                     msgs = take!(subscription_channel)
                     for msg in msgs # TODO: vectoriztion
                         handler_task = Threads.@spawn :default disable_sigint() do
-                            task_local_storage("sub_stats", sub_stats)
                             try
-                                @inc_stat :handlers_running 1 sub_stats conn_stats state.stats
+                                inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                                 f(msg)
-                                @inc_stat :msgs_handled 1 sub_stats conn_stats state.stats
-                                @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                                inc_stats(:msgs_handled, 1, sub_stats, conn_stats, state.stats)
+                                dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             catch err
-                                @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
-                                @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                                inc_stats(:msgs_errored, 1, sub_stats, conn_stats, state.stats)
+                                dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                                 report_error!(monitoring_data, err, msg)
                             end
                         end
@@ -107,19 +108,18 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_ha
         errormonitor(subscription_task)
     else
         subscription_task = Threads.@spawn :default disable_sigint() do
-            task_local_storage("sub_stats", sub_stats)
             try
                 while true
                     msgs = take!(subscription_channel)
                     for msg in msgs # TODO do some vectorization
                         try
-                            @inc_stat :handlers_running 1 sub_stats conn_stats state.stats
+                            inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             f(msg)
-                            @inc_stat :msgs_handled 1 sub_stats conn_stats state.stats
-                            @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
+                            inc_stats(:msgs_handled, 1, sub_stats, conn_stats, state.stats)
+                            dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                         catch err
-                            @dec_stat :handlers_running 1 sub_stats conn_stats state.stats
-                            @inc_stat :msgs_errored 1 sub_stats conn_stats state.stats
+                            inc_stats(:msgs_errored, 1, sub_stats, conn_stats, state.stats)
+                            dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             report_error!(monitoring_data, err, msg)
                         end
                     end

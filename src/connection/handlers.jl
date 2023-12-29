@@ -61,15 +61,15 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
             if Base.n_avail(ch) == ch.sz_max
                 # This check is safe, as the only task putting in to subs channel is this one.
                 # TODO: drop older msgs?
-                @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
+                inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
             else
                 try
                     put!(ch, msgs)
-                    @inc_stat :msgs_received n state.stats nc.stats sub_stats
+                    inc_stats(:msgs_received, n, state.stats, nc.stats, sub_stats)
                 catch
                     # TODO: if msg needs ack send nak here
                     # Channel was closed by `unsubscribe`.
-                    @inc_stat :msgs_dropped n state.stats nc.stats sub_stats
+                    inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
                 end
                 _cleanup_unsub_msg(nc, sid, n)
             end
@@ -84,7 +84,8 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     Base.invokelatest(f, nc, msg)
                 end
             end
-            @inc_stat :msgs_dropped n state.stats nc.stats
+
+            inc_stats(:msgs_dropped, n, state.stats, nc.stats)
         end
     end
 end
