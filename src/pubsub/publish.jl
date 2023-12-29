@@ -60,12 +60,9 @@ function publish(
     payload_bytes = repr(MIME_PAYLOAD(), data)
     headers_bytes = repr(MIME_HEADERS(), data)
     send(connection, Pub(subject, reply_to, headers_bytes, payload_bytes))
-    @inc_stat :msgs_published 1 connection.stats state.stats
-    t = current_task()
-    if !isnothing(t.storage) && haskey(t.storage, "sub_stats")
-        sub_stats = task_local_storage("sub_stats")
-        @inc_stat :msgs_published 1 sub_stats
+    inc_stats(:msgs_published, 1, connection.stats, state.stats)
+    sub_stats = ScopedValues.get(scoped_subscription_stats)
+    if !isnothing(sub_stats)
+        inc_stat(sub_stats.value, :msgs_published, 1)
     end
-    
-    
 end

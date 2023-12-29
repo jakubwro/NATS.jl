@@ -27,6 +27,7 @@ using DocStringExtensions
 using BufferedStreams
 using Sodium
 using CodecBase
+using ScopedValues
 
 import Base: show, convert, close, put!, take!
 
