@@ -20,6 +20,24 @@ end
 
 NATS.status()
 
+@testset "Publication subscription stats should be counted from nested spawned task." begin
+    conn = NATS.connect()
+    sub = subscribe(conn, "stats_test") do 
+        Threads.@spawn begin
+            Threads.@spawn publish(conn, "some_other_subject", "Some payload")
+        end
+    end
+    sleep(0.1)
+    publish(conn, "stats_test")
+    sleep(0.1)
+    @test conn.stats.msgs_published == 2
+    sub_stats = NATS.state.sub_stats[sub.sid]
+    @test sub_stats.msgs_published == 1
+    unsubscribe(conn, sub)
+end
+
+NATS.status()
+
 @testset "Method error hints." begin
     # hint = """To use `Type{Float64}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
     #         ```
