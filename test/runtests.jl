@@ -42,6 +42,7 @@ if have_nats
     include("reqreply.jl")
     # include("channel.jl")
     include("fallback_handler.jl")
+    include("experimental.jl")
 
     @testset "All subs should be closed" begin
         sleep(5)
