@@ -32,7 +32,7 @@ using ScopedValues
 import Base: show, convert, close, put!, take!
 
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
-export sconnection
+export with_connection
 
 const NATS_CLIENT_VERSION = "0.1.0"
 const NATS_CLIENT_LANG = "julia"

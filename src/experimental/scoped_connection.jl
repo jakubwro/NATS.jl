@@ -16,6 +16,20 @@ function subscribe(
     subscribe(f, sconnection[], subject; queue_group, async_handlers, channel_size, monitoring_throttle_seconds)
 end
 
+function unsubscribe(
+    sub::Sub;
+    max_msgs::Union{Int, Nothing} = nothing
+)
+    unsubscribe(sconnection[], sub; max_msgs)
+end
+
+function unsubscribe(
+    sid::String;
+    max_msgs::Union{Int, Nothing} = nothing
+)
+    unsubscribe(sconnection[], sid; max_msgs)
+end
+
 function publish(
     subject::String;
     reply_to::Union{String, Nothing} = nothing,
