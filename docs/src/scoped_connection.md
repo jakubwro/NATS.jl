@@ -2,6 +2,12 @@
 
 This feature allows to use implicit connection in a block of code. It utilizes [ScopedValues](https://github.com/vchuravy/ScopedValues.jl) package.
 
+## Functions
+
+```@docs
+with_connection
+```
+
 ## Examples
 
 ```julia
