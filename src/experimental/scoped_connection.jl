@@ -17,6 +17,30 @@
 
 const sconnection = ScopedValue{Connection}()
 
+function scoped_connection()
+    conn = ScopedValues.get(sconnection)
+    if isnothing(conn)
+        error("""No scoped connection.
+            To use methods without explicit `connection` parameter you need to wrap your logic into `with_connection` function.
+            
+            Example:
+            ```
+            nc = NATS.connect()
+            with_connection(nc) do
+                publish("some_subject", "Some payload")
+            end
+            ```
+
+            Or pass `connection` explicitly:
+            ```
+            nc = NATS.connect()
+            publish(nc, "some_subject", "Some payload")
+            ```
+            """)
+    end
+    conn.value
+end
+
 """
 $(SIGNATURES)
 
@@ -42,21 +66,21 @@ function subscribe(
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,
     monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
 )
-    subscribe(f, sconnection[], subject; queue_group, async_handlers, channel_size, monitoring_throttle_seconds)
+    subscribe(f, scoped_connection(), subject; queue_group, async_handlers, channel_size, monitoring_throttle_seconds)
 end
 
 function unsubscribe(
     sub::Sub;
     max_msgs::Union{Int, Nothing} = nothing
 )
-    unsubscribe(sconnection[], sub; max_msgs)
+    unsubscribe(scoped_connection(), sub; max_msgs)
 end
 
 function unsubscribe(
     sid::String;
     max_msgs::Union{Int, Nothing} = nothing
 )
-    unsubscribe(sconnection[], sid; max_msgs)
+    unsubscribe(scoped_connection(), sid; max_msgs)
 end
 
 function publish(
@@ -65,7 +89,7 @@ function publish(
     payload::Union{String, Nothing} = nothing,
     headers::Union{Nothing, Headers} = nothing
 )
-    publish(sconnection[], subject; payload, headers, reply_to)
+    publish(scoped_connection(), subject; payload, headers, reply_to)
 end
 
 function publish(
@@ -73,7 +97,7 @@ function publish(
     data;
     reply_to::Union{String, Nothing} = nothing
 )
-    publish(sconnection[], subject, data; reply_to)
+    publish(scoped_connection(), subject, data; reply_to)
 end
 
 function reply(
@@ -82,7 +106,7 @@ function reply(
     queue_group::Union{Nothing, String} = nothing,
     async_handlers = false
 )
-    reply(f, sconnection[], subject; queue_group, async_handlers)
+    reply(f, scoped_connection(), subject; queue_group, async_handlers)
 end
 
 function request(
@@ -90,7 +114,7 @@ function request(
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(sconnection[], subject, data; timer)
+    request(scoped_connection(), subject, data; timer)
 end
 
 function request(
@@ -99,7 +123,7 @@ function request(
     nreplies::Integer;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(sconnection[], subject, data, nreplies; timer)
+    request(scoped_connection(), subject, data, nreplies; timer)
 end
 
 function request(
@@ -108,5 +132,5 @@ function request(
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(sconnection[], T, subject, data; timer)
+    request(scoped_connection(), T, subject, data; timer)
 end

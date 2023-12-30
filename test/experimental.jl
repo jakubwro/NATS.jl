@@ -1,7 +1,7 @@
 using NATS, Test
 
 @testset "Scoped connections" begin
-    @test_throws KeyError publish("some.random.subject")
+    @test_throws ErrorException publish("some.random.subject")
 
     sc = NATS.connect()
     was_delivered = false
