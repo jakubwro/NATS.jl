@@ -11,7 +11,7 @@ using NATS, Test
         end
         publish("subject_1")
         publish("subject_1", "Some data") 
-        sleep(0.1)
+        sleep(0.5)
         unsubscribe(sub)
     end
     @test was_delivered == true
