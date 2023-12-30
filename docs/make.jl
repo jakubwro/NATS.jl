@@ -10,6 +10,7 @@ makedocs(
         "examples.md",
         "benchmarks.md",
         "custom-data.md",
+        "scoped_connection.md",
         "Functions" => [
             "connect.md",
             "pubsub.md",
