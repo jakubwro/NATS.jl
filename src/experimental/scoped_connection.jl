@@ -1,6 +1,35 @@
+### scoped_connection.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains implementation of simplified interface utilizing connection as dynamically scoped variable.
+#
+### Code:
 
 const sconnection = ScopedValue{Connection}()
 
+"""
+$(SIGNATURES)
+
+Create scope with ambient context connection, in which connection argument might be skipped during invocation of functions.
+
+Usage:
+```
+    nc = NATS.connect()
+    with_connection(nc) do
+        publish("some.subject") # No `connection` argument.
+    end
+```
+"""
 function with_connection(f, nc::Connection)
     with(f, sconnection => nc)
 end
