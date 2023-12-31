@@ -102,7 +102,6 @@ end
 $(SIGNATURES)
 
 This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-```
 """
 function publish(
     subject::String,

@@ -51,20 +51,23 @@ end
 # Cleanup subscription data when no more messages are expected.
 # """
 function _cleanup_sub(nc::Connection, sid::String)
-    lock(state.lock) do
+    @lock state.lock begin
         ch = get(state.handlers, sid, nothing)
         !isnothing(ch) && close(ch)
         delete!(state.handlers, sid)
+    end
+    @lock nc.lock begin
         delete!(nc.subs, sid)
         delete!(nc.unsubs, sid)
     end
+
 end
 
 # """
 # Update state on message received.
 # """
 function _cleanup_unsub_msg(nc::Connection, sid::AbstractString, n::Int64)
-    lock(state.lock) do
+    lock(nc.lock) do
         count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)
             count -= n

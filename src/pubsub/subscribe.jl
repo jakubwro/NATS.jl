@@ -47,6 +47,8 @@ function subscribe(
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
         state.sub_stats[sid] = sub_stats
+    end
+    @lock connection.lock begin
         connection.subs[sid] = sub
     end
     send(connection, sub)
