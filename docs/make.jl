@@ -8,14 +8,12 @@ makedocs(
     pages = [
         "index.md",
         "examples.md",
-        "benchmarks.md",
+        "connect.md",
+        "pubsub.md",
+        "reqreply.md",
         "custom-data.md",
         "scoped_connection.md",
-        "Functions" => [
-            "connect.md",
-            "pubsub.md",
-            "reqreply.md",
-        ],
+        "benchmarks.md",
         "Internals" => [
             "protocol.md",
             "interrupt_handling.md"

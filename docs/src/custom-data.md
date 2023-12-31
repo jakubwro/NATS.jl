@@ -1,4 +1,4 @@
-# Custom transport data structures
+# Transport data structures
 
 ## Using custom types as handler input
 
