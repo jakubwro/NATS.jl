@@ -102,25 +102,11 @@ end
 $(SIGNATURES)
 
 This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
-function publish(
-    subject::String;
-    reply_to::Union{String, Nothing} = nothing,
-    payload::Union{String, Nothing} = nothing,
-    headers::Union{Nothing, Headers} = nothing
-)
-    publish(scoped_connection(), subject; payload, headers, reply_to)
-end
-
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 ```
 """
 function publish(
     subject::String,
-    data;
+    data = nothing;
     reply_to::Union{String, Nothing} = nothing
 )
     publish(scoped_connection(), subject, data; reply_to)

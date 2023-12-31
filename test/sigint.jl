@@ -23,7 +23,7 @@ function run_test()
         for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:10
-                publish(connection, subject; payload = "Hi!")
+                publish(connection, subject, "Hi!")
             end
             Threads.atomic_add!(published_count, 10)
             try wait(timer) catch end

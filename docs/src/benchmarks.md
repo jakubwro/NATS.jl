@@ -174,7 +174,7 @@ julia>
 
 julia> while true
            for i in 1:100000
-            publish(nc, "foo"; payload = "This is a payload")
+            publish(nc, "foo", "This is a payload")
            end
            sleep(0.001)
        end

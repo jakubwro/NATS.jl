@@ -75,7 +75,7 @@ end
     @test restart_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.CONNECTED
-    publish(nc, subject; payload = "Hi!")
+    publish(nc, subject, "Hi!")
     sleep(5)
     @test Base.n_avail(c) == 1
 end
@@ -200,7 +200,7 @@ end
         for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:10
-                publish(nc, subject; payload = "Hi!")
+                publish(nc, subject, "Hi!")
             end
             Threads.atomic_add!(published_count, 10)
             try wait(timer) catch end

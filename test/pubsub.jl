@@ -8,7 +8,7 @@ using Random
     sub = subscribe(nc, "SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!")
+    publish(nc, "SOME.BAR", "Hi!")
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
@@ -26,7 +26,7 @@ NATS.status()
     sub = subscribe(connection, "SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(connection, "SOME.BAR"; payload = "Hi!")
+    publish(connection, "SOME.BAR", "Hi!")
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
@@ -39,7 +39,7 @@ NATS.status()
     sub = subscribe(connection, "SOME.BAR") do msg::String
         put!(c, msg)
     end
-    publish(connection, "SOME.BAR"; payload = "Hi!")
+    publish(connection, "SOME.BAR", "Hi!")
     result = take!(c)
     unsubscribe(connection, sub)
     @test result == "Hi!"
@@ -53,7 +53,7 @@ NATS.status()
     sub = subscribe(nc, "SOME.BAR") do msg::String
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!")
+    publish(nc, "SOME.BAR", "Hi!")
     result = take!(c)
     @test result == "Hi!"
     @test length(NATS.state.handlers) == 1
@@ -69,7 +69,7 @@ NATS.status()
     sub = subscribe(nc, "SOME.BAR") do msg
         put!(c, msg)
     end
-    publish(nc, "SOME.BAR"; payload = "Hi!", headers = ["A" => "B"])
+    publish(nc, "SOME.BAR", ("Hi!", ["A" => "B"]))
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
@@ -89,7 +89,7 @@ NATS.status()
         was_delivered = true
         "nothing to do"
     end
-    publish(nc, subject, payload = "Hi!")
+    publish(nc, subject, "Hi!")
     sleep(1)
     unsubscribe(nc, sub)
     @test was_delivered

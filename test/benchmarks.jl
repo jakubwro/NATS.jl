@@ -20,7 +20,7 @@ include("util.jl")
             try put!(c, msg) catch err @error err end
         end
     end
-    publish(connection, subject; payload = "Hi!")
+    publish(connection, subject, "Hi!")
     unsubscribe(connection, sub)
     sleep(2)
     close(c)
@@ -124,7 +124,7 @@ end
     counter = 0
     c = 0
     while isopen(tm)
-        publish(connection, "zxc"; payload = "Hello world!!!!!")
+        publish(connection, "zxc", "Hello world!!!!!")
         counter = counter + 1
         c += 1
         if c == 10000

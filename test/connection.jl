@@ -74,7 +74,7 @@ NATS.status()
 
     tm = Timer(7)
     while isopen(tm)
-        publish(nc, subject, payload = "Hi!")
+        publish(nc, subject, "Hi!")
         sleep(0.1)
     end
     sleep(1) # wait for all errors.
@@ -93,7 +93,7 @@ NATS.status()
 
     tm = Timer(7)
     while isopen(tm)
-        publish(nc, subject, payload = "Hi!")
+        publish(nc, subject, "Hi!")
         sleep(0.1)
     end
     sleep(1) # wait for all errors.
@@ -196,7 +196,7 @@ NATS.status()
     connection = NATS.connect(send_buffer_size = 5, send_retry_delays = [])
 
     @test_throws ErrorException for _ in 1:100
-        publish(connection, "overflow_buffer"; payload = "some long payload to overflow buffer")
+        publish(connection, "overflow_buffer", "some long payload to overflow buffer")
     end
     NATS.ping(connection) # Ping should work even when buffer is overflown
     
@@ -206,7 +206,7 @@ NATS.status()
         counter += 1
     end
     for _ in 1:100
-        publish(connection, "overflow_buffer"; payload = "test retry path")
+        publish(connection, "overflow_buffer", "test retry path")
     end
     sleep(1)
     unsubscribe(connection, sub)

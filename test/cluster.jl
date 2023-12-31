@@ -87,7 +87,7 @@ end
     n = 1500
     start_time = time()
     for i in 1:n
-        publish(pub_conn, "a_topic"; payload = "$i")
+        publish(pub_conn, "a_topic", "$i")
         sleep(0.001)
     end
     @info "Published $n messages in $(time() - start_time) seconds."
@@ -133,7 +133,7 @@ end
         for i in 1:10000
             timer = Timer(0.001)
             for _ in 1:100
-                publish(subject; payload = "Hi!", connection)
+                publish(connection, subject, "Hi!")
             end
             Threads.atomic_add!(published_count, 100)
             try wait(timer) catch end
