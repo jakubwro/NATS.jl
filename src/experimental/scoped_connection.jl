@@ -61,7 +61,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function subscribe(
     f,
@@ -77,7 +77,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function unsubscribe(
     sub::Sub;
@@ -89,7 +89,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function unsubscribe(
     sid::String;
@@ -101,7 +101,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function publish(
     subject::String;
@@ -129,7 +129,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function reply(
     f,
@@ -143,7 +143,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function request(
     subject::String,
@@ -156,7 +156,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function request(
     subject::String,
@@ -170,7 +170,7 @@ end
 """
 $(SIGNATURES)
 
-This overload is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function request(
     T::Type,
