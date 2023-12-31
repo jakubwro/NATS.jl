@@ -36,13 +36,13 @@ function Base.show(io::IO, ::MIME_PAYLOAD, payload::String)
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Headers}) where TPayload
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{<:Any, Headers})
     # Allows to return tuple from handler, useful to override headers.
     Base.show(io, mime, first(tup))
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{TPayload, Nothing}) where TPayload
+function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{<:Any, Nothing})
     # Handle edge case when some method will return nothing headers, but still in a tuple with payload.
     Base.show(io, mime, first(tup))
     nothing
@@ -60,7 +60,7 @@ function Base.show(io::IO, ::MIME_HEADERS, ::Nothing)
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{TPayload, Headers}) where TPayload
+function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{<:Any, Headers})
     Base.show(io, mime, last(tup))
     nothing
 end
