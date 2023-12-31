@@ -25,7 +25,7 @@ NATS.status()
     sub2 = reply(nc, subject) do msg
         "Reply from service 2."
     end
-    results = request(nc, subject, "This is request payload", 2)
+    results = request(nc, 2, subject, "This is request payload")
     sleep(1)
     unsubscribe(nc, sub1)
     unsubscribe(nc, sub2)
@@ -122,7 +122,7 @@ NATS.status()
     sub = reply(nc, "SOME.REQUESTS") do msg::String
         "Received $msg"
     end
-    result = request(nc, String, "SOME.REQUESTS", "Hi!")
+    result = request(String, nc, "SOME.REQUESTS", "Hi!")
     unsubscribe(nc, sub)
     @test result isa String
     @test result == "Received Hi!"

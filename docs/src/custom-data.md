@@ -62,7 +62,7 @@ sub = reply(connection, "EMPLOYEES.SUPERVISOR") do person::Person
     end
 end
 
-julia> request(connection, Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
+julia> request(Person, connection, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
 Person("Bob", 44)
 
 ```
@@ -105,7 +105,7 @@ sub = reply(nc, "EMPLOYEES.SUPERVISOR") do person::Person
         Person("Unknown", 0, ""), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
     end
 end
-supervisor = request(nc, Person, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
+supervisor = request(Person, nc, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
 @show supervisor
 
 error_response = request(nc, "EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"));

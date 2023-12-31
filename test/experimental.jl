@@ -27,7 +27,7 @@ using NATS, Test
         sub2 = reply("service_1") do 
             "Response content 2"
         end
-        answers = request("service_1", nothing, 2)
+        answers = request(2, "service_1", nothing)
         @test length(answers) == 2
         unsubscribe(sub.sid)
         unsubscribe(sub2.sid)

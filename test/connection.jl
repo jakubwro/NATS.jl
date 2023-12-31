@@ -50,7 +50,7 @@ NATS.status()
     @test_throws MethodError subscribe(nc, "SOME.THING") do msg::Float64 end
     @test_throws MethodError request(nc, "SOME.REQUESTS", 4)
     # hint = """Object of type `Int64` cannot be serialized into payload."""
-    @test_throws MethodError request(nc, "SOME.REQUESTS", 4, 4) # TODO: in this case there should be rather warning about missing payload.
+    @test_throws MethodError request(nc, 4, "SOME.REQUESTS", 4) # TODO: in this case there should be rather warning about missing payload.
     # hint = """To use `Type{Integer}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
     #         ```
     #         import Base: convert

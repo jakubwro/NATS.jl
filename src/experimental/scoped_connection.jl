@@ -159,12 +159,12 @@ $(SIGNATURES)
 This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
 """
 function request(
+    nreplies::Integer,
     subject::String,
-    data,
-    nreplies::Integer;
+    data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(scoped_connection(), subject, data, nreplies; timer)
+    request(scoped_connection(), nreplies, subject, data; timer)
 end
 
 """
@@ -178,5 +178,5 @@ function request(
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    request(scoped_connection(), T, subject, data; timer)
+    request(T, scoped_connection(), subject, data; timer)
 end

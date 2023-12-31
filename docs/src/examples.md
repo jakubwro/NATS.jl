@@ -105,21 +105,21 @@ julia> rep = request(connection, "some_subject");
 julia> payload(rep)
 "Reply from worker 1"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 1"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 2"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 2"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 2"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 1"
 
-julia> rep = request(connection, String, "some_subject")
+julia> rep = request(String, connection, "some_subject")
 "Reply from worker 1"
 ```

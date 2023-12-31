@@ -40,7 +40,7 @@ function request(
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
-    replies = request(connection, subject, data, 1; timer)
+    replies = request(connection, 1, subject, data; timer)
     if isempty(replies) || all(has_error_status, replies)
         error("No replies received.")
     end
@@ -61,15 +61,15 @@ Optional keyword arguments are:
 
 # Examples
 ```julia-repl
-julia> request("help.please", nreplies = 2; timer = Timer(0))
+julia> request(nc, 2, "help.please"; timer = Timer(0))
 NATS.Msg[]
 ```
 """
 function request(
     connection::Connection,
+    nreplies::Integer,
     subject::String,
-    data,
-    nreplies::Integer;
+    data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
 )
     find_data_conversion_or_throw(typeof(data))
@@ -98,9 +98,12 @@ function request(
     replies
 end
 
+"""
+Request a reply from a service listening for `subject` messages. Reply is converted to specified type. Apropriate `convert` method must be defined, otherwise error is thrown.
+"""
 function request(
-    connection::Connection,
     T::Type,
+    connection::Connection,
     subject::String,
     data = nothing;
     timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
