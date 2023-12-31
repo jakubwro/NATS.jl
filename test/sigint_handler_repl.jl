@@ -16,7 +16,7 @@ function run_test()
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
-    sub = subscribe(subject; connection) do msg
+    sub = subscribe(connection, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
     sleep(0.5)
