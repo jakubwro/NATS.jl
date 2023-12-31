@@ -31,7 +31,7 @@ end</code></pre><pre><code class="language-julia hljs">sub = reply(connection, &
     end
 end
 
-julia&gt; request(connection, Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 22))
+julia&gt; request(Person, connection, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 22))
 Person(&quot;Bob&quot;, 44)
 </code></pre><h2 id="Error-handling"><a class="docs-heading-anchor" href="#Error-handling">Error handling</a><a id="Error-handling-1"></a><a class="docs-heading-anchor-permalink" href="#Error-handling" title="Permalink"></a></h2><p>Errors can be handled with custom headers.</p><pre><code class="language-julia hljs">using NATS
 
@@ -66,10 +66,10 @@ sub = reply(nc, &quot;EMPLOYEES.SUPERVISOR&quot;) do person::Person
         Person(&quot;Unknown&quot;, 0, &quot;&quot;), [&quot;status&quot; =&gt; &quot;error&quot;, &quot;message&quot; =&gt; &quot;Supervisor not defined for $(person.name)&quot; ]
     end
 end
-supervisor = request(nc, Person, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 33, &quot;IT&quot;))
+supervisor = request(Person, nc, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Alice&quot;, 33, &quot;IT&quot;))
 @show supervisor
 
 error_response = request(nc, &quot;EMPLOYEES.SUPERVISOR&quot;, Person(&quot;Anna&quot;, 33, &quot;ACCOUNTING&quot;));
 @show headers(error_response)
 
-unsubscribe(nc, sub)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reqreply/">« Request - reply</a><a class="docs-footer-nextpage" href="../scoped_connection/">Scoped connection »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Sunday 31 December 2023 11:23">Sunday 31 December 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+unsubscribe(nc, sub)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../reqreply/">« Request - reply</a><a class="docs-footer-nextpage" href="../scoped_connection/">Scoped connection »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Sunday 31 December 2023 18:06">Sunday 31 December 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
