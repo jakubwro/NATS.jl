@@ -61,9 +61,13 @@ function connect_urls(nc::Connection)::Vector{Tuple{String, Int}}
         [(nc.host, nc.port)]
     else
         map(urls) do url
-            @assert ':' in url "$url is not correct"
-            host, port = split(url, ":")
-            host, parse(Int, port)
+            if ':' in url
+                host, port = split(url, ":")
+                host, parse(Int, port)
+            else
+                # No port specified, use default
+                url, 4222
+            end
         end
     end
 end
@@ -82,7 +86,7 @@ function init_protocol(host, port, options; nc = nothing)
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
             tls_options = options[(:tls_ca_cert_path, :tls_client_cert_path, :tls_client_key_path)]
             (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
-            @info "Socket upgraded"
+            @debug "Socket upgraded"
         end
 
         if !isnothing(info_msg.nonce)
@@ -140,7 +144,7 @@ function receiver(nc::Connection, io::IO)
         end
         # process(nc, next_protocol_message(io))
     end
-    @warn "Receiver task finished."
+    @debug "Receiver task finished."
 end
 
 #TODO: restore link #NATS.Connect
@@ -198,10 +202,10 @@ function connect(
                 try
                     wait(err_channel)
                 catch err
-                    istaskfailed(receiver_task) && @error "Receiver task failed:" receiver_task.result
-                    istaskfailed(sender_task) && @error "Sender task failed:" sender_task.result
+                    istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
+                    istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
                     reopen_send_buffer(nc)
-                    @info "Wait end time: $(time())"
+                    @debug "Wait end time: $(time())"
                     close(sock)
                     break
                 end
@@ -213,8 +217,8 @@ function connect(
             try wait(sender_task) catch end
             # try wait(receiver_task) catch end
 
-            @warn "Reconnecting..."
             status(nc, CONNECTING)
+            @warn "Reconnecting"
             start_time = time()
             # TODO: handle repeating server Err messages.
             start_reconnect_time = time()

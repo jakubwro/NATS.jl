@@ -15,9 +15,9 @@ function find_container_id(name)
 end
 
 port_to_container = Dict(
-    5222 => find_container_id("nats-node-1"),
-    5223 => find_container_id("nats-node-2"),
-    5224 => find_container_id("nats-node-3")
+    4222 => find_container_id("nats-node-1"),
+    4223 => find_container_id("nats-node-2"),
+    4224 => find_container_id("nats-node-3")
 )
 
 function signal_lame_duck_mode(container_id)
@@ -33,7 +33,7 @@ function start_container(container_id)
 end
 
 @testset "Request during node switch" begin
-    connection = NATS.connect("localhost", 5222)
+    connection = NATS.connect("localhost", 4222)
 
     sub = reply(connection, "a_topic"; spawn = true) do msg
         sleep(7)
@@ -42,7 +42,7 @@ end
 
     errormonitor(@async begin
         sleep(2)
-        signal_lame_duck_mode(port_to_container[5222])
+        signal_lame_duck_mode(port_to_container[4222])
     end)
 
     start_time = time()
@@ -50,18 +50,18 @@ end
     @info "Response time was $(time() - start_time)"
 
     @test response == "This is a reply."
-    @test connection.port != 5222
+    @test connection.port != 4222
 
     sleep(15) # Wait at least 10 s for server exit
-    start_container(port_to_container[5222])
+    start_container(port_to_container[4222])
     sleep(10)
-    @test "localhost:5222" in connection.info.connect_urls
+    @test "localhost:4222" in connection.info.connect_urls
     drain(connection)
 end
 
 @testset "No messages lost during node switch." begin
-    pub_conn = NATS.connect("localhost", 5222) # TODO: unclear why echo needs to be false to not have doubled msgs.
-    sub_conn = NATS.connect("localhost", 5223) 
+    pub_conn = NATS.connect("localhost", 4222) # TODO: unclear why echo needs to be false to not have doubled msgs.
+    sub_conn = NATS.connect("localhost", 4223) 
     
     sub_conn_received_count = 0
     sub_conn_results = []
@@ -81,7 +81,7 @@ end
 
     errormonitor(@async begin
         sleep(2)
-        signal_lame_duck_mode(port_to_container[5222])
+        signal_lame_duck_mode(port_to_container[4222])
     end)
 
     n = 1500
@@ -106,7 +106,7 @@ end
     @show first(sub_conn_results) last(sub_conn_results)
 
     sleep(15) # Wait at least 10 s for server exit
-    start_container(port_to_container[5222])
+    start_container(port_to_container[4222])
     sleep(10)
 
     drain(pub_conn)
@@ -117,8 +117,8 @@ end
 end
 
 @testset "Lame Duck Mode during heavy publications" begin
-    connection = NATS.connect("localhost", 5222)
-    subscription_connection = NATS.connect("localhost", 5224)
+    connection = NATS.connect("localhost", 4222)
+    subscription_connection = NATS.connect("localhost", 4224)
 
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
@@ -143,7 +143,7 @@ end
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
     sleep(2)
-    signal_lame_duck_mode(port_to_container[5222])
+    signal_lame_duck_mode(port_to_container[4222])
 
     while !istaskdone(pub_task)
         sleep(2)
@@ -156,16 +156,16 @@ end
     @test published_count[] == received_count.value[]
 
     sleep(15) # Wait at least 10 s for server exit
-    start_container(port_to_container[5222])
+    start_container(port_to_container[4222])
     sleep(10)
-    @test "localhost:5222" in connection.info.connect_urls
+    @test "localhost:4222" in connection.info.connect_urls
     drain(connection)
 end
 
 
 # @testset "Switch sub connection." begin
-#     conn_a = NATS.connect("localhost", 5222)
-#     conn_b = NATS.connect("localhost", 5223) 
+#     conn_a = NATS.connect("localhost", 4222)
+#     conn_b = NATS.connect("localhost", 4223) 
 
 #     subject = "switch"
 

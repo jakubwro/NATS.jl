@@ -16,12 +16,12 @@
 ### Code:
 
 function process(nc::Connection, msg::Info)
-    @info "New INFO received: ." msg
+    @debug "New INFO received: ." msg
     info(nc, msg)
 
     if !isnothing(msg.ldm) && msg.ldm
         @warn "Server is in Lame Duck Mode, forcing reconnect to other server"
-        @info "Connect urls are: $(msg.connect_urls)"
+        @debug "Connect urls are: $(msg.connect_urls)"
         reopen_send_buffer(nc)
     end
 end
@@ -32,7 +32,7 @@ function process(nc::Connection, ping::Ping)
 end
 
 function process(nc::Connection, pong::Pong)
-    @info "Received pong."
+    @debug "Received pong."
 end
 
 function process(nc::Connection, batch::Vector{ProtocolMessage})

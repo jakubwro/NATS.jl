@@ -82,9 +82,9 @@ function reopen_send_buffer(nc::Connection)
             unsub_max_msgs = get(nc.unsubs, sid, nothing) # TODO: lock on connection may be needed
             isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
         end
-        @info "Restored subs buffer length $(length(data))"
+        @debug "Restored subs buffer length $(length(data))"
         write(new_send_buffer, data)
-        @info "Total restored buffer length $(length(data))"
+        @debug "Total restored buffer length $(length(data))"
         close(nc.send_buffer)
         nc.send_buffer = new_send_buffer
         notify(nc.send_buffer_cond)
@@ -110,6 +110,6 @@ function sendloop(nc::Connection, io::IO)
         write(io, buf)
         # flush(io)
     end
-    @info "Sender task finished. $(length(send_buffer)) bytes in send buffer."
+    @debug "Sender task finished. $(send_buffer.size) bytes in send buffer."
     error("sender task finished")
 end
