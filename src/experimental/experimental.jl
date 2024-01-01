@@ -15,5 +15,4 @@
 #
 ### Code:
 
-include("channel.jl")
 include("scoped_connection.jl")
