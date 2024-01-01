@@ -140,7 +140,7 @@ function receiver(nc::Connection, io::IO)
         end
         # process(nc, next_protocol_message(io))
     end
-    @warn "Receiver task finished at $(time())"
+    @warn "Receiver task finished."
 end
 
 #TODO: restore link #NATS.Connect

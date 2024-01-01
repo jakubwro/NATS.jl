@@ -22,7 +22,7 @@ Subscribe to a subject.
 
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
-- `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
+- `spawn`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 - `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$SUBSCRIPTION_CHANNEL_SIZE`
 - `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
 """
@@ -31,7 +31,7 @@ function subscribe(
     connection::Connection,
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
-    async_handlers = false,
+    spawn = false,
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,
     monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
 )
@@ -41,12 +41,14 @@ function subscribe(
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
+    @lock NATS.state.lock begin
+        state.sub_stats[sid] = sub_stats
+    end
     channel = with(scoped_subscription_stats => sub_stats) do
-        _start_tasks(f_typed, sub_stats, connection.stats, async_handlers, subject, channel_size, monitoring_throttle_seconds)
+        _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, channel_size, monitoring_throttle_seconds)
     end
     @lock NATS.state.lock begin
         state.handlers[sid] = channel
-        state.sub_stats[sid] = sub_stats
     end
     @lock connection.lock begin
         connection.subs[sid] = sub
@@ -79,10 +81,10 @@ function reset_counter!(data::SubscriptionMonitoringData)
     end
 end
 
-function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, async_handlers::Bool, subject::String, channel_size::Int64, monitoring_throttle_seconds::Float64)
+function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::Bool, subject::String, channel_size::Int64, monitoring_throttle_seconds::Float64)
     subscription_channel = Channel(channel_size)
     monitoring_data = SubscriptionMonitoringData()
-    if async_handlers == true
+    if spawn == true
         subscription_task = Threads.@spawn :interactive disable_sigint() do
             try
                 while true

@@ -35,7 +35,7 @@ end
 @testset "Request during node switch" begin
     connection = NATS.connect("localhost", 5222)
 
-    sub = reply(connection, "a_topic"; async_handlers = true) do msg
+    sub = reply(connection, "a_topic"; spawn = true) do msg
         sleep(7)
         "This is a reply."
     end
@@ -65,14 +65,14 @@ end
     
     sub_conn_received_count = 0
     sub_conn_results = []
-    sub1 = subscribe(sub_conn, "a_topic"; async_handlers = false) do msg
+    sub1 = subscribe(sub_conn, "a_topic"; spawn = false) do msg
         sub_conn_received_count = sub_conn_received_count + 1
         push!(sub_conn_results, payload(msg))
     end
 
     pub_conn_received_count = 0
     pub_conn_results = []
-    sub2 = subscribe(pub_conn, "a_topic"; async_handlers = false) do msg
+    sub2 = subscribe(pub_conn, "a_topic"; spawn = false) do msg
         pub_conn_received_count = pub_conn_received_count + 1
         push!(pub_conn_results, payload(msg))
     end

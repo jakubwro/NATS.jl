@@ -87,7 +87,7 @@ NATS.status()
 
 @testset "Handler error throttling async." begin
     subject = randstring(8)
-    sub = subscribe(nc, subject, async_handlers = true) do msg
+    sub = subscribe(nc, subject, spawn = true) do msg
         error("Just testing...")
     end
 
@@ -158,14 +158,14 @@ NATS.status()
 
 @testset "Subscription warnings" begin
     NATS.status()
-    sub1 = subscribe(nc, "too_many_handlers", async_handlers = true, monitoring_throttle_seconds = 15.0) do msg
+    sub1 = subscribe(nc, "too_many_handlers", spawn = true, monitoring_throttle_seconds = 15.0) do msg
         sleep(21)
     end
     for _ in 1:1001
         publish(nc, "too_many_handlers")
     end
 
-    sub2 = subscribe(nc, "overload_channel", async_handlers = false, channel_size = 100, monitoring_throttle_seconds = 15.0) do msg
+    sub2 = subscribe(nc, "overload_channel", spawn = false, channel_size = 100, monitoring_throttle_seconds = 15.0) do msg
         sleep(21)
     end
     for _ in 1:82
@@ -178,7 +178,7 @@ NATS.status()
     unsubscribe(nc, sub2)
 
     NATS.status()
-    sub3 = subscribe(nc, "overload_channel", async_handlers = false, channel_size = 10) do msg
+    sub3 = subscribe(nc, "overload_channel", spawn = false, channel_size = 10) do msg
         sleep(5)
     end
     for _ in 1:15

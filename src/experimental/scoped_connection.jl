@@ -67,11 +67,11 @@ function subscribe(
     f,
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
-    async_handlers = false,
+    spawn = false,
     channel_size = SUBSCRIPTION_CHANNEL_SIZE,
     monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
 )
-    subscribe(f, scoped_connection(), subject; queue_group, async_handlers, channel_size, monitoring_throttle_seconds)
+    subscribe(f, scoped_connection(), subject; queue_group, spawn, channel_size, monitoring_throttle_seconds)
 end
 
 """
@@ -120,9 +120,9 @@ function reply(
     f,
     subject::String;
     queue_group::Union{Nothing, String} = nothing,
-    async_handlers = false
+    spawn = false
 )
-    reply(f, scoped_connection(), subject; queue_group, async_handlers)
+    reply(f, scoped_connection(), subject; queue_group, spawn)
 end
 
 """

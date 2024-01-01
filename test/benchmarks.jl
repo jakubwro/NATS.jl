@@ -27,13 +27,13 @@ include("util.jl")
     NATS.status()
 end
 
-function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, async_handlers = false)
+function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, spawn = false)
     empty!(NATS.state.fallback_handlers)
     c = Channel(100000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     tm = Timer(time_to_wait_s)
-    sub = subscribe(connection, subject; async_handlers) do msg
+    sub = subscribe(connection, subject; spawn) do msg
         if isopen(tm)
             try put!(c, msg) catch err @error err end
         end
@@ -89,7 +89,7 @@ end
 @testset "Requests per second with async handlers." begin
     connection = NATS.connect()
     subject = randstring(5)
-    sub = reply(connection, subject; async_handlers = true) do msg
+    sub = reply(connection, subject; spawn = true) do msg
         "This is a reply."
     end
     counter = 0

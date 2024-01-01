@@ -22,7 +22,7 @@ Reply for messages for a `subject`. Works like `subscribe` with automatic `publi
 
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
-- `async_handlers`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
+- `spawn`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 
 # Examples
 ```julia-repl
@@ -44,12 +44,12 @@ function reply(
     connection::Connection,
     subject::String;
     queue_group::Union{Nothing, String} = nothing,
-    async_handlers = false
+    spawn = false
 )
     T = argtype(f)
     find_msg_conversion_or_throw(T)
     fast_f = _fast_call(f, T)
-    subscribe(connection, subject; queue_group, async_handlers) do msg
+    subscribe(connection, subject; queue_group, spawn) do msg
         data = fast_f(msg)
         publish(connection, msg.reply_to, data)
     end

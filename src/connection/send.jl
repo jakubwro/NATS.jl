@@ -110,6 +110,6 @@ function sendloop(nc::Connection, io::IO)
         write(io, buf)
         # flush(io)
     end
-    @info "Sender task finished at $(time())" #TODO: bytes in buffer
+    @info "Sender task finished. $(length(send_buffer)) bytes in send buffer."
     error("sender task finished")
 end
