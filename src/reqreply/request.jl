@@ -91,10 +91,8 @@ function request(
     end
     bind(replies_channel, timeout_task)
     errormonitor(timeout_task)
-    # @info "waiting"
     replies = collect(replies_channel) # Waits until channel closed.
-    # @show replies
-    @debug "Received $(length(replies)) messages with statuses: $(map(m -> statuscode(m), replies))"
+    # @debug "Received $(length(replies)) messages with statuses: $(map(m -> statuscode(m), replies))"
     replies
 end
 

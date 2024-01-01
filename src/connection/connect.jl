@@ -173,7 +173,7 @@ Options are:
 - `nkey_seed`: the private NKey to authenticate the client
 """
 function connect(
-    host::String = get(ENV, "NATS_HOST", "localhost"),
+    host::String = get(ENV, "NATS_HOST", "localhost"), # TODO: change ENV to provide list of urls
     port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
     reconnect_delays = RECONNECT_DELAYS,
     send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
@@ -218,7 +218,7 @@ function connect(
             # try wait(receiver_task) catch end
 
             status(nc, CONNECTING)
-            @warn "Reconnecting"
+            @warn "Disconnected, trying to reconnect"
             start_time = time()
             # TODO: handle repeating server Err messages.
             start_reconnect_time = time()

@@ -155,7 +155,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             end
 
         end
-        @debug "Subscription monitoring task finished" subject
+        # @debug "Subscription monitoring task finished" subject
     end
     errormonitor(subscription_monitoring_task)
 
