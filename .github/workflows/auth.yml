@@ -68,11 +68,11 @@ jobs:
       - run: |
           julia --project -e 'using Pkg; Pkg.instantiate()'
       - run: |
-          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_URL=localhost:4222 NATS_AUTH_TOKEN=s3cr3t julia --color=yes --code-coverage=user --project test/runtests.jl
+          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CONNECT_URL=localhost:4222 NATS_AUTH_TOKEN=s3cr3t julia --color=yes --code-coverage=user --project test/runtests.jl
       - run: |
-          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_URL=localhost:4223 NATS_USER=jakub NATS_PASS=passw0rd julia --color=yes --code-coverage=user --project test/runtests.jl
+          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CONNECT_URL=localhost:4223 NATS_USER=jakub NATS_PASS=passw0rd julia --color=yes --code-coverage=user --project test/runtests.jl
       - run: |
-          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_URL=localhost:4224 NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --color=yes --code-coverage=user --project test/runtests.jl
+          JULIA_DEBUG=NATS JULIA_NUM_THREADS=${{ matrix.julia-num-threads }} NATS_CONNECT_URL=localhost:4224 NATS_NKEY_SEED=SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA NATS_NKEY=UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J julia --color=yes --code-coverage=user --project test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
         #   annotate: true
       - name: Upload coverage reports to Codecov

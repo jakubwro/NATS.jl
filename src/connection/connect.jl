@@ -198,7 +198,6 @@ function connect(
 )
 
     options = merge(default_connect_options(), options)
-    @debug options
     sock, read_stream, write_stream, info_msg = init_protocol(url, options)
 
     nc = Connection(; url, send_buffer_size, send_retry_delays, info = info_msg)
