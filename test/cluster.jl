@@ -50,7 +50,8 @@ end
     @info "Response time was $(time() - start_time)"
 
     @test response == "This is a reply."
-    @test connection.port != 4222
+    @show connection.url
+    @test !endswith(connection.url, ":4222")
 
     sleep(15) # Wait at least 10 s for server exit
     start_container(port_to_container[4222])
