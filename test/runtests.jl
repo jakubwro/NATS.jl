@@ -18,7 +18,9 @@ include("protocol.jl")
 
 function is_nats_available()
     try
-        Sockets.getaddrinfo(get(ENV, "NATS_HOST", "localhost"))
+        url = get(ENV, "NATS_CONNECT_URL", NATS.DEFAULT_CONNECT_URL)
+        host, port = NATS.host_port(url)
+        Sockets.getaddrinfo(host)
         nc = NATS.connect()
         sleep(5)
         @assert nc.status == NATS.CONNECTED

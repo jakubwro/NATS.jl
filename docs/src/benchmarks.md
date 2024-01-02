@@ -80,7 +80,7 @@ Start reply service
 
 ```
 julia> using NATS
-julia> nc = NATS.connect(default = true);
+julia> nc = NATS.connect();
 julia> reply(nc, "foo") do
            "This is a reply."
        end
@@ -165,7 +165,7 @@ NATS Pub/Sub stats: 2,251,521 msgs/sec ~ 34.36 MB/sec
 ```
 julia> using NATS
 
-julia> nc = NATS.connect(default = true);
+julia> nc = NATS.connect();
 Threads.threadid() = 
 julia> 
 julia> Threads.threadid() = 1

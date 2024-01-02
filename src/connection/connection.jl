@@ -23,8 +23,7 @@ const DEFAULT_SEND_BUFFER_SIZE = 2 * 2^20
 const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
 
 @kwdef mutable struct Connection
-    host::String
-    port::Int64
+    url::String
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
     info::Info

@@ -28,27 +28,37 @@ using BufferedStreams
 using Sodium
 using CodecBase
 using ScopedValues
+using URIs
 
 import Base: show, convert, close, put!, take!
 
 export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
 export with_connection
 
-const NATS_CLIENT_VERSION = "0.1.0"
-const NATS_CLIENT_LANG = "julia"
+const DEFAULT_HOST = "localhost"
+const DEFAULT_PORT = "4222"
+const DEFAULT_CONNECT_URL = "nats://$(DEFAULT_HOST):$(DEFAULT_PORT)"
+const CLIENT_VERSION = "0.1.0"
+const CLIENT_LANG = "julia"
 
 const MIME_PROTOCOL = MIME"application/nats"
 const MIME_PAYLOAD  = MIME"application/nats-payload"
 const MIME_HEADERS  = MIME"application/nats-headers"
 
-const RECONNECT_DELAYS = Base.ExponentialBackOff(n=220752000000000000, first_delay=0.0001, max_delay=1) # 7 bilion years.
+# Granular reconnect retries configuration
+const DEFAULT_RECONNECT_RETRIES = "220752000000000000" # 7 bilion years.
+const DEFAULT_RECONNECT_FIRST_DELAY = "0.0001"
+const DEFAULT_RECONNECT_MAX_DELAY = "2.0"
+const DEFAULT_RECONNECT_FACTOR = "5.0"
+const DEFAULT_RECONNECT_JITTER = "0.1"
+
 const SUBSCRIPTION_CHANNEL_SIZE = 10000000
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
 const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
-const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false
-const INVOKE_LATEST_CONVERSIONS = false
+const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false # TODO: use this in code
+const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code
 
 include("protocol/protocol.jl")
 include("connection/connection.jl")

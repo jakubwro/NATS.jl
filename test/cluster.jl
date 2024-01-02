@@ -33,7 +33,7 @@ function start_container(container_id)
 end
 
 @testset "Request during node switch" begin
-    connection = NATS.connect("localhost", 4222)
+    connection = NATS.connect("localhost:4222")
 
     sub = reply(connection, "a_topic"; spawn = true) do msg
         sleep(7)
@@ -60,8 +60,8 @@ end
 end
 
 @testset "No messages lost during node switch." begin
-    pub_conn = NATS.connect("localhost", 4222) # TODO: unclear why echo needs to be false to not have doubled msgs.
-    sub_conn = NATS.connect("localhost", 4223) 
+    pub_conn = NATS.connect("localhost:4222") # TODO: unclear why echo needs to be false to not have doubled msgs.
+    sub_conn = NATS.connect("localhost:4223") 
     
     sub_conn_received_count = 0
     sub_conn_results = []
@@ -117,8 +117,8 @@ end
 end
 
 @testset "Lame Duck Mode during heavy publications" begin
-    connection = NATS.connect("localhost", 4222)
-    subscription_connection = NATS.connect("localhost", 4224)
+    connection = NATS.connect("localhost:4222")
+    subscription_connection = NATS.connect("localhost:4224")
 
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)

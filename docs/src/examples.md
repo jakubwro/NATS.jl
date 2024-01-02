@@ -11,7 +11,7 @@ docker run -p 4222:4222 nats:latest
 ```julia
 julia> using NATS
 
-julia> nc = NATS.connect(default = true)
+julia> nc = NATS.connect()
 NATS.Connection(unnamed cluster, CONNECTED, 0 subs, 0 unsubs)
 
 julia> sub = subscribe(nc, "test_subject") do msg

@@ -25,8 +25,8 @@ function default_connect_options()
         user = get(ENV, "NATS_USER", nothing),
         pass = get(ENV, "NATS_PASS", nothing),
         name = nothing,
-        lang = NATS_CLIENT_LANG,
-        version = NATS_CLIENT_VERSION,
+        lang = CLIENT_LANG,
+        version = CLIENT_VERSION,
         protocol = 1,
         echo = nothing,
         sig = nothing,
@@ -42,6 +42,15 @@ function default_connect_options()
     )
 end
 
+function default_reconnect_delays()
+    ExponentialBackOff(
+        n = parse(Int64, get(ENV, "NATS_RECONNECT_RETRIES", DEFAULT_RECONNECT_RETRIES)),
+        first_delay = parse(Float64, get(ENV, "NATS_RECONNECT_FIRST_DELAY", DEFAULT_RECONNECT_FIRST_DELAY)),
+        max_delay = parse(Float64, get(ENV, "NATS_RECONNECT_MAX_DELAY", DEFAULT_RECONNECT_MAX_DELAY)),
+        factor = parse(Float64, get(ENV, "NATS_RECONNECT_FACTOR", DEFAULT_RECONNECT_FACTOR)),
+        jitter = parse(Float64, get(ENV, "NATS_RECONNECT_JITTER", DEFAULT_RECONNECT_JITTER)))
+end
+
 function validate_connect_options(server_info::Info, options)
     # TODO: check if proto is 1 when `echo` flag is set
 
@@ -55,28 +64,36 @@ function validate_connect_options(server_info::Info, options)
     end
 end
 
-function connect_urls(nc::Connection)::Vector{Tuple{String, Int}}
+function host_port(url::AbstractString)
+    if !contains(url, "://")
+        url = "nats://$url"
+    end
+    uri = URI(url)
+    host, port = uri.host, uri.port
+    if isempty(host)
+        error("Host not specified in url `$url`.")
+    end
+    if isempty(port)
+        port = DEFAULT_PORT
+    end
+    host, parse(Int, port)
+end
+
+function connect_urls(nc::Connection)
     urls = info(nc).connect_urls
-    if isnothing(urls)
-        [(nc.host, nc.port)]
+    if isnothing(urls) || isempty(urls)
+        [nc.url]
     else
-        map(urls) do url
-            if ':' in url
-                host, port = split(url, ":")
-                host, parse(Int, port)
-            else
-                # No port specified, use default
-                url, 4222
-            end
-        end
+        urls
     end
 end
 
-function init_protocol(host, port, options; nc = nothing)
+function init_protocol(url, options; nc = nothing)
     if !isnothing(nc)
         # If this is an existing connection, try to use other cluster server.
-        host, port = rand(connect_urls(nc))
+        url = rand(connect_urls(nc))
     end
+    host, port = host_port(url)
     sock = Sockets.connect(host, port)
     try
         info_msg = next_protocol_message(sock)
@@ -126,7 +143,7 @@ function init_protocol(host, port, options; nc = nothing)
         end
 
         if !isnothing(nc)
-            nc.host, nc.port = host, port
+            nc.url = url
         end
         sock, read_stream, write_stream, info_msg
     catch err
@@ -149,7 +166,7 @@ end
 
 #TODO: restore link #NATS.Connect
 """
-    connect([host, port; options...])
+$(SIGNATURES)
 
 Connect to NATS server. The function is blocking until connection is initialized.
 
@@ -173,18 +190,17 @@ Options are:
 - `nkey_seed`: the private NKey to authenticate the client
 """
 function connect(
-    host::String = get(ENV, "NATS_HOST", "localhost"), # TODO: change ENV to provide list of urls
-    port::Int = parse(Int, get(ENV, "NATS_PORT", "4222"));
-    reconnect_delays = RECONNECT_DELAYS,
+    url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
+    reconnect_delays = default_reconnect_delays(),
     send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
     send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
 
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(host, port, options)
+    sock, read_stream, write_stream, info_msg = init_protocol(url, options)
 
-    nc = Connection(; host, port, send_buffer_size, send_retry_delays, info = info_msg)
+    nc = Connection(; url, send_buffer_size, send_retry_delays, info = info_msg)
     status(nc, CONNECTED)
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
@@ -231,7 +247,7 @@ function connect(
             end
             retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
             try
-                sock, read_stream, write_stream, info_msg = retry_init_protocol(host, port, options; nc)
+                sock, read_stream, write_stream, info_msg = retry_init_protocol(url, options; nc)
             catch err
                 time_diff = time() - start_reconnect_time
                 @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
