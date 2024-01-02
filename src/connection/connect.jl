@@ -117,7 +117,7 @@ function init_protocol(url, options; nc = nothing)
         known_options = keys(defaults)
         provided_keys = keys(options)
         keys_df = setdiff(provided_keys, known_options)
-        !isempty(keys_df) && error("Unknown `connect` options: $(join(keys_df, ", "))") 
+        !isempty(keys_df) && error("Unknown `connect` options: $(join(keys_df, ", "))")
         connect_msg = from_options(Connect, options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
@@ -198,6 +198,7 @@ function connect(
 )
 
     options = merge(default_connect_options(), options)
+    @debug options
     sock, read_stream, write_stream, info_msg = init_protocol(url, options)
 
     nc = Connection(; url, send_buffer_size, send_retry_delays, info = info_msg)
