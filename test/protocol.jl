@@ -1,5 +1,3 @@
-uint8_vec(s::String) = convert.(UInt8, collect(s))
-
 @testset "Parsing server operations." begin
 
     expected = [
