@@ -28,7 +28,7 @@ For [JetStream](https://docs.nats.io/nats-concepts/jetstream) check [JetStream.j
 
 ### Julia
 
-It was tested in `julia` `1.9` and `1.10-beta`
+It was tested in `julia` `1.9` and `1.10`
 
 ### NATS
 

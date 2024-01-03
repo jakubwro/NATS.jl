@@ -16,7 +16,7 @@ jobs:
       matrix:
         julia-version: ['1.10'] # TODO: '1.10.0-beta2'
         julia-arch: [x64]
-        nats-version: ['2.10.1']
+        nats-version: ['2.10.7']
         julia-num-threads: ['1', '1,1', '2,2'] # TODO: add ['1,4', '4,4'], but it require large runner, default there are only 2 cores. 
         os: [ubuntu-latest]
     
