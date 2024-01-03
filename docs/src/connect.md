@@ -21,9 +21,9 @@ There are several `ENV` variables defined to provide default parameters for `con
 | `jwt`              | `NATS_JWT`              |                  | yes
 | `nkey`             | `NATS_NKEY`             |                  | yes
 | `nkey_seed`        | `NATS_NKEY_SEED`        |                  | no
-| `tls_ca_cert_path`     | `NATS_CA_CERT_PATH`      |             | no
-| `tls_client_cert_path` | `NATS_CLIENT_CERT_PATH`  |             | no
-| `tls_client_key_path`  | `NATS_CLIENT_KEY_PATH`   |             | no
+| `tls_ca_path`     | `NATS_TLS_CA_PATH`      |             | no
+| `tls_cert_path` | `NATS_TLS_CERT_PATH`  |             | no
+| `tls_key_path`  | `NATS_TLS_KEY_PATH`   |             | no
 
 Additionally reconnect `reconnect_delays` default `ExponentialBackOff` might be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.
 

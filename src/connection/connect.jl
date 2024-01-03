@@ -36,9 +36,9 @@ function default_connect_options()
         nkey = get(ENV, "NATS_NKEY", nothing),
         # Options used only on client side, never sent to server.
         nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
-        tls_ca_cert_path = get(ENV, "NATS_CA_CERT_PATH", nothing),
-        tls_client_cert_path = get(ENV, "NATS_CLIENT_CERT_PATH", nothing),
-        tls_client_key_path = get(ENV, "NATS_CLIENT_KEY_PATH", nothing)
+        tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
+        tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
+        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing)
     )
 end
 
@@ -101,7 +101,7 @@ function init_protocol(url, options; nc = nothing)
         validate_connect_options(info_msg, options)
         read_stream, write_stream = sock, sock
         if !isnothing(info_msg.tls_required) && info_msg.tls_required
-            tls_options = options[(:tls_ca_cert_path, :tls_client_cert_path, :tls_client_key_path)]
+            tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
             (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
             @debug "Socket upgraded"
         end
@@ -176,9 +176,9 @@ Options are:
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required`: indicates whether the client requires SSL connection
-- `tls_ca_cert_path`: CA certuficate file path
-- `tls_client_cert_path`: client public certificate file
-- `tls_client_key_path`: client private certificate file
+- `tls_ca_path`: CA certuficate file path
+- `tls_cert_path`: client public certificate file
+- `tls_key_path`: client private certificate file
 - `auth_token`: client authorization token
 - `user`: connection username
 - `pass`: connection password
