@@ -69,7 +69,11 @@ include("interrupts.jl")
 include("hints.jl")
 
 function __init__()
-    start_interrupt_handler()
+    if VERSION < v"1.11"
+        start_legacy_interrupt_handler()
+    else
+        start_interrupt_handler()
+    end
     register_hints()
 end
 
