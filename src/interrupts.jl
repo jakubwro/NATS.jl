@@ -66,7 +66,7 @@ function start_interrupt_handler(interactive = isinteractive())
         end
 
         while true
-            wait(Base.INTERRUPT_CONDITION)
+            @lock Base.INTERRUPT_CONDITION wait(Base.INTERRUPT_CONDITION)
             disable_sigint() do
                 @info "Draining all due to interrupt signal."
                 drain()
