@@ -26,7 +26,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     url::String
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
-    info::Info
+    info::Union{Info, Nothing}
     reconnect_count::Int64 = 0
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
@@ -39,11 +39,19 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     pong_received_cond::Threads.Condition = Threads.Condition()
 end
 
-info(c::Connection)::Info = @lock c.lock c.info
+info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
-clustername(c::Connection) = @something info(c).cluster "unnamed"
 status(c::Connection)::ConnectionStatus = @lock c.lock c.status
 status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
+
+function clustername(c::Connection)
+    info_msg = info(c)
+    if isnothing(info_msg)
+        "unknown"
+    else
+        @something info(c).cluster "unnamed"
+    end
+end
 
 function new_inbox(connection::Connection, prefix::String = "inbox.")
     random_suffix = @lock connection.lock randstring(connection.rng, 10)

@@ -86,11 +86,11 @@ function host_port(url::AbstractString)
 end
 
 function connect_urls(nc::Connection)
-    urls = info(nc).connect_urls
-    if isnothing(urls) || isempty(urls)
+    info_msg = info(nc)
+    if isnothing(info_msg) || isnothing(info_msg.urls) || isempty(info_msg.urls)
         [nc.url]
     else
-        urls
+        info_msg.connect_urls
     end
 end
 
@@ -234,13 +234,49 @@ function connect(
     options...
 )
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(url, options)
-
-    nc = Connection(; url, send_buffer_size, send_retry_delays, info = info_msg)
-    status(nc, CONNECTED)
+    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing)
+    sock = nothing
+    read_stream = nothing
+    write_stream = nothing
+    info_msg = nothing
+    try
+        sock, read_stream, write_stream, info_msg = init_protocol(url, options)
+        info(nc, info_msg)
+        status(nc, CONNECTED)
+    catch
+        if !options.retry_on_init_fail
+            rethrow()
+        end
+    end
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
         while true
+            if status(nc) == CONNECTING
+                start_time = time()
+                # TODO: handle repeating server Err messages.
+                start_reconnect_time = time()
+                function check_errors(s, e)
+                    total_retries = length(reconnect_delays)
+                    current_retries = total_retries - s[1]
+                    current_time = time() - start_reconnect_time
+                    mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
+                    true
+                end
+                retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
+                try
+                    sock, read_stream, write_stream, info_msg = retry_init_protocol(url, options; nc)
+                catch err
+                    time_diff = time() - start_reconnect_time
+                    @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
+                    status(nc, DISCONNECTED)
+                    break
+                end
+                info(nc, info_msg)
+                status(nc, CONNECTED)
+                # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
+                # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
+                @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+            end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
@@ -274,30 +310,6 @@ function connect(
 
             status(nc, CONNECTING)
             @warn "Disconnected, trying to reconnect"
-            start_time = time()
-            # TODO: handle repeating server Err messages.
-            start_reconnect_time = time()
-            function check_errors(s, e)
-                total_retries = length(reconnect_delays)
-                current_retries = total_retries - s[1]
-                current_time = time() - start_reconnect_time
-                mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                true
-            end
-            retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
-            try
-                sock, read_stream, write_stream, info_msg = retry_init_protocol(url, options; nc)
-            catch err
-                time_diff = time() - start_reconnect_time
-                @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
-                status(nc, DISCONNECTED)
-                break
-            end
-            info(nc, info_msg)
-            status(nc, CONNECTED)
-            # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
-            # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
-            @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
         end
     end
 
