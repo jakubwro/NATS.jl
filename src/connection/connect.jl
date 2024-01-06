@@ -110,10 +110,10 @@ function init_protocol(nc, url, options)
     end
     if !isnothing(userinfo) && !isempty(userinfo)
         user, pass = split(userinfo, ":"; limit = 2)
-        if !haskey(options, :user)
+        if !haskey(options, :user) || isnothing(options.user)
             options = merge(options, (user = user,))
         end
-        if !haskey(options, :pass)
+        if !haskey(options, :pass) || isnothing(options.pass)
             options = merge(options, (pass = pass,))
         end
     end
