@@ -189,8 +189,12 @@ end
 
 function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     pings_out = 0
-    while true
+    reconnects = nc.reconnect_count
+    while status(nc) == CONNECTED && reconnects == nc.reconnect_count
         sleep(ping_interval)
+        if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
+            break
+        end
         try
             _, tm = @timed ping(nc)
             pings_out = 0
@@ -271,10 +275,11 @@ function connect(
                     sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
                 catch err
                     time_diff = time() - start_reconnect_time
-                    @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
+                    @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
                     status(nc, DISCONNECTED)
                     break
                 end
+                nc.reconnect_count += 1
                 info(nc, info_msg)
                 status(nc, CONNECTED)
                 # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
