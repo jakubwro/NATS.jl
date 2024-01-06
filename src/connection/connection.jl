@@ -36,6 +36,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
+    pong_received_cond::Threads.Condition = Threads.Condition()
 end
 
 info(c::Connection)::Info = @lock c.lock c.info
@@ -78,6 +79,30 @@ end
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs)")
 
-function ping(nc)
-    send(nc, Ping())
+function ping(nc; timer = Timer(1.0))
+    pong_ch = Channel{Pong}(1)
+
+    ping_task = @async begin
+        @async send(nc, Ping())
+        @lock nc.pong_received_cond wait(nc.pong_received_cond)
+        put!(pong_ch, Pong())
+    end
+
+    @async begin
+        try wait(timer) catch end
+        close(pong_ch)
+    end
+
+    try
+        take!(pong_ch)
+    catch
+        try
+            if !istaskdone(ping_task)
+                Base.throwto(ping_task, InterruptException())
+            end
+        catch err
+            !(err isa InterruptException) && @error err
+        end
+        error("No PONG received.")
+    end
 end

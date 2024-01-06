@@ -38,7 +38,13 @@ function default_connect_options()
         nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
         tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
         tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
-        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing)
+        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
+        # ADR-40 compliance options
+        ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
+        max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
+        retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
+        ignore_advertised_servers = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS))),
+        retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER)))
     )
 end
 
@@ -69,14 +75,14 @@ function host_port(url::AbstractString)
         url = "nats://$url"
     end
     uri = URI(url)
-    host, port = uri.host, uri.port
+    host, port, scheme, userinfo = uri.host, uri.port, uri.scheme, uri.userinfo
     if isempty(host)
         error("Host not specified in url `$url`.")
     end
     if isempty(port)
         port = DEFAULT_PORT
     end
-    host, parse(Int, port)
+    host, parse(Int, port), scheme, userinfo
 end
 
 function connect_urls(nc::Connection)
@@ -93,7 +99,20 @@ function init_protocol(url, options; nc = nothing)
         # If this is an existing connection, try to use other cluster server.
         url = rand(connect_urls(nc))
     end
-    host, port = host_port(url)
+    host, port, scheme, userinfo = host_port(url)
+    if scheme == "tls"
+        # Due to ADR-40 url schema can enforce TLS.
+        options = merge(options, (tls_required = true,))
+    end
+    if !isnothing(userinfo) && !isempty(userinfo)
+        user, pass = split(userinfo, ":"; limit = 2)
+        if !haskey(options, :user)
+            options = merge(options, (user = user,))
+        end
+        if !haskey(options, :pass)
+            options = merge(options, (pass = pass,))
+        end
+    end
     sock = Sockets.connect(host, port)
     try
         info_msg = next_protocol_message(sock)
@@ -164,6 +183,24 @@ function receiver(nc::Connection, io::IO)
     @debug "Receiver task finished."
 end
 
+function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
+    pings_out = 0
+    while true
+        sleep(ping_interval)
+        try
+            _, tm = @timed ping(nc)
+            pings_out = 0
+            @debug "PONG received after $tm seconds"
+        catch
+            @debug "No PONG received."
+            pings_out += 1
+        end
+        if pings_out >= max_pings_out
+            error("Not pong received after $pings_out attempts.")
+        end
+    end
+end
+
 #TODO: restore link #NATS.Connect
 """
 $(SIGNATURES)
@@ -196,7 +233,6 @@ function connect(
     send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
-
     options = merge(default_connect_options(), options)
     sock, read_stream, write_stream, info_msg = init_protocol(url, options)
 
@@ -207,12 +243,14 @@ function connect(
         while true
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
+            ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
             # errormonitor(receiver_task)
             # errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
             bind(err_channel, sender_task)
+            bind(err_channel, ping_task)
             
             while true
                 try
@@ -220,6 +258,7 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
+                    istaskfailed(ping_task) && @debug "Ping task failed:" sender_task.result
                     reopen_send_buffer(nc)
                     @debug "Wait end time: $(time())"
                     close(sock)
@@ -264,4 +303,8 @@ function connect(
 
     @lock state.lock push!(state.connections, nc)
     nc
+end
+
+function reconnect(nc::NATS.Connect)
+
 end

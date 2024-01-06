@@ -26,13 +26,14 @@ function process(nc::Connection, msg::Info)
     end
 end
 
-function process(nc::Connection, ping::Ping)
+function process(nc::Connection, ::Ping)
     @debug "Sending PONG."
     send(nc, Pong())
 end
 
-function process(nc::Connection, pong::Pong)
+function process(nc::Connection, ::Pong)
     @debug "Received pong."
+    @lock nc.pong_received_cond notify(nc.pong_received_cond)
 end
 
 function process(nc::Connection, batch::Vector{ProtocolMessage})
