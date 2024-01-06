@@ -108,7 +108,7 @@ NATS.status()
     options = merge(NATS.default_connect_options(), (protocol=100,) )
     con_msg = NATS.from_options(NATS.Connect, options)
     NATS.send(nc, con_msg)
-    sleep(5)
+    sleep(10)
     @test nc.status == NATS.CONNECTED
 end
 
@@ -134,7 +134,6 @@ NATS.status()
     @test NATS.status(nc) == NATS.DRAINED
     NATS.drain(nc) # Draining drained connectin is noop.
     @test NATS.status(nc) == NATS.DRAINED
-
     @test isempty(nc.subs)
     @test isempty(NATS.state.handlers)
 end

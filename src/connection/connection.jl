@@ -37,6 +37,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
     pong_received_cond::Threads.Condition = Threads.Condition()
+    connect_init_count::Int64 = 0 # How many tries of protocol init was done on last reconnect.
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
@@ -89,7 +90,6 @@ show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
 
 function ping(nc; timer = Timer(1.0))
     pong_ch = Channel{Pong}(1)
-
     ping_task = @async begin
         @async send(nc, Ping())
         @lock nc.pong_received_cond wait(nc.pong_received_cond)
@@ -100,17 +100,9 @@ function ping(nc; timer = Timer(1.0))
         try wait(timer) catch end
         close(pong_ch)
     end
-
     try
         take!(pong_ch)
     catch
-        try
-            if !istaskdone(ping_task)
-                Base.throwto(ping_task, InterruptException())
-            end
-        catch err
-            !(err isa InterruptException) && @error err
-        end
         error("No PONG received.")
     end
 end

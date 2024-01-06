@@ -85,19 +85,23 @@ function host_port(url::AbstractString)
     host, parse(Int, port), scheme, userinfo
 end
 
-function connect_urls(nc::Connection)
+function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
     info_msg = info(nc)
-    if isnothing(info_msg) || isnothing(info_msg.urls) || isempty(info_msg.urls)
-        [nc.url]
+    if ignore_advertised_servers || isnothing(info_msg) || isnothing(info_msg.connect_urls) || isempty(info_msg.connect_urls)
+        split(url, ",")
     else
         info_msg.connect_urls
     end
 end
 
-function init_protocol(url, options; nc = nothing)
-    if !isnothing(nc)
-        # If this is an existing connection, try to use other cluster server.
-        url = rand(connect_urls(nc))
+function init_protocol(nc, url, options)
+    nc.connect_init_count += 1
+    urls = connect_urls(nc, url; options.ignore_advertised_servers)
+    if options.retain_servers_order
+        idx = mod(nc.connect_init_count - 1, length(urls)) + 1
+        url = urls[idx]
+    else
+        url = rand(urls)
     end
     host, port, scheme, userinfo = host_port(url)
     if scheme == "tls"
@@ -240,7 +244,7 @@ function connect(
     write_stream = nothing
     info_msg = nothing
     try
-        sock, read_stream, write_stream, info_msg = init_protocol(url, options)
+        sock, read_stream, write_stream, info_msg = init_protocol(nc, url, options)
         info(nc, info_msg)
         status(nc, CONNECTED)
     catch
@@ -260,11 +264,11 @@ function connect(
                     current_retries = total_retries - s[1]
                     current_time = time() - start_reconnect_time
                     mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                    true
+                    status(nc) == CONNECTING # Stop on drain
                 end
                 retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
                 try
-                    sock, read_stream, write_stream, info_msg = retry_init_protocol(url, options; nc)
+                    sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
@@ -309,6 +313,7 @@ function connect(
             # try wait(receiver_task) catch end
 
             status(nc, CONNECTING)
+            nc.connect_init_count = 0
             @warn "Disconnected, trying to reconnect"
         end
     end
