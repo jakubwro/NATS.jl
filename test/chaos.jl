@@ -223,7 +223,7 @@ end
 end
 
 @testset "Reconnecting after disconnect." begin
-    nc = NATS.connect(; reconnect_delays = [])
+    nc = NATS.connect(; reconnect_delays = [1.0])
     @test restart_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED
