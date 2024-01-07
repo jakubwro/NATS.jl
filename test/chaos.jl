@@ -235,11 +235,12 @@ end
 end
 
 @testset "Reconnecting after disconnect." begin
+    container_id = find_nats_container_id()
     nc = NATS.connect(; reconnect_delays = [])
-    @test stop_nats_server() == 0
+    @test stop_nats_server(container_id) == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED
-    @test start_nats_server() == 0
+    @test start_nats_server(container_id) == 0
     sleep(5)
     NATS.reconnect(nc)
     sleep(10)
