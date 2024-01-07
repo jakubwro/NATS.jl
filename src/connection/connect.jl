@@ -203,7 +203,7 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
             @debug "No PONG received."
             pings_out += 1
         end
-        if pings_out >= max_pings_out
+        if pings_out > max_pings_out
             error("Not pong received after $pings_out attempts.")
         end
     end
