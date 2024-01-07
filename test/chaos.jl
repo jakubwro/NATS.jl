@@ -222,9 +222,21 @@ end
     @info "Published: $(published_count.value), received: $(received_count.value)."
 end
 
+@testset "Reconnecting after disconnect." begin
+    nc = NATS.connect(; reconnect_delays = [])
+    @test restart_nats_server() == 0
+    sleep(5)
+    @test nc.status == NATS.DISCONNECTED
+
+    sleep(5)
+    NATS.reconnect(nc)
+    @test nc.status == CONNECTED
+end
+
 @testset "Disconnecting when retries exhausted." begin
     nc = NATS.connect(; reconnect_delays = [])
     @test stop_nats_server() == 0
     sleep(5)
     @test nc.status == NATS.DISCONNECTED
 end
+
