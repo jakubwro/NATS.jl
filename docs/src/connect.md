@@ -21,9 +21,17 @@ There are several `ENV` variables defined to provide default parameters for `con
 | `jwt`              | `NATS_JWT`              |                  | yes
 | `nkey`             | `NATS_NKEY`             |                  | yes
 | `nkey_seed`        | `NATS_NKEY_SEED`        |                  | no
-| `tls_ca_path`     | `NATS_TLS_CA_PATH`      |             | no
-| `tls_cert_path` | `NATS_TLS_CERT_PATH`  |             | no
-| `tls_key_path`  | `NATS_TLS_KEY_PATH`   |             | no
+| `tls_ca_path`      | `NATS_TLS_CA_PATH`      |                  | no
+| `tls_cert_path`    | `NATS_TLS_CERT_PATH`    |                  | no
+| `tls_key_path`     | `NATS_TLS_KEY_PATH`     |                  | no
+
+| Parameter                   | `ENV` variable                   |  Default value   | Sent to server |
+|-----------------------------|----------------------------------|------------------|-----------------|
+| `ping_interval`             | `NATS_PING_INTERVAL_SECONDS`     | `120`            | no
+| `max_pings_out`             | `NATS_MAX_PINGS_OUT`             | `2`              | no
+| `retry_on_init_fail`        | `NATS_RETRY_ON_INIT_FAIL`        | `false`          | no
+| `ignore_advertised_servers` | `NATS_IGNORE_ADVERTISED_SERVERS` | `false`          | no
+| `retain_servers_order`      | `NATS_RETAIN_SERVERS_ORDER `     | `false`          | no
 
 Additionally reconnect `reconnect_delays` default `ExponentialBackOff` might be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.
 

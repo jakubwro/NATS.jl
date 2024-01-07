@@ -26,7 +26,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     url::String
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
-    info::Info
+    info::Union{Info, Nothing}
     reconnect_count::Int64 = 0
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
@@ -36,13 +36,24 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
+    pong_received_cond::Threads.Condition = Threads.Condition()
+    connect_init_count::Int64 = 0 # How many tries of protocol init was done on last reconnect.
+    reconnect_cond::Threads.Condition = Threads.Condition()
 end
 
-info(c::Connection)::Info = @lock c.lock c.info
+info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
-clustername(c::Connection) = @something info(c).cluster "unnamed"
 status(c::Connection)::ConnectionStatus = @lock c.lock c.status
 status(c::Connection, status::ConnectionStatus) = @lock c.lock c.status = status
+
+function clustername(c::Connection)
+    info_msg = info(c)
+    if isnothing(info_msg)
+        "unknown"
+    else
+        @something info(c).cluster "unnamed"
+    end
+end
 
 function new_inbox(connection::Connection, prefix::String = "inbox.")
     random_suffix = @lock connection.lock randstring(connection.rng, 10)
@@ -51,6 +62,14 @@ end
 
 function new_sid(connection::Connection)
     @lock connection.lock randstring(connection.rng, 6)
+end
+
+function isconnecting(nc::Connection)
+    status(nc) == CONNECTING
+end
+
+function isconnected(nc::Connection)
+    status(nc) == CONNECTED
 end
 
 include("state.jl")
@@ -78,6 +97,21 @@ end
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs)")
 
-function ping(nc)
-    send(nc, Ping())
+function ping(nc; timer = Timer(1.0))
+    pong_ch = Channel{Pong}(1)
+    ping_task = @async begin
+        @async send(nc, Ping())
+        @lock nc.pong_received_cond wait(nc.pong_received_cond)
+        put!(pong_ch, Pong())
+    end
+
+    @async begin
+        try wait(timer) catch end
+        close(pong_ch)
+    end
+    try
+        take!(pong_ch)
+    catch
+        error("No PONG received.")
+    end
 end

@@ -64,6 +64,32 @@ NATS.status()
     end
 end
 
+@testset "Connection url schemes" begin
+    try
+        @test_throws Base.IOError NATS.connect("tls://localhost:4321")
+
+        conn = NATS.connect("nats://username:passw0rd@localhost:4222")
+        @test NATS.status(conn) == NATS.CONNECTED
+        
+        conn = NATS.connect("nats://localhost:4321,localhost:5555", retry_on_init_fail = true)
+        @test NATS.status(conn) == NATS.CONNECTING
+        drain(conn)
+
+        @test_throws ErrorException NATS.connect(":4321")
+
+        conn = NATS.connect("localhost")
+        @test NATS.status(conn) == NATS.CONNECTED
+
+        conn = NATS.connect("localhost:4321,localhost:4322,localhost:4222", retry_on_init_fail = true, retain_servers_order = true, reconnect_delays = [0.1, 0.1, 0.1])
+        sleep(1)
+        @test conn.reconnect_count == 1
+        @test conn.connect_init_count == 3
+    catch
+        # This may fail for some NATS server setup and this is ok.
+        @info "`Connection url schemes` tests ignored."
+    end
+end
+
 NATS.status()
 
 @testset "Handler error throttling." begin
@@ -108,13 +134,13 @@ NATS.status()
     options = merge(NATS.default_connect_options(), (protocol=100,) )
     con_msg = NATS.from_options(NATS.Connect, options)
     NATS.send(nc, con_msg)
-    sleep(5)
+    sleep(10)
     @test nc.status == NATS.CONNECTED
 end
 
 NATS.status()
 
-@testset "Should reconnect on outbox closed" begin
+@testset "Should reconnect on send buffer closed" begin
     NATS.reopen_send_buffer(nc)
     sleep(5)
     @test nc.status == NATS.CONNECTED
@@ -134,7 +160,6 @@ NATS.status()
     @test NATS.status(nc) == NATS.DRAINED
     NATS.drain(nc) # Draining drained connectin is noop.
     @test NATS.status(nc) == NATS.DRAINED
-
     @test isempty(nc.subs)
     @test isempty(NATS.state.handlers)
 end

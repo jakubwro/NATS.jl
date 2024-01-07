@@ -38,7 +38,14 @@ function default_connect_options()
         nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
         tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
         tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
-        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing)
+        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
+        # ADR-40 compliance options
+        ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
+        max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
+        retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
+        ignore_advertised_servers = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS))),
+        retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER))),
+        enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED)))
     )
 end
 
@@ -69,31 +76,48 @@ function host_port(url::AbstractString)
         url = "nats://$url"
     end
     uri = URI(url)
-    host, port = uri.host, uri.port
+    host, port, scheme, userinfo = uri.host, uri.port, uri.scheme, uri.userinfo
     if isempty(host)
         error("Host not specified in url `$url`.")
     end
     if isempty(port)
         port = DEFAULT_PORT
     end
-    host, parse(Int, port)
+    host, parse(Int, port), scheme, userinfo
 end
 
-function connect_urls(nc::Connection)
-    urls = info(nc).connect_urls
-    if isnothing(urls) || isempty(urls)
-        [nc.url]
+function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
+    info_msg = info(nc)
+    if ignore_advertised_servers || isnothing(info_msg) || isnothing(info_msg.connect_urls) || isempty(info_msg.connect_urls)
+        split(url, ",")
     else
-        urls
+        info_msg.connect_urls
     end
 end
 
-function init_protocol(url, options; nc = nothing)
-    if !isnothing(nc)
-        # If this is an existing connection, try to use other cluster server.
-        url = rand(connect_urls(nc))
+function init_protocol(nc, url, options)
+    nc.connect_init_count += 1
+    urls = connect_urls(nc, url; options.ignore_advertised_servers)
+    if options.retain_servers_order
+        idx = mod(nc.connect_init_count - 1, length(urls)) + 1
+        url = urls[idx]
+    else
+        url = rand(urls)
     end
-    host, port = host_port(url)
+    host, port, scheme, userinfo = host_port(url)
+    if scheme == "tls"
+        # Due to ADR-40 url schema can enforce TLS.
+        options = merge(options, (tls_required = true,))
+    end
+    if !isnothing(userinfo) && !isempty(userinfo)
+        user, pass = split(userinfo, ":"; limit = 2)
+        if !haskey(options, :user) || isnothing(options.user)
+            options = merge(options, (user = user,))
+        end
+        if !haskey(options, :pass) || isnothing(options.pass)
+            options = merge(options, (pass = pass,))
+        end
+    end
     sock = Sockets.connect(host, port)
     try
         info_msg = next_protocol_message(sock)
@@ -164,6 +188,31 @@ function receiver(nc::Connection, io::IO)
     @debug "Receiver task finished."
 end
 
+function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
+    pings_out = 0
+    reconnects = nc.reconnect_count
+    while status(nc) == CONNECTED && reconnects == nc.reconnect_count
+        sleep(ping_interval)
+        if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
+            @show status(nc) nc.reconnect_count reconnects
+            # In case if connection is broke new task will be spawned.
+            # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
+            break
+        end
+        try
+            _, tm = @timed ping(nc)
+            pings_out = 0
+            @debug "PONG received after $tm seconds"
+        catch
+            @debug "No PONG received."
+            pings_out += 1
+        end
+        if pings_out > max_pings_out
+            error("Not pong received after $pings_out attempts.")
+        end
+    end
+end
+
 #TODO: restore link #NATS.Connect
 """
 $(SIGNATURES)
@@ -196,23 +245,64 @@ function connect(
     send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
-
     options = merge(default_connect_options(), options)
-    sock, read_stream, write_stream, info_msg = init_protocol(url, options)
-
-    nc = Connection(; url, send_buffer_size, send_retry_delays, info = info_msg)
-    status(nc, CONNECTED)
+    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing)
+    sock = nothing
+    read_stream = nothing
+    write_stream = nothing
+    info_msg = nothing
+    try
+        sock, read_stream, write_stream, info_msg = init_protocol(nc, url, options)
+        info(nc, info_msg)
+        status(nc, CONNECTED)
+    catch
+        if !options.retry_on_init_fail
+            rethrow()
+        end
+    end
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
         while true
+            if status(nc) == CONNECTING
+                start_time = time()
+                # TODO: handle repeating server Err messages.
+                start_reconnect_time = time()
+                function check_errors(s, e)
+                    total_retries = length(reconnect_delays)
+                    current_retries = total_retries - s[1]
+                    current_time = time() - start_reconnect_time
+                    mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
+                    status(nc) == CONNECTING # Stop on drain
+                end
+                retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
+                try
+                    sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
+                    status(nc, CONNECTED)
+                catch err
+                    time_diff = time() - start_reconnect_time
+                    @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
+                    status(nc, DISCONNECTED)
+                end
+                if status(nc) == CONNECTED
+                    nc.reconnect_count += 1
+                    info(nc, info_msg)
+                    @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+                elseif status(nc) == DISCONNECTED
+                    @lock nc.reconnect_cond wait(nc.reconnect_cond)
+                    status(nc, CONNECTING)
+                    continue
+                end
+            end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
+            ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
             # errormonitor(receiver_task)
             # errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
             bind(err_channel, sender_task)
+            bind(err_channel, ping_task)
             
             while true
                 try
@@ -220,6 +310,7 @@ function connect(
                 catch err
                     istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
                     istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
+                    istaskfailed(ping_task) && @debug "Ping task failed:" sender_task.result
                     reopen_send_buffer(nc)
                     @debug "Wait end time: $(time())"
                     close(sock)
@@ -233,35 +324,34 @@ function connect(
             try wait(sender_task) catch end
             # try wait(receiver_task) catch end
 
+            @warn "Trying to reconnect"
             status(nc, CONNECTING)
-            @warn "Disconnected, trying to reconnect"
-            start_time = time()
-            # TODO: handle repeating server Err messages.
-            start_reconnect_time = time()
-            function check_errors(s, e)
-                total_retries = length(reconnect_delays)
-                current_retries = total_retries - s[1]
-                current_time = time() - start_reconnect_time
-                mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                true
-            end
-            retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
-            try
-                sock, read_stream, write_stream, info_msg = retry_init_protocol(url, options; nc)
-            catch err
-                time_diff = time() - start_reconnect_time
-                @error "Connection disconnected after $(length(reconnect_delays)) reconnect retries, it took $time_diff seconds." err
-                status(nc, DISCONNECTED)
-                break
-            end
-            info(nc, info_msg)
-            status(nc, CONNECTED)
-            # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
-            # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
-            @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+            nc.connect_init_count = 0
         end
     end
 
     @lock state.lock push!(state.connections, nc)
     nc
+end
+
+function reconnect(nc::NATS.Connection)
+    st = status(nc)
+    if st == CONNECTING
+    elseif st == CONNECTED
+        reopen_send_buffer(nc)
+    elseif st == DRAINING || st == DRAINED
+        error("Cannot reconnect DRAINED connection")
+    elseif st == DISCONNECTED
+        notified_count = @lock nc.reconnect_cond notify(nc.reconnect_cond)
+        if notified_count == 0
+            error("Failed to reconnect.")
+        elseif notified_count == 1
+            @info "Reconnect signal sent successfully"
+        else
+            error("Unexpected number of notified tasks: $notified_count")
+        end
+    else
+        error("Unexpected connection status: $st")
+    end
+
 end

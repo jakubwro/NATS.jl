@@ -53,6 +53,9 @@ if have_nats
         for nc in NATS.state.connections
             @test isempty(nc.subs)
             @test isempty(nc.unsubs)
+            if nc.send_buffer.size > 0
+                @info "Buffer content" String(nc.send_buffer.data[begin:nc.send_buffer.size])
+            end
             @test nc.send_buffer.size == 0
         end
     end
