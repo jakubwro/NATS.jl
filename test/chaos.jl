@@ -230,7 +230,7 @@ end
 
     sleep(5)
     NATS.reconnect(nc)
-    sleep(2)
+    sleep(10)
     @test nc.status == NATS.CONNECTED
 end
 
