@@ -193,6 +193,8 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     while status(nc) == CONNECTED && reconnects == nc.reconnect_count
         sleep(ping_interval)
         if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
+            # In case if connection is broke new task will be spawned.
+            # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
             break
         end
         try
