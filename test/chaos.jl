@@ -230,7 +230,7 @@ end
 
     sleep(5)
     NATS.reconnect(nc)
-    @test nc.status == CONNECTED
+    @test nc.status == NATS.CONNECTED
 end
 
 @testset "Disconnecting when retries exhausted." begin
