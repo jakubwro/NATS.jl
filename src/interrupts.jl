@@ -58,7 +58,7 @@ function start_legacy_interrupt_handler(interactive = isinteractive())
 end
 
 
-function start_interrupt_handler(interactive = isinteractive())
+function start_new_interrupt_handler(interactive = isinteractive())
     @info "Starting new interrupt handler."
     interrupt_handler_task = @async begin
         if interactive && !isinteractive()
@@ -75,4 +75,12 @@ function start_interrupt_handler(interactive = isinteractive())
     end
 
     errormonitor(interrupt_handler_task)
+end
+
+function start_interrupt_handler()
+    if VERSION < v"1.11"
+        start_legacy_interrupt_handler()
+    else
+        start_new_interrupt_handler()
+    end
 end
