@@ -58,13 +58,13 @@ const DEFAULT_MAX_PINGS_OUT = 2
 const DEFAULT_RETRY_ON_INIT_FAIL = false
 const DEFAULT_IGNORE_ADVERTISED_SERVERS = false
 const DEFAULT_RETAIN_SERVERS_ORDER = false
+const DEFAULT_ENQUEUE_WHEN_DISCONNECTED = true
 
 const SUBSCRIPTION_CHANNEL_SIZE = 10000000
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
 const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
-const SEND_ENQUEUE_WHEN_NOT_CONNECTED = false # TODO: use this in code
 const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code
 
 include("protocol/protocol.jl")

@@ -140,7 +140,7 @@ end
 
 NATS.status()
 
-@testset "Should reconnect on outbox closed" begin
+@testset "Should reconnect on send buffer closed" begin
     NATS.reopen_send_buffer(nc)
     sleep(5)
     @test nc.status == NATS.CONNECTED

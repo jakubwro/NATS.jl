@@ -44,7 +44,8 @@ function default_connect_options()
         max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
         retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
         ignore_advertised_servers = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS))),
-        retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER)))
+        retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER))),
+        enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED)))
     )
 end
 
@@ -193,6 +194,7 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     while status(nc) == CONNECTED && reconnects == nc.reconnect_count
         sleep(ping_interval)
         if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
+            @show status(nc) nc.reconnect_count reconnects
             # In case if connection is broke new task will be spawned.
             # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
             break
@@ -329,6 +331,6 @@ function connect(
     nc
 end
 
-function reconnect(nc::NATS.Connect)
-
+function reconnect(nc::NATS.Connection)
+    reopen_send_buffer(nc)
 end
