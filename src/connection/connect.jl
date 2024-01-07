@@ -277,18 +277,21 @@ function connect(
                 retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
                 try
                     sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
+                    status(nc, CONNECTED)
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
                     status(nc, DISCONNECTED)
-                    break
                 end
-                nc.reconnect_count += 1
-                info(nc, info_msg)
-                status(nc, CONNECTED)
-                # @lock nc.lock nc.stats.reconnections = nc.stats.reconnections + 1
-                # @lock state.lock state.stats.reconnections = state.stats.reconnections + 1
-                @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+                if status(nc) == CONNECTED
+                    nc.reconnect_count += 1
+                    info(nc, info_msg)
+                    @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+                elseif status(nc) == DISCONNECTED
+                    @lock nc.reconnect_cond wait(nc.reconnect_cond)
+                    status(nc, CONNECTING)
+                    continue
+                end
             end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
@@ -321,9 +324,9 @@ function connect(
             try wait(sender_task) catch end
             # try wait(receiver_task) catch end
 
+            @warn "Trying to reconnect"
             status(nc, CONNECTING)
             nc.connect_init_count = 0
-            @warn "Disconnected, trying to reconnect"
         end
     end
 
@@ -332,5 +335,23 @@ function connect(
 end
 
 function reconnect(nc::NATS.Connection)
-    reopen_send_buffer(nc)
+    st = status(nc)
+    if st == CONNECTING
+    elseif st == CONNECTED
+        reopen_send_buffer(nc)
+    elseif st == DRAINING || st == DRAINED
+        error("Cannot reconnect DRAINED connection")
+    elseif st == DISCONNECTED
+        notified_count = @lock nc.reconnect_cond notify(nc.reconnect_cond)
+        if notified_count == 0
+            error("Failed to reconnect.")
+        elseif notified_count == 1
+            @info "Reconnect signal sent successfully"
+        else
+            error("Unexpected number of notified tasks: $notified_count")
+        end
+    else
+        error("Unexpected connection status: $st")
+    end
+
 end

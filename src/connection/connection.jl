@@ -38,6 +38,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_retry_delays::Any = SEND_RETRY_DELAYS
     pong_received_cond::Threads.Condition = Threads.Condition()
     connect_init_count::Int64 = 0 # How many tries of protocol init was done on last reconnect.
+    reconnect_cond::Threads.Condition = Threads.Condition()
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
