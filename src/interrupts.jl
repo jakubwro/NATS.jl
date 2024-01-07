@@ -77,10 +77,10 @@ function start_new_interrupt_handler(interactive = isinteractive())
     errormonitor(interrupt_handler_task)
 end
 
-function start_interrupt_handler()
+function start_interrupt_handler(interactive = isinteractive())
     if VERSION < v"1.11"
-        start_legacy_interrupt_handler()
+        start_legacy_interrupt_handler(interactive)
     else
-        start_new_interrupt_handler()
+        start_new_interrupt_handler(interactive)
     end
 end
