@@ -49,7 +49,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_retry_delays::Any = SEND_RETRY_DELAYS
     pong_received_cond::Threads.Condition = Threads.Condition()
     connect_init_count::Int64 = 0 # How many tries of protocol init was done on last reconnect.
-    reconnect_event::Threads.Event = Threads.Event(true)
+    reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
     status_change_cond::Threads.Condition = Threads.Condition()
     sub_channels::Dict{String, Channel} = Dict{String, Channel}()

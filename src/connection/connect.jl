@@ -298,6 +298,8 @@ function connect(
                     @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
                 elseif status(nc) == DISCONNECTED
                     wait(nc.reconnect_event)
+                    reset(nc.reconnect_event)
+                    @debug "Reconnect requested"
                     if (@atomic nc.drain_event.set) == true
                         status(nc, DRAINING)
                         _do_drain(nc)
@@ -324,7 +326,6 @@ function connect(
             bind(err_channel, ping_task)
             bind(err_channel, drain_await_task)
             bind(err_channel, wait_reconnect_event_task)
-            
             try
                 wait(err_channel)
             catch err
@@ -340,7 +341,8 @@ function connect(
                 @info "Connection is drained"
                 break
             end
-
+            
+            reset(nc.reconnect_event)
             close(sock)
             reopen_send_buffer(nc)
 
