@@ -317,8 +317,6 @@ function connect(
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
             wait_reconnect_event_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event); error("Reconnect requested") end
-            # errormonitor(receiver_task)
-            # errormonitor(sender_task)
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
@@ -346,12 +344,8 @@ function connect(
             close(sock)
             reopen_send_buffer(nc)
 
-            if isdrained(nc)
-                @debug "Drained, no reconnect."
-                break
-            end
             try wait(sender_task) catch end
-            # try wait(receiver_task) catch end
+            try wait(receiver_task) catch end
 
             @warn "Trying to reconnect"
             status(nc, CONNECTING)
