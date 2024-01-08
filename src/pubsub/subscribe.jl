@@ -48,7 +48,7 @@ function subscribe(
         _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, channel_size, monitoring_throttle_seconds)
     end
     @lock NATS.state.lock begin
-        state.handlers[sid] = channel
+        connection.sub_channels[sid] = channel
     end
     @lock connection.lock begin
         connection.subs[sid] = sub

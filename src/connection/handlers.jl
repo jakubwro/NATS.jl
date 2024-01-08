@@ -55,7 +55,7 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
     for (sid, msgs) in groups
         n = length(msgs)
         ch = lock(state.lock) do
-            get(state.handlers, sid, nothing)
+            get(nc.sub_channels, sid, nothing)
         end
         if !isnothing(ch)
             sub_stats = state.sub_stats[sid]

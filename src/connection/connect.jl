@@ -314,6 +314,7 @@ function connect(
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
+            wait_reconnect_event_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event); error("Reconnect requested") end
             # errormonitor(receiver_task)
             # errormonitor(sender_task)
 
@@ -322,6 +323,7 @@ function connect(
             bind(err_channel, sender_task)
             bind(err_channel, ping_task)
             bind(err_channel, drain_await_task)
+            bind(err_channel, wait_reconnect_event_task)
             
             try
                 wait(err_channel)
@@ -361,7 +363,7 @@ function connect(
 end
 
 function reconnect(nc::NATS.Connection)
-    @lock c.status_change_cond begin
+    @lock nc.status_change_cond begin
         notify(nc.reconnect_event)
     end
 end

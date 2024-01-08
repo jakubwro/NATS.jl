@@ -21,7 +21,6 @@ end
 
 @kwdef mutable struct State
     connections::Vector{Connection} = Connection[]
-    handlers::Dict{String, Channel} = Dict{String, Function}()
     "Handlers of messages for which handler was not found."
     fallback_handlers::Vector{Function} = Function[default_fallback_handler]
     lock::ReentrantLock = ReentrantLock()
@@ -52,9 +51,9 @@ end
 # """
 function _cleanup_sub(nc::Connection, sid::String)
     @lock state.lock begin
-        ch = get(state.handlers, sid, nothing)
+        ch = get(nc.sub_channels, sid, nothing)
         !isnothing(ch) && close(ch)
-        delete!(state.handlers, sid)
+        delete!(nc.sub_channels, sid)
     end
     @lock nc.lock begin
         delete!(nc.subs, sid)

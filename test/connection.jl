@@ -161,7 +161,7 @@ NATS.status()
     NATS.drain(nc) # Draining drained connectin is noop.
     @test NATS.status(nc) == NATS.DRAINED
     @test isempty(nc.subs)
-    @test isempty(NATS.state.handlers)
+    @test isempty(nc.sub_channels)
 end
 
 NATS.status()

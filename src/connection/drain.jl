@@ -22,10 +22,16 @@ end
 
 function _do_drain(nc::Connection)
     all_subs = copy(nc.subs)
+    channels = collect(values(nc.sub_channels))
     for (_, sub) in all_subs
         unsubscribe(nc, sub; max_msgs = 0)
     end
-    sleep(3)
+    while any(ch -> Base.n_avail(ch) > 0, channels)
+        sleep(1)
+    end
+    while (@atomic nc.stats.handlers_running) > 0
+        sleep(1)
+    end
     length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
 end
 
