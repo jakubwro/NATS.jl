@@ -304,19 +304,17 @@ function connect(
             bind(err_channel, sender_task)
             bind(err_channel, ping_task)
             
-            while true
-                try
-                    wait(err_channel)
-                catch err
-                    istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
-                    istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
-                    istaskfailed(ping_task) && @debug "Ping task failed:" sender_task.result
-                    reopen_send_buffer(nc)
-                    @debug "Wait end time: $(time())"
-                    close(sock)
-                    break
-                end
+            try
+                wait(err_channel)
+            catch err
+                istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
+                istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
+                istaskfailed(ping_task) && @debug "Ping task failed:" sender_task.result
+                reopen_send_buffer(nc)
+                @debug "Wait end time: $(time())"
+                close(sock)
             end
+
             if isdrained(nc)
                 @debug "Drained, no reconnect."
                 break
