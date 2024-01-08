@@ -20,6 +20,15 @@ function isdrained(nc::Connection)
     status(nc) in [DRAINING, DRAINED]
 end
 
+function _do_drain(nc::Connection)
+    all_subs = copy(nc.subs)
+    for (_, sub) in all_subs
+        unsubscribe(nc, sub; max_msgs = 0)
+    end
+    sleep(3)
+    length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
+end
+
 """
 $SIGNATURES
 
@@ -27,19 +36,16 @@ Unsubscribe all subscriptions, wait for precessing all messages in buffers, then
 Drained connection is no more usable. This method is used to gracefuly stop the process.
 """
 function drain(nc::Connection)
-    if isdrained(nc)
-        return
+    @lock nc.status_change_cond begin
+        notify(nc.drain_event)
+        # There is a chance that connection is DISCONNECTED or is in CONNECTING
+        # state and became DISCONNECTED before drain event is handled. Wake it up
+        # to force reconnect that will promptly do drain.
+        notify(nc.reconnect_event) 
+        while nc.status != DRAINED
+            wait(nc.status_change_cond)
+        end
     end
-    status(nc, DRAINING)
-    for (_, sub) in nc.subs
-        unsubscribe(nc, sub; max_msgs = 0)
-    end
-    # TODO: wait for handlers running == 0
-    sleep(3)
-    length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
-    status(nc, DRAINED)
-    reopen_send_buffer(nc)
-    @debug "connection drained"
 end
 
 """
