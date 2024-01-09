@@ -112,5 +112,4 @@ function sendloop(nc::Connection, io::IO)
         # flush(io)
     end
     @debug "Sender task finished. $(send_buffer.size) bytes in send buffer."
-    error("sender task finished")
 end
