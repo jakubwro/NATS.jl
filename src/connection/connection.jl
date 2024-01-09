@@ -17,17 +17,6 @@
 
 @enum ConnectionStatus CONNECTING CONNECTED DISCONNECTED DRAINING DRAINED
 
-# digraph G {
-#   CONNECTING -> CONNECTED //[label="connection initialized"]
-#   CONNECTED -> CONNECTING //[label="network failure"]
-#   CONNECTING -> DISCONNECTED //[label="retries exhausted"]
-#   DISCONNECTED -> CONNECTING //[label=reconnect]
-#   CONNECTED -> DRAINING
-#   DISCONNECTED -> DRAINING
-#   CONNECTING -> DRAINING
-#   DRAINING -> DRAINED
-# }
-
 include("stats.jl")
 
 const DEFAULT_SEND_BUFFER_SIZE = 2 * 2^20
@@ -38,7 +27,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
     info::Union{Info, Nothing}
-    reconnect_count::Int64 = 0
+    @atomic reconnect_count::Int64
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
     subs::Dict{String, Sub} = Dict{String, Sub}()
@@ -48,7 +37,7 @@ const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_d
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
     pong_received_cond::Threads.Condition = Threads.Condition()
-    connect_init_count::Int64 = 0 # How many tries of protocol init was done on last reconnect.
+    @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
     reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
     status_change_cond::Threads.Condition = Threads.Condition()
@@ -57,7 +46,7 @@ end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
-status(c::Connection)::ConnectionStatus = @lock c.lock c.status
+status(c::Connection)::ConnectionStatus = @lock c.status_change_cond c.status
 function status(c::Connection, status::ConnectionStatus)
     @lock c.status_change_cond begin
         c.status = status

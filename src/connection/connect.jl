@@ -96,10 +96,10 @@ function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
 end
 
 function init_protocol(nc, url, options)
-    nc.connect_init_count += 1
+    @atomic nc.connect_init_count += 1
     urls = connect_urls(nc, url; options.ignore_advertised_servers)
     if options.retain_servers_order
-        idx = mod(nc.connect_init_count - 1, length(urls)) + 1
+        idx = mod((@atomic nc.connect_init_count) - 1, length(urls)) + 1
         url = urls[idx]
     else
         url = rand(urls)
@@ -185,10 +185,10 @@ end
 
 function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     pings_out = 0
-    reconnects = nc.reconnect_count
-    while status(nc) == CONNECTED && reconnects == nc.reconnect_count
+    reconnects = (@atomic nc.reconnect_count)
+    while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
         sleep(ping_interval)
-        if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
+        if !(status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count))
             # In case if connection is broke new task will be spawned.
             # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
             break
@@ -241,7 +241,7 @@ function connect(
     options...
 )
     options = merge(default_connect_options(), options)
-    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing)
+    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing, reconnect_count = 0, connect_init_count = 0)
     sock = nothing
     read_stream = nothing
     write_stream = nothing
@@ -291,7 +291,7 @@ function connect(
                     end
                 end
                 if status(nc) == CONNECTED
-                    nc.reconnect_count += 1
+                    @atomic nc.reconnect_count += 1
                     info(nc, info_msg)
                     @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
                 elseif status(nc) == DISCONNECTED
@@ -358,7 +358,7 @@ function connect(
             # TODO: indicate what was the cause in warning message.
             @warn "Connection lost, trynig to reconnect."
             status(nc, CONNECTING)
-            nc.connect_init_count = 0
+            @atomic nc.connect_init_count = 0
         end
     end
     errormonitor(reconnect_task)

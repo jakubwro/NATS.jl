@@ -89,7 +89,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             try
                 while true
                     msgs = take!(subscription_channel)
-                    for msg in msgs # TODO: vectoriztion
+                    for msg in msgs
                         handler_task = Threads.@spawn :default disable_sigint() do
                             try
                                 inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
@@ -115,7 +115,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             try
                 while true
                     msgs = take!(subscription_channel)
-                    for msg in msgs # TODO do some vectorization
+                    for msg in msgs
                         try
                             inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             f(msg)
