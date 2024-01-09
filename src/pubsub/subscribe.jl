@@ -48,7 +48,7 @@ function subscribe(
         _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, channel_size, monitoring_throttle_seconds)
     end
     @lock NATS.state.lock begin
-        state.handlers[sid] = channel
+        connection.sub_channels[sid] = channel
     end
     @lock connection.lock begin
         connection.subs[sid] = sub
@@ -89,7 +89,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             try
                 while true
                     msgs = take!(subscription_channel)
-                    for msg in msgs # TODO: vectoriztion
+                    for msg in msgs
                         handler_task = Threads.@spawn :default disable_sigint() do
                             try
                                 inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
@@ -115,7 +115,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             try
                 while true
                     msgs = take!(subscription_channel)
-                    for msg in msgs # TODO do some vectorization
+                    for msg in msgs
                         try
                             inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             f(msg)

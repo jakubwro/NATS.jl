@@ -6,7 +6,7 @@ using NATS
     sub = subscribe(nc, "SOME.BAR") do msg
         @show msg
     end
-    empty!(NATS.state.handlers) # Break state of connection to force fallback handler.
+    empty!(nc.sub_channels) # Break state of connection to force fallback handler.
     publish(nc, "SOME.BAR", "Hi!")
     sleep(2) # Wait for compilation.
     @test nc.stats.msgs_dropped > 0
@@ -25,7 +25,7 @@ NATS.status()
     sub = subscribe(nc, "SOME.FOO") do msg
         @show msg
     end
-    empty!(NATS.state.handlers) # Break state of connection to force fallback handler.
+    empty!(nc.sub_channels) # Break state of connection to force fallback handler.
     publish(nc, "SOME.FOO", "Hi!")
     sleep(0.5) # Wait for compilation.
     @test nc.stats.msgs_dropped > 0

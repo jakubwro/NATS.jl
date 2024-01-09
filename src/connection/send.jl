@@ -73,6 +73,7 @@ function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
     error("Cannot send, send buffer too large.")
 end
 
+# Calling this function is an easy way to force crash of sender task what will force reconnect.
 function reopen_send_buffer(nc::Connection)
     @lock nc.send_buffer_cond begin
         new_send_buffer = IOBuffer()
@@ -111,5 +112,4 @@ function sendloop(nc::Connection, io::IO)
         # flush(io)
     end
     @debug "Sender task finished. $(send_buffer.size) bytes in send buffer."
-    error("sender task finished")
 end

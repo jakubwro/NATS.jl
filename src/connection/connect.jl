@@ -96,10 +96,10 @@ function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
 end
 
 function init_protocol(nc, url, options)
-    nc.connect_init_count += 1
+    @atomic nc.connect_init_count += 1
     urls = connect_urls(nc, url; options.ignore_advertised_servers)
     if options.retain_servers_order
-        idx = mod(nc.connect_init_count - 1, length(urls)) + 1
+        idx = mod((@atomic nc.connect_init_count) - 1, length(urls)) + 1
         url = urls[idx]
     else
         url = rand(urls)
@@ -178,23 +178,17 @@ end
 
 function receiver(nc::Connection, io::IO)
     # @show Threads.threadid()
-    while true
-        eof(io) && break
-        parser_loop(io) do msg
-            process(nc, msg)
-        end
-        # process(nc, next_protocol_message(io))
+    parser_loop(io) do msg
+        process(nc, msg)
     end
-    @debug "Receiver task finished."
 end
 
 function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     pings_out = 0
-    reconnects = nc.reconnect_count
-    while status(nc) == CONNECTED && reconnects == nc.reconnect_count
+    reconnects = (@atomic nc.reconnect_count)
+    while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
         sleep(ping_interval)
-        if !(status(nc) == CONNECTED && reconnects == nc.reconnect_count)
-            @show status(nc) nc.reconnect_count reconnects
+        if !(status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count))
             # In case if connection is broke new task will be spawned.
             # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
             break
@@ -208,7 +202,8 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
             pings_out += 1
         end
         if pings_out > max_pings_out
-            error("Not pong received after $pings_out attempts.")
+            @warn "No pong received after $pings_out attempts."
+            break
         end
     end
 end
@@ -246,7 +241,7 @@ function connect(
     options...
 )
     options = merge(default_connect_options(), options)
-    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing)
+    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing, reconnect_count = 0, connect_init_count = 0)
     sock = nothing
     read_stream = nothing
     write_stream = nothing
@@ -260,6 +255,12 @@ function connect(
             rethrow()
         end
     end
+    # This task just waits for `drain_even`, to wake up `reconnect_task` that there is cleanup to do.
+    drain_await_task = Threads.@spawn :interactive disable_sigint() do
+        wait(nc.drain_event)
+    end
+    # This works as controller for connection state. It spawns other task and listens for their completion to do
+    # reconnect logic.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
         while true
@@ -272,7 +273,7 @@ function connect(
                     current_retries = total_retries - s[1]
                     current_time = time() - start_reconnect_time
                     mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
-                    status(nc) == CONNECTING # Stop on drain
+                    (@atomic nc.drain_event.set) == false # Stop on drain
                 end
                 retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
                 try
@@ -281,77 +282,94 @@ function connect(
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
-                    status(nc, DISCONNECTED)
+                    if (@atomic nc.drain_event.set) == true
+                        status(nc, DRAINING)
+                        _do_drain(nc)
+                        status(nc, DRAINED)
+                    else
+                        status(nc, DISCONNECTED)
+                    end
                 end
                 if status(nc) == CONNECTED
-                    nc.reconnect_count += 1
+                    @atomic nc.reconnect_count += 1
                     info(nc, info_msg)
                     @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
                 elseif status(nc) == DISCONNECTED
-                    @lock nc.reconnect_cond wait(nc.reconnect_cond)
-                    status(nc, CONNECTING)
-                    continue
+                    wait(nc.reconnect_event)
+                    @debug "Reconnect requested"
+                    if (@atomic nc.drain_event.set) == true
+                        status(nc, DRAINING)
+                        _do_drain(nc)
+                        status(nc, DRAINED)
+                        break
+                    else
+                        status(nc, CONNECTING)
+                        continue
+                    end
+                elseif status(nc) == DRAINED
+                    break
                 end
             end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
-            # errormonitor(receiver_task)
-            # errormonitor(sender_task)
+            reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event) end
 
             err_channel = Channel()
             bind(err_channel, receiver_task)
             bind(err_channel, sender_task)
             bind(err_channel, ping_task)
-            
-            while true
-                try
-                    wait(err_channel)
-                catch err
-                    istaskfailed(receiver_task) && @debug "Receiver task failed:" receiver_task.result
-                    istaskfailed(sender_task) && @debug "Sender task failed:" sender_task.result
-                    istaskfailed(ping_task) && @debug "Ping task failed:" sender_task.result
-                    reopen_send_buffer(nc)
-                    @debug "Wait end time: $(time())"
-                    close(sock)
-                    break
+            bind(err_channel, drain_await_task)
+            bind(err_channel, reconnect_await_task)
+            try
+                wait(err_channel)
+                @debug "Reconnect task woken at $(time())"
+            catch err
+                if !(err isa InvalidStateException)
+                    @debug "Error caused wake up" err
                 end
             end
-            if isdrained(nc)
-                @debug "Drained, no reconnect."
+
+            if istaskdone(drain_await_task)
+                status(nc, DRAINING)
+                _do_drain(nc)
+                status(nc, DRAINED)
+                close(sock)
+                reopen_send_buffer(nc)
+                @info "Connection is drained"
                 break
             end
-            try wait(sender_task) catch end
-            # try wait(receiver_task) catch end
+            
+            notify(nc.reconnect_event) # Finish reconnect_await_task.
+            # TODO: maybe `autoreset` should be used, but special care needs to be taken to not consume it anywhere else.
+            reset(nc.reconnect_event) # Reset event to prevent forever reconnect. 
+            close(sock) # Finish receiver_task.
+            reopen_send_buffer(nc) # Finish sender_task.
 
-            @warn "Trying to reconnect"
+            try wait(sender_task) catch end
+            try wait(receiver_task) catch end
+            try wait(reconnect_await_task) catch end
+            # `ping_task` will complete eventually seeing `reconnect_count` increased.
+
+            @assert istaskdone(receiver_task)
+            @assert istaskdone(sender_task)
+            @assert istaskdone(reconnect_await_task)
+
+            # TODO: indicate what was the cause in warning message.
+            @warn "Connection lost, trynig to reconnect."
             status(nc, CONNECTING)
-            nc.connect_init_count = 0
+            @atomic nc.connect_init_count = 0
         end
     end
+    errormonitor(reconnect_task)
 
     @lock state.lock push!(state.connections, nc)
     nc
 end
 
 function reconnect(nc::NATS.Connection)
-    st = status(nc)
-    if st == CONNECTING
-    elseif st == CONNECTED
-        reopen_send_buffer(nc)
-    elseif st == DRAINING || st == DRAINED
-        error("Cannot reconnect DRAINED connection")
-    elseif st == DISCONNECTED
-        notified_count = @lock nc.reconnect_cond notify(nc.reconnect_cond)
-        if notified_count == 0
-            error("Failed to reconnect.")
-        elseif notified_count == 1
-            @info "Reconnect signal sent successfully"
-        else
-            error("Unexpected number of notified tasks: $notified_count")
-        end
-    else
-        error("Unexpected connection status: $st")
+    @lock nc.status_change_cond begin
+        notify(nc.reconnect_event)
+        # TODO: wait for status change
     end
-
 end

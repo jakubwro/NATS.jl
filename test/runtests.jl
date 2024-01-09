@@ -48,7 +48,7 @@ if have_nats
 
     @testset "All subs should be closed" begin
         sleep(5)
-        @test isempty(NATS.state.handlers)
+        @test isempty(nc.sub_channels)
 
         for nc in NATS.state.connections
             @test isempty(nc.subs)

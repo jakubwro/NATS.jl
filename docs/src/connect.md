@@ -1,6 +1,28 @@
 
 # Connection
 
+## Connection lifecycle
+
+```@eval
+using GraphViz
+
+lifecycle = dot""" digraph G {
+    CONNECTING -> CONNECTED -> DRAINING -> DRAINED
+    CONNECTED -> CONNECTING [label="TCP failure", fontname="Courier New", fontsize=5, color="#aa0000", fontcolor="#aa0000"]
+    CONNECTING -> DISCONNECTED [label="reconnect\nretries\nexhausted", fontname="Courier New", fontsize=5, color="#aa0000", fontcolor="#aa0000"]
+    DISCONNECTED -> CONNECTING [label="reconnect()", fontname="Courier New", fontsize=5]
+    DISCONNECTED -> DRAINING [lable="unsubscribe and\nprocess messages"]
+}"""
+
+GraphViz.layout!(lifecycle, engine="dot")
+open("lifecycle.svg", write = true) do f
+    GraphViz.render(f, lifecycle)
+end
+nothing
+```
+![](lifecycle.svg)
+
+
 ## Connecting to NATS cluster
 
 To use NATS it is needed to crate connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
