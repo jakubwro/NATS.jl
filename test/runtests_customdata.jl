@@ -36,10 +36,10 @@ nc = NATS.connect(default = true)
     @test result isa Person
     @test result.name == "Jacek"
     @test result.age == 33
-    @test length(nc.sub_channels) == 1
+    @test length(nc.sub_data) == 1
     unsubscribe(sub)
     sleep(0.1)
-    @test length(nc.sub_channels) == 0
+    @test length(nc.sub_data) == 0
 end
 
 @testset "Request reply with custom data" begin

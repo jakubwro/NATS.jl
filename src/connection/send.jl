@@ -15,22 +15,47 @@
 #
 ### Code:
 
-function can_send(nc::Connection, message::ProtocolMessage)
-    if isdrained(nc)
-        if message isa Unsub || message isa Pong
-            !(status(nc) == DRAINED || status(nc) == DISCONNECTED)
-        else
-            false
-        end
-    else
+function can_send(nc::Connection, ::ProtocolMessage)
+    # Drained conection is not usable, otherwise allow ping and pong and unsubs.
+    status(nc) != DRAINED
+end
+
+function can_send(nc::Connection, ::Union{Pub, Vector{Pub}})
+    conn_status = status(nc)
+    if conn_status == CONNECTED
         true
+    elseif conn_status == CONNECTING
+        true # TODO: or nc.send_enqueue_when_disconnected?
+    elseif conn_status == DISCONNECTED
+        nc.send_enqueue_when_disconnected
+    elseif conn_status == DRAINING
+        # Allow handlers to publish results during drain
+        sub_stats = ScopedValues.get(scoped_subscription_stats)
+        is_called_from_subscription_handler = !isnothing(sub_stats)
+        is_called_from_subscription_handler
+    elseif conn_status == DRAINED
+        false
+    end
+end
+
+function can_send(nc::Connection, ::Sub)
+    conn_status = status(nc)
+    if conn_status == CONNECTED
+        true
+    elseif conn_status == CONNECTING
+        true
+    elseif conn_status == DISCONNECTED
+        true
+    elseif conn_status == DRAINING
+        # No new subs allowed during drain.
+        false
+    elseif conn_status == DRAINED
+        false
     end
 end
 
 function try_send(nc::Connection, msgs::Vector{Pub})::Bool
-    if status(nc) in [DRAINING, DRAINED, DISCONNECTED]
-        error("Cannot send on connection with status $(status(nc))")
-    end
+    can_send(nc, msgs) || error("Cannot send on connection with status $(status(nc))")
     
     @lock nc.send_buffer_cond begin
         if nc.send_buffer.size < nc.send_buffer_size
@@ -78,8 +103,8 @@ function reopen_send_buffer(nc::Connection)
     @lock nc.send_buffer_cond begin
         new_send_buffer = IOBuffer()
         data = take!(nc.send_buffer)
-        for (sid, sub) in pairs(nc.subs)
-            show(new_send_buffer, MIME_PROTOCOL(), sub)
+        for (sid, sub_data) in pairs(nc.sub_data)
+            show(new_send_buffer, MIME_PROTOCOL(), sub_data.sub)
             unsub_max_msgs = get(nc.unsubs, sid, nothing) # TODO: lock on connection may be needed
             isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
         end
@@ -89,6 +114,14 @@ function reopen_send_buffer(nc::Connection)
         close(nc.send_buffer)
         nc.send_buffer = new_send_buffer
         notify(nc.send_buffer_cond)
+    end
+end
+
+# Tells if send buffer if flushed what means no protocol messages are waiting
+# to be delivered to the server.
+function is_send_buffer_flushed(nc::Connection)
+    @lock nc.send_buffer_cond begin
+        nc.send_buffer.size == 0 && (@atomic nc.send_buffer_flushed) 
     end
 end
 
@@ -103,13 +136,16 @@ function sendloop(nc::Connection, io::IO)
                 if !isopen(send_buffer)
                     break
                 end
+                @atomic nc.send_buffer_flushed = false
                 take!(send_buffer)
             else
+                @atomic nc.send_buffer_flushed = false
                 taken
             end
         end
         write(io, buf)
-        # flush(io)
+        flush(io)
+        @atomic nc.send_buffer_flushed = true
     end
     @debug "Sender task finished. $(send_buffer.size) bytes in send buffer."
 end

@@ -12,10 +12,10 @@ using Random
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
-    @test length(nc.sub_channels) == 1
+    @test length(nc.sub_data) == 1
     unsubscribe(nc, sub)
     sleep(0.1)
-    @test length(nc.sub_channels) == 0
+    @test length(nc.sub_data) == 0
 end
 
 NATS.status()
@@ -30,10 +30,10 @@ NATS.status()
     result = take!(c)
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
-    @test length(connection.sub_channels) == 1
+    @test length(connection.sub_data) == 1
     unsubscribe(connection, sub)
     sleep(0.1)
-    @test length(connection.sub_channels) == 0
+    @test length(connection.sub_data) == 0
 
     c = Channel()
     sub = subscribe(connection, "SOME.BAR") do msg::String
@@ -56,10 +56,10 @@ NATS.status()
     publish(nc, "SOME.BAR", "Hi!")
     result = take!(c)
     @test result == "Hi!"
-    @test length(nc.sub_channels) == 1
+    @test length(nc.sub_data) == 1
     unsubscribe(nc, sub)
     sleep(0.1)
-    @test length(nc.sub_channels) == 0
+    @test length(nc.sub_data) == 0
 end
 
 NATS.status()
@@ -74,10 +74,10 @@ NATS.status()
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test headers(result) == ["A" => "B"]
-    @test length(nc.sub_channels) == 1
+    @test length(nc.sub_data) == 1
     unsubscribe(nc, sub)
     sleep(0.1)
-    @test length(nc.sub_channels) == 0
+    @test length(nc.sub_data) == 0
 end
 
 NATS.status()

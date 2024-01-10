@@ -22,26 +22,33 @@ include("stats.jl")
 const DEFAULT_SEND_BUFFER_SIZE = 2 * 2^20
 const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
 
+struct SubscriptionData
+    sub::Sub
+    channel::Channel
+    stats::Stats
+end
+
 @kwdef mutable struct Connection
     url::String
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
     info::Union{Info, Nothing}
-    @atomic reconnect_count::Int64
+    sub_data::Dict{String, SubscriptionData} = Dict{String, SubscriptionData}()
+    unsubs::Dict{String, Int64} = Dict{String, Int64}()
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
-    subs::Dict{String, Sub} = Dict{String, Sub}()
-    unsubs::Dict{String, Int64} = Dict{String, Int64}()
     send_buffer::IO = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
-    pong_received_cond::Threads.Condition = Threads.Condition()
-    @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
+    send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
+    pong_received_cond::Threads.Condition = Threads.Condition()
     status_change_cond::Threads.Condition = Threads.Condition()
-    sub_channels::Dict{String, Channel} = Dict{String, Channel}()
+    @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
+    @atomic reconnect_count::Int64
+    @atomic send_buffer_flushed::Bool
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
@@ -93,7 +100,7 @@ function status()
     println("connections:    $(length(state.connections))        ")
     for (i, nc) in enumerate(state.connections)
         print("       [#$i]:  ")
-        print(status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs             ")
+        print(status(nc), ", " , length(nc.sub_data)," subs, ", length(nc.unsubs)," unsubs             ")
         println()
     end
     # println("subscriptions:  $(length(state.handlers))           ")
@@ -103,7 +110,7 @@ function status()
 end
 
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
-    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.subs)," subs, ", length(nc.unsubs)," unsubs)")
+    clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.sub_data)," subs, ", length(nc.unsubs)," unsubs)")
 
 function ping(nc; timer = Timer(1.0))
     pong_ch = Channel{Pong}(1)

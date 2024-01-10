@@ -48,10 +48,8 @@ if have_nats
 
     @testset "All subs should be closed" begin
         sleep(5)
-        @test isempty(nc.sub_channels)
-
         for nc in NATS.state.connections
-            @test isempty(nc.subs)
+            @test isempty(nc.sub_data)
             @test isempty(nc.unsubs)
             if nc.send_buffer.size > 0
                 @info "Buffer content" String(nc.send_buffer.data[begin:nc.send_buffer.size])

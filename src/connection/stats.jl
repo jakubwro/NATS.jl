@@ -19,6 +19,8 @@ const NATS_STATS_MAX_RECENT_ERRORS = 100
 mutable struct Stats
     "Count of msgs received but maybe not yet handled by subscription."
     @atomic msgs_received::Int64
+    "Count of msgs received that was not pickuped by subscription handler yet."
+    @atomic msgs_pending::Int64
     "Count of msgs handled without error."
     @atomic msgs_handled::Int64
     "Count of msgs that caused handler function error."
@@ -32,7 +34,7 @@ mutable struct Stats
     "Recent errors."
     errors::Channel{Exception}
     function Stats()
-        new(0, 0, 0, 0, 0, 0, Channel{Exception}(NATS_STATS_MAX_RECENT_ERRORS))
+        new(0, 0, 0, 0, 0, 0, 0, Channel{Exception}(NATS_STATS_MAX_RECENT_ERRORS))
     end
 end
 
@@ -41,6 +43,7 @@ const scoped_subscription_stats = ScopedValue{Stats}()
 function show(io::IO, stats::Stats)
      print(io, "published: $(stats.msgs_published) \n")
      print(io, " received: $(stats.msgs_received) \n")
+     print(io, " pending: $(stats.msgs_pending) \n")
      print(io, "   active: $(stats.handlers_running) \n")
      print(io, "  handled: $(stats.msgs_handled) \n")
      print(io, "  errored: $(stats.msgs_errored) \n")
@@ -65,4 +68,11 @@ end
 
 function dec_stat(stat, field, value)
     Base.modifyproperty!(stat, field, -, value, :sequentially_consistent)
+end
+
+# Tell if all received messages are delivered to subscription and handlers finished.
+function is_every_message_handled(stats::Stats)
+    (@atomic stats.msgs_pending) == 0 &&
+    (@atomic stats.handlers_running) == 0 &&
+    (@atomic stats.msgs_received) == (@atomic stats.msgs_handled) + (@atomic stats.msgs_errored)
 end
