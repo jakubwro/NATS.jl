@@ -45,7 +45,10 @@ function default_connect_options()
         retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
         ignore_advertised_servers = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS))),
         retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER))),
-        enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED)))
+        send_enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED))),
+        reconnect_delays = default_reconnect_delays(),
+        send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
+        send_retry_delays = SEND_RETRY_DELAYS
     )
 end
 
@@ -189,7 +192,7 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
     while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
         sleep(ping_interval)
         if !(status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count))
-            # In case if connection is broke new task will be spawned.
+            # In case if connection is broken new task will be spawned.
             # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
             break
         end
@@ -215,8 +218,6 @@ $(SIGNATURES)
 Connect to NATS server. The function is blocking until connection is initialized.
 
 Options are:
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
-- `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
 - `tls_required`: indicates whether the client requires SSL connection
@@ -232,23 +233,29 @@ Options are:
 - `no_responders`: enable quick replies for cases where a request is sent to a topic with no responders.
 - `nkey`: the public NKey to authenticate the client
 - `nkey_seed`: the private NKey to authenticate the client
+- `ping_interval`: interval in seconds how often server should be pinged to check connection health. Default is $DEFAULT_PING_INTERVAL_SECONDS seconds
+- `max_pings_out`: how many pings in a row migh fail before connection will be restarted. Default is `$DEFAULT_MAX_PINGS_OUT`
+- `retry_on_init_fail`: if set connection handle will be returned even if initial connect fails. Otherwise error causing failure will be trown. Default is `$DEFAULT_RETRY_ON_INIT_FAIL`
+- `ignore_advertised_servers`: ignores other cluster servers returned by server. Default is `$DEFAULT_IGNORE_ADVERTISED_SERVERS`
+- `retain_servers_order`: try to connect server in order specified in `url` or list returned by the server. Defaylt is `$DEFAULT_RETAIN_SERVERS_ORDER`
+- `send_enqueue_when_disconnected`: allows buffering outgoing messages during disconnection. Default is `$DEFAULT_ENQUEUE_WHEN_DISCONNECTED`
+- `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
+- `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 """
 function connect(
     url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
-    reconnect_delays = default_reconnect_delays(),
-    send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
-    send_retry_delays = SEND_RETRY_DELAYS,
     options...
 )
     options = merge(default_connect_options(), options)
     nc = Connection(;
         url,
-        send_buffer_size,
-        send_retry_delays,
         info = nothing,
         reconnect_count = 0,
         connect_init_count = 0,
-        send_buffer_flushed = true)
+        send_buffer_flushed = true,
+        options.send_buffer_size,
+        options.send_retry_delays,
+        options.send_enqueue_when_disconnected)
     sock = nothing
     read_stream = nothing
     write_stream = nothing
@@ -276,13 +283,13 @@ function connect(
                 # TODO: handle repeating server Err messages.
                 start_reconnect_time = time()
                 function check_errors(s, e)
-                    total_retries = length(reconnect_delays)
+                    total_retries = length(options.reconnect_delays)
                     current_retries = total_retries - s[1]
                     current_time = time() - start_reconnect_time
                     mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
                     (@atomic nc.drain_event.set) == false # Stop on drain
                 end
-                retry_init_protocol = retry(init_protocol, delays=reconnect_delays, check = check_errors)
+                retry_init_protocol = retry(init_protocol, delays=options.reconnect_delays, check = check_errors)
                 try
                     sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
                     status(nc, CONNECTED)

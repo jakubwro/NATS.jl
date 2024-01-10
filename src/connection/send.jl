@@ -21,17 +21,17 @@ function can_send(nc::Connection, ::ProtocolMessage)
 end
 
 function can_send(nc::Connection, ::Union{Pub, Vector{Pub}})
-    sub_stats = ScopedValues.get(scoped_subscription_stats)
-    is_called_from_subscription_handler = !isnothing(sub_stats)
     conn_status = status(nc)
     if conn_status == CONNECTED
         true
     elseif conn_status == CONNECTING
-        true # TODO: it depends on options
+        true # TODO: or nc.send_enqueue_when_disconnected?
     elseif conn_status == DISCONNECTED
-        true # TODO: it depends on options
+        nc.send_enqueue_when_disconnected
     elseif conn_status == DRAINING
         # Allow handlers to publish results during drain
+        sub_stats = ScopedValues.get(scoped_subscription_stats)
+        is_called_from_subscription_handler = !isnothing(sub_stats)
         is_called_from_subscription_handler
     elseif conn_status == DRAINED
         false

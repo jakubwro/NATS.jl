@@ -41,6 +41,7 @@ end
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
     send_retry_delays::Any = SEND_RETRY_DELAYS
+    send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
     pong_received_cond::Threads.Condition = Threads.Condition()
