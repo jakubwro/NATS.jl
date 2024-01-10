@@ -79,14 +79,6 @@ function new_sid(connection::Connection)
     @lock connection.lock randstring(connection.rng, 6)
 end
 
-function isconnecting(nc::Connection)
-    status(nc) == CONNECTING
-end
-
-function isconnected(nc::Connection)
-    status(nc) == CONNECTED
-end
-
 include("state.jl")
 include("utils.jl")
 include("tls.jl")
