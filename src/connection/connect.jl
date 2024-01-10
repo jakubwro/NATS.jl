@@ -298,7 +298,7 @@ function connect(
                     @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
                     if (@atomic nc.drain_event.set) == true
                         status(nc, DRAINING)
-                        _do_drain(nc)
+                        _do_drain(nc, false)
                         status(nc, DRAINED)
                     else
                         status(nc, DISCONNECTED)
@@ -313,7 +313,7 @@ function connect(
                     @debug "Reconnect requested"
                     if (@atomic nc.drain_event.set) == true
                         status(nc, DRAINING)
-                        _do_drain(nc)
+                        _do_drain(nc, false)
                         status(nc, DRAINED)
                         break
                     else
@@ -346,7 +346,9 @@ function connect(
 
             if istaskdone(drain_await_task)
                 status(nc, DRAINING)
-                _do_drain(nc)
+                # Check if there is a chance for send buffer flush.
+                is_connected = !(istaskdone(sender_task) || istaskdone(receiver_task))
+                _do_drain(nc, is_connected)
                 status(nc, DRAINED)
                 close(sock)
                 reopen_send_buffer(nc)

@@ -19,7 +19,7 @@
 const DRAIN_POLL_INTERVAL = 0.05
 
 # Actual drain logic, for thread safety executed in connection controller task.
-function _do_drain(nc::Connection; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
+function _do_drain(nc::Connection, is_connected; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
     all_subs = @lock nc.lock copy(nc.sub_data)
     for (sid, _) in all_subs
         send(nc, Unsub(sid, 0))
@@ -40,9 +40,8 @@ function _do_drain(nc::Connection; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
             # TODO: add log about count of messages undelivered.
             break
         end
-        conn_status = status(nc)
-        if conn_status != CONNECTED
-            @error "Cannot flush send buffer as connection state is `$conn_status`, some publications might be lost."
+        if !is_connected
+            @error "Cannot flush send buffer as connection is disconnected from server, some publications might be lost."
             # TODO: add log about count of messages undelivered.
             break
         end
