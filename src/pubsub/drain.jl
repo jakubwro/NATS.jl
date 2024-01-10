@@ -32,7 +32,7 @@ function drain(connection::Connection, sid::String; timer = Timer(DEFAULT_DRAIN_
         end
         sleep(DRAIN_POLL_INTERVAL) # TODO: exp backoff
     end
-    _cleanup_sub(connection, sid)
+    _delete_sub_data(connection, sid)
 end
 
 function drain(connection::Connection, sub::Sub)

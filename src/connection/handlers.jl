@@ -63,6 +63,7 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                 inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
                 n -= n_dropped
                 msgs = first(msgs, n)
+                # TODO: send NAK for dropped messages
             end
             if n > 0
                 try
@@ -75,7 +76,8 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
                     inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
                 end
-                _cleanup_unsub_msg(nc, sid, n)
+                # TODO: here should be n + n_dropped
+                _update_unsub_counter(nc, sid, n)
             end
         else
             if isnothing(fallbacks)
