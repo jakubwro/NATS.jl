@@ -20,6 +20,12 @@ function can_send(nc::Connection, ::ProtocolMessage)
     status(nc) != DRAINED
 end
 
+function can_send(nc::Connection, ::Union{Ping, Pong})
+    # Do not let PING and PONG polute send buffer during drain.
+    conn_status = status(nc)
+    conn_status != DRAINED && conn_status != DRAINING
+end
+
 function can_send(nc::Connection, ::Union{Pub, Vector{Pub}})
     conn_status = status(nc)
     if conn_status == CONNECTED
