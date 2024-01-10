@@ -41,11 +41,12 @@ function _do_drain(nc::Connection; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
             break
         end
         conn_status = status(nc)
-        if conn_status != CONNECTED
-            @error "Cannot flush send buffer as connection state is `$conn_status`, some publications might be lost."
-            # TODO: add log about count of messages undelivered.
-            break
-        end
+        #TODO: access previous status somehow
+        # if conn_status != CONNECTED
+        #     @error "Cannot flush send buffer as connection state is `$conn_status`, some publications might be lost."
+        #     # TODO: add log about count of messages undelivered.
+        #     break
+        # end
         sleep(DRAIN_POLL_INTERVAL)
     end
     @lock nc.lock empty!(nc.sub_data)
