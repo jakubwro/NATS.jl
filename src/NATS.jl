@@ -32,7 +32,7 @@ using URIs
 
 import Base: show, convert, close, put!, take!
 
-export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain, isdrained
+export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain
 export with_connection
 
 const DEFAULT_HOST = "localhost"
@@ -60,9 +60,10 @@ const DEFAULT_IGNORE_ADVERTISED_SERVERS = false
 const DEFAULT_RETAIN_SERVERS_ORDER = false
 const DEFAULT_ENQUEUE_WHEN_DISCONNECTED = true
 
-const SUBSCRIPTION_CHANNEL_SIZE = 10000000
+const SUBSCRIPTION_CHANNEL_SIZE = 512 * 1024
 const SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
 const REQUEST_TIMEOUT_SECONDS = 5.0 # TODO: add to ENV
+const DEFAULT_DRAIN_TIMEOUT = 5.0 # TODO: add to ENV
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
 const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code

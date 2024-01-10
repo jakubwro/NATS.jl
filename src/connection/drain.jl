@@ -16,23 +16,39 @@
 #
 ### Code:
 
-function isdrained(nc::Connection)
-    status(nc) in [DRAINING, DRAINED]
-end
+const DRAIN_POLL_INTERVAL = 0.05
 
-function _do_drain(nc::Connection)
-    all_subs = copy(nc.subs)
-    channels = collect(values(nc.sub_channels))
-    for (_, sub) in all_subs
-        unsubscribe(nc, sub; max_msgs = 0)
+# Actual drain logic, for thread safety executed in connection controller task.
+function _do_drain(nc::Connection; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
+    all_subs = @lock nc.lock copy(nc.sub_data)
+    for (sid, _) in all_subs
+        send(nc, Unsub(sid, 0))
     end
-    while any(ch -> Base.n_avail(ch) > 0, channels)
-        sleep(1)
+    conn_stats = @lock nc.lock nc.stats
+    while !is_every_message_handled(conn_stats)
+        if !isopen(timeout)
+            @error "Timeout for drain exceeded, not all subs might be drained."
+            # TODO: add log about count of messages not handled.
+            break
+        end
+        sleep(DRAIN_POLL_INTERVAL)
     end
-    while (@atomic nc.stats.handlers_running) > 0
-        sleep(1)
+    # At this point no more publications can be done. Wait for `send_buffer` flush.
+    while !is_send_buffer_flushed(nc)
+        if !isopen(timeout)
+            @error "Timeout for drain exceeded, some publications might be lost."
+            # TODO: add log about count of messages undelivered.
+            break
+        end
+        conn_status = status(nc)
+        if conn_status != CONNECTED
+            @error "Cannot flush send buffer as connection state is `$conn_status`, some publications might be lost."
+            # TODO: add log about count of messages undelivered.
+            break
+        end
+        sleep(DRAIN_POLL_INTERVAL)
     end
-    length(nc.subs) > 0 && @warn "$(length(nc.subs)) not unsubscribed during drain."
+    @lock nc.lock empty!(nc.sub_data)
 end
 
 """

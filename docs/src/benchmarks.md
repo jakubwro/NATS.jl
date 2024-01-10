@@ -203,11 +203,11 @@ Error
 ```
 
 ```julia
-function subscribe_for_one_second()
-    tm = Timer(1)
+function subscribe_for_one_second(nc::NATS.Connection, timeout = 1.0)
+    tm = Timer(timeout)
     counter = 0
     start = nothing
-    sub = subscribe("foo") do
+    sub = subscribe(nc, "foo") do
         if isnothing(start)
             start = time()
         end
@@ -217,7 +217,7 @@ function subscribe_for_one_second()
     #     sleep(1)
     # end
     wait(tm)
-    unsubscribe(sub)
+    unsubscribe(nc, sub)
     if counter == 0
         @info "No messages"
     else

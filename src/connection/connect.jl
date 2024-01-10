@@ -241,7 +241,14 @@ function connect(
     options...
 )
     options = merge(default_connect_options(), options)
-    nc = Connection(; url, send_buffer_size, send_retry_delays, info = nothing, reconnect_count = 0, connect_init_count = 0)
+    nc = Connection(;
+        url,
+        send_buffer_size,
+        send_retry_delays,
+        info = nothing,
+        reconnect_count = 0,
+        connect_init_count = 0,
+        send_buffer_flushed = true)
     sock = nothing
     read_stream = nothing
     write_stream = nothing
@@ -333,6 +340,7 @@ function connect(
             if istaskdone(drain_await_task)
                 status(nc, DRAINING)
                 _do_drain(nc)
+                # TODO: enusure tcp socket is flushed
                 status(nc, DRAINED)
                 close(sock)
                 reopen_send_buffer(nc)
