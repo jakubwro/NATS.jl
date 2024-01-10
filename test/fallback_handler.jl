@@ -30,7 +30,7 @@ NATS.status()
     sleep(0.5) # Wait for compilation.
     @test nc.stats.msgs_dropped > 0
     @test was_called
-    unsubscribe(nc, sub)
+    drain(nc, sub)
 end
 
 NATS.status()

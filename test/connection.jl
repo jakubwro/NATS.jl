@@ -33,7 +33,7 @@ NATS.status()
     @test conn.stats.msgs_published == 2
     sub_stats = conn.sub_data[sub.sid].stats
     @test sub_stats.msgs_published == 1
-    unsubscribe(conn, sub)
+    drain(conn, sub)
 end
 
 NATS.status()
@@ -103,10 +103,8 @@ NATS.status()
         publish(nc, subject, "Hi!")
         sleep(0.1)
     end
-    sleep(1) # wait for all errors.
 
-    unsubscribe(nc, sub)
-    sleep(0.1)
+    drain(nc, sub)
 end
 
 NATS.status()
@@ -122,10 +120,7 @@ NATS.status()
         publish(nc, subject, "Hi!")
         sleep(0.1)
     end
-    sleep(1) # wait for all errors.
-
-    unsubscribe(nc, sub)
-    sleep(0.1)
+    drain(nc, sub)
 end
 
 NATS.status()
@@ -158,7 +153,7 @@ NATS.status()
     @test_throws ErrorException publish(nc, "DRAIN_TEST")
     @test_throws ErrorException ping(nc)
     @test NATS.status(nc) == NATS.DRAINED
-    NATS.drain(nc) # Draining drained connectin is noop.
+    NATS.drain(nc) # Draining drained connection is noop.
     @test NATS.status(nc) == NATS.DRAINED
     @test isempty(nc.sub_data)
 end

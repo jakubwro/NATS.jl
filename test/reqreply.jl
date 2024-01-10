@@ -26,10 +26,8 @@ NATS.status()
         "Reply from service 2."
     end
     results = request(nc, 2, subject, "This is request payload")
-    sleep(1)
-    unsubscribe(nc, sub1)
-    unsubscribe(nc, sub2)
-    sleep(0.1)
+    drain(nc, sub1)
+    drain(nc, sub2)
     @test length(results) == 2
     payloads = payload.(results)
     @test "Reply from service 1." in payloads
@@ -123,7 +121,7 @@ NATS.status()
         "Received $msg"
     end
     result = request(String, nc, "SOME.REQUESTS", "Hi!")
-    unsubscribe(nc, sub)
+    drain(nc, sub)
     @test result isa String
     @test result == "Received Hi!"
 end
@@ -135,7 +133,7 @@ NATS.status()
         "This is a reply.", ["A" => "B"]
     end
     result = request(nc, "SOME.REQUESTS")
-    unsubscribe(nc, sub)
+    drain(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
     @test headers(result) == ["A" => "B"]

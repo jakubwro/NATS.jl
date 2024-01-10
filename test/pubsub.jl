@@ -13,8 +13,7 @@ using Random
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test length(nc.sub_data) == 1
-    unsubscribe(nc, sub)
-    sleep(0.1)
+    drain(nc, sub)
     @test length(nc.sub_data) == 0
 end
 
@@ -31,8 +30,7 @@ NATS.status()
     @test result isa NATS.Msg
     @test payload(result) == "Hi!"
     @test length(connection.sub_data) == 1
-    unsubscribe(connection, sub)
-    sleep(0.1)
+    drain(connection, sub)
     @test length(connection.sub_data) == 0
 
     c = Channel()
@@ -41,7 +39,7 @@ NATS.status()
     end
     publish(connection, "SOME.BAR", "Hi!")
     result = take!(c)
-    unsubscribe(connection, sub)
+    drain(connection, sub)
     @test result == "Hi!"
 end
 
@@ -57,8 +55,7 @@ NATS.status()
     result = take!(c)
     @test result == "Hi!"
     @test length(nc.sub_data) == 1
-    unsubscribe(nc, sub)
-    sleep(0.1)
+    drain(nc, sub)
     @test length(nc.sub_data) == 0
 end
 
@@ -75,8 +72,7 @@ NATS.status()
     @test payload(result) == "Hi!"
     @test headers(result) == ["A" => "B"]
     @test length(nc.sub_data) == 1
-    unsubscribe(nc, sub)
-    sleep(0.1)
+    drain(nc, sub)
     @test length(nc.sub_data) == 0
 end
 
@@ -90,8 +86,7 @@ NATS.status()
         "nothing to do"
     end
     publish(nc, subject, "Hi!")
-    sleep(1)
-    unsubscribe(nc, sub)
+    drain(nc, sub)
     @test was_delivered
 end
 
