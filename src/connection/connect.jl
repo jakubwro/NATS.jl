@@ -340,7 +340,6 @@ function connect(
             if istaskdone(drain_await_task)
                 status(nc, DRAINING)
                 _do_drain(nc)
-                # TODO: enusure tcp socket is flushed
                 status(nc, DRAINED)
                 close(sock)
                 reopen_send_buffer(nc)

@@ -27,9 +27,9 @@ function can_send(nc::Connection, ::Union{Pub, Vector{Pub}})
     if conn_status == CONNECTED
         true
     elseif conn_status == CONNECTING
-        true # it depends on options
+        true # TODO: it depends on options
     elseif conn_status == DISCONNECTED
-        true # it depends on options
+        true # TODO: it depends on options
     elseif conn_status == DRAINING
         # Allow handlers to publish results during drain
         is_called_from_subscription_handler

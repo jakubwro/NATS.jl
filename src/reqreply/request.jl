@@ -87,7 +87,6 @@ function request(
     timeout_task = Threads.@spawn :interactive disable_sigint() do
         try wait(timer) catch end
         drain(connection, sub)
-        # unsubscribe(connection, sub; max_msgs = 0)
     end
     bind(replies_channel, timeout_task)
     errormonitor(timeout_task)
