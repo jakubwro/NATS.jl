@@ -64,7 +64,7 @@ const DEFAULT_SUBSCRIPTION_CHANNEL_SIZE = 512 * 1024
 const DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS = 5.0
 const DEFAULT_REQUEST_TIMEOUT_SECONDS = 5.0
 const DEFAULT_DRAIN_TIMEOUT_SECONDS = 5.0
-const DEFAULT_DRAIN_POLL_INTERVAL_SECONDS = 0.1
+const DEFAULT_DRAIN_POLL_INTERVAL_SECONDS = 0.2
 
 # If set to true messages will be enqueued when connection lost, otherwise exception will be thrown.
 const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code

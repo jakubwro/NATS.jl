@@ -10,7 +10,7 @@ using NATS, Test
             was_delivered = true
         end
         publish("subject_1")
-        publish("subject_1", "Some data") 
+        publish("subject_1", "Some data")
         drain(sub)
     end
     @test was_delivered == true

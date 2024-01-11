@@ -40,7 +40,7 @@ Current `NATS.jl` approach to handling signals is based on code and discussions 
 |-----------------------------------------------|--------------|--------------------|-------------
 | `NATS_AUTH_TOKEN`                             | `connect`    | `nothing`          | Client authorization token   
 | `NATS_CONNECT_URL`                            | `connect`    | `localhost:4222`   | Connection url, multiple urls to the same NATS cluster can be provided, for example `nats:://localhost:4222,tls://localhost:4223`    
-| `NATS_DRAIN_POLL_INTERVAL_SECONDS`            | `connect`    | `0.1`              | Interval in seconds how often `drain` will check if all buffers are consumed.
+| `NATS_DRAIN_POLL_INTERVAL_SECONDS`            | `connect`    | `0.2`              | Interval in seconds how often `drain` will check if all buffers are consumed.
 | `NATS_DRAIN_TIMEOUT_SECONDS`                  | `connect`    | `5.0`              | Maximum time (in seconds) `drain` will block before returning error
 | `NATS_ENQUEUE_WHEN_DISCONNECTED`              | `connect`    | `true`             | Allows buffering outgoing messages during disconnection
 | `NATS_IGNORE_ADVERTISED_SERVERS`              | `connect`    | `false`            | Ignores other cluster servers returned by server
