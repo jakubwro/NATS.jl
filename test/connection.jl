@@ -2,6 +2,7 @@
 using Test
 using NATS
 using Random
+using ScopedValues
 
 NATS.status()
 
@@ -242,6 +243,67 @@ NATS.status()
 
     pub = NATS.Pub("test_publish_on_drained", nothing, UInt8[], UInt8[])
     @test_throws ErrorException NATS.send(connection, repeat([pub], 10))
+end
+
+NATS.status()
+
+@testset "Subscription draining" begin
+    connection = NATS.connect()
+
+    published_count = 0
+    delivered_count = 0
+    sub = subscribe(connection, "some_topic") do msg
+        sleep(0.1)
+        delivered_count += 1
+    end
+    sleep(1) # Let server to notice subscribtion.
+    publisher = @async for i in 1:300
+        publish(connection, "some_topic", "Hi!")
+        published_count += 1
+        sleep(0.01)
+    end
+    sleep(0.2)
+    drain(connection, sub)
+    sleep(1)
+    @test delivered_count > 0
+    wait(publisher)
+    @show delivered_count published_count
+    @test connection.stats.msgs_handled == delivered_count
+    @test connection.stats.msgs_received == delivered_count
+end
+
+NATS.status()
+
+@testset "Connection draining" begin
+    connection = NATS.connect()
+
+    published_count = 0
+    delivered_count = 0
+    sub = subscribe(connection, "some_topic") do msg
+        sleep(0.05)
+        delivered_count += 1
+    end
+    sleep(1) # Let server to notice subscription.
+    publisher = @async for i in 1:300
+        publish(connection, "some_topic", "Hi!")
+        published_count += 1
+        sleep(0.01)
+    end
+    sleep(0.2)
+    t = @async with(NATS.scoped_subscription_stats => NATS.Stats()) do
+        tm = Timer(3)
+        while isopen(tm)
+            publish(connection, "other_topic")
+        end
+    end
+    sleep(0.1)
+    @time drain(connection)
+    sleep(1)
+    @test delivered_count > 0
+    @test_throws "Cannot send on connection with status DRAINING" wait(publisher)
+    @show delivered_count published_count
+    @test connection.stats.msgs_handled == delivered_count
+    @test connection.stats.msgs_received == delivered_count
 end
 
 NATS.status()
