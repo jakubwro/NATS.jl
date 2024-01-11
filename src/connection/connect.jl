@@ -386,13 +386,13 @@ function connect(
     nc
 end
 
-function reconnect(nc::NATS.Connection)
+function reconnect(nc::NATS.Connection; wait = true)
     @lock nc.status_change_cond begin
         if nc.status == DRAINING || nc.status == DRAINED
             error("Cannot reconnect drained connection.")
         end
         notify(nc.reconnect_event)
-        while nc.status != CONNECTING
+        while wait && nc.status != CONNECTING
             wait(nc.status_change_cond)
         end
     end

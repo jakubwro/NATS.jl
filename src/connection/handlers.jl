@@ -23,7 +23,7 @@ function process(nc::Connection, msg::Info)
         @warn "Server is in Lame Duck Mode, forcing reconnect to other server"
         @debug "Connect urls are: $(msg.connect_urls)"
         # TODO: do not reconnect if there are no urls provided
-        reconnect(nc)
+        reconnect(nc, wait = false)
     end
 end
 
