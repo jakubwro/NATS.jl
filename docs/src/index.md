@@ -33,3 +33,38 @@ Limitation to this approach is that tasks started by user of `NATS.jl` or other 
 Future improvements in this matter might be introduced by [open PR](https://github.com/JuliaLang/julia/pull/49541)
 
 Current `NATS.jl` approach to handling signals is based on code and discussions from this PR. 
+
+## Environment variables
+
+| `ENV` variable                                | Used in      | Default if not set | Description
+|-----------------------------------------------|--------------|--------------------|-------------
+| `NATS_AUTH_TOKEN`                             | `connect`    | `nothing`          | Client authorization token   
+| `NATS_CONNECT_URL`                            | `connect`    | `localhost:4222`   |           
+| `NATS_DRAIN_POLL_INTERVAL_SECONDS`            | `connect`    | `0.1`              |               
+| `NATS_DRAIN_TIMEOUT_SECONDS`                  | `connect`    | `5.0`              | 
+| `NATS_ENQUEUE_WHEN_DISCONNECTED`              | `connect`    | `true`             | Allows buffering outgoing messages during disconnection
+| `NATS_IGNORE_ADVERTISED_SERVERS`              | `connect`    | `false`            | Ignores other cluster servers returned by server
+| `NATS_JWT`                                    | `connect`    | `nothing`          | The JWT that identifies a user permissions and account                                  
+| `NATS_MAX_PINGS_OUT`                          | `connect`    | `3`                | How many pings in a row might fail before connection will be restarted                                      
+| `NATS_NKEY`                                   | `connect`    | `nothing`          | The public NKey to authenticate the client
+| `NATS_NKEY_SEED`                              | `connect`    | `nothing`          | the private NKey to authenticate the client
+| `NATS_PASS`                                   | `connect`    | `nothing`          | Connection password                                   
+| `NATS_PEDANTIC`                               | `connect`    | `false`            |  
+| `NATS_PING_INTERVAL`                          | `connect`    | `120.0`            |               
+| `NATS_RECONNECT_FACTOR`                       | `connect`    | ``                 | 
+| `NATS_RECONNECT_FIRST_DELAY`                  | `connect`    | ``                 |       
+| `NATS_RECONNECT_JITTER`                       | `connect`    | ``                 |  
+| `NATS_RECONNECT_MAX_DELAY`                    | `connect`    | ``                 |     
+| `NATS_RECONNECT_RETRIES`                      | `connect`    | ``                 |   
+| `NATS_REQUEST_TIMEOUT_SECONDS`                | `request`    | `5.0`              |            
+| `NATS_RETAIN_SERVERS_ORDER`                   | `connect`    | `false`            |           
+| `NATS_RETRY_ON_INIT_FAIL`                     | `connect`    | `false`            |         
+| `NATS_SEND_BUFFER_LIMIT_BYTES`                | `connect`    | `2097152`          | Soft limit for buffer of messages pending. If too small operations that send messages to server (e.g. `publish`) may throw an exception
+| `NATS_SUBSCRIPTION_CHANNEL_SIZE`              | `subscribe`  | `524288`           |                 
+| `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS`  | `subscribe`  | `5.0`              |                          
+| `NATS_TLS_CA_PATH`                            | `connect`    | `nothing`          |    
+| `NATS_TLS_CERT_PATH`                          | `connect`    | `nothing`          |    
+| `NATS_TLS_KEY_PATH`                           | `connect`    | `nothing`          |   
+| `NATS_TLS_REQUIRED`                           | `connect`    | `false`            | 
+| `NATS_USER`                                   | `connect`    | `nothing`          | Connection username   
+| `NATS_VERBOSE`                                | `connect`    | `false`            | Turns on protocol acknowledgements

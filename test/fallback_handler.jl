@@ -10,7 +10,7 @@ using NATS
     publish(nc, "SOME.BAR", "Hi!")
     sleep(2) # Wait for compilation.
     @test nc.stats.msgs_dropped > 0
-    unsubscribe(nc, sub)
+    drain(nc, sub)
 end
 
 NATS.status()

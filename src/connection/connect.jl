@@ -39,7 +39,6 @@ function default_connect_options()
         tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
         tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
         tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
-        # ADR-40 compliance options
         ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
         max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
         retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
@@ -47,18 +46,20 @@ function default_connect_options()
         retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER))),
         send_enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED))),
         reconnect_delays = default_reconnect_delays(),
-        send_buffer_size = parse(Int, get(ENV, "NATS_SEND_BUFFER_SIZE", string(DEFAULT_SEND_BUFFER_SIZE))),
-        send_retry_delays = SEND_RETRY_DELAYS
+        send_buffer_limit = parse(Int, get(ENV, "NATS_SEND_BUFFER_LIMIT_BYTES", string(DEFAULT_SEND_BUFFER_LIMIT_BYTES))),
+        send_retry_delays = SEND_RETRY_DELAYS,
+        drain_timeout = parse(Float64, get(ENV, "NATS_DRAIN_TIMEOUT_SECONDS", string(DEFAULT_DRAIN_TIMEOUT_SECONDS))),
+        drain_poll = parse(Float64, get(ENV, "NATS_DRAIN_POLL_INTERVAL_SECONDS", string(DEFAULT_DRAIN_POLL_INTERVAL_SECONDS))),
     )
 end
 
 function default_reconnect_delays()
     ExponentialBackOff(
-        n = parse(Int64, get(ENV, "NATS_RECONNECT_RETRIES", DEFAULT_RECONNECT_RETRIES)),
-        first_delay = parse(Float64, get(ENV, "NATS_RECONNECT_FIRST_DELAY", DEFAULT_RECONNECT_FIRST_DELAY)),
-        max_delay = parse(Float64, get(ENV, "NATS_RECONNECT_MAX_DELAY", DEFAULT_RECONNECT_MAX_DELAY)),
-        factor = parse(Float64, get(ENV, "NATS_RECONNECT_FACTOR", DEFAULT_RECONNECT_FACTOR)),
-        jitter = parse(Float64, get(ENV, "NATS_RECONNECT_JITTER", DEFAULT_RECONNECT_JITTER)))
+        n = parse(Int64, get(ENV, "NATS_RECONNECT_RETRIES", string(DEFAULT_RECONNECT_RETRIES))),
+        first_delay = parse(Float64, get(ENV, "NATS_RECONNECT_FIRST_DELAY", string(DEFAULT_RECONNECT_FIRST_DELAY))),
+        max_delay = parse(Float64, get(ENV, "NATS_RECONNECT_MAX_DELAY", string(DEFAULT_RECONNECT_MAX_DELAY))),
+        factor = parse(Float64, get(ENV, "NATS_RECONNECT_FACTOR", string(DEFAULT_RECONNECT_FACTOR))),
+        jitter = parse(Float64, get(ENV, "NATS_RECONNECT_JITTER", string(DEFAULT_RECONNECT_JITTER))))
 end
 
 function validate_connect_options(server_info::Info, options)
@@ -234,13 +235,13 @@ Options are:
 - `nkey`: the public NKey to authenticate the client
 - `nkey_seed`: the private NKey to authenticate the client
 - `ping_interval`: interval in seconds how often server should be pinged to check connection health. Default is $DEFAULT_PING_INTERVAL_SECONDS seconds
-- `max_pings_out`: how many pings in a row migh fail before connection will be restarted. Default is `$DEFAULT_MAX_PINGS_OUT`
+- `max_pings_out`: how many pings in a row might fail before connection will be restarted. Default is `$DEFAULT_MAX_PINGS_OUT`
 - `retry_on_init_fail`: if set connection handle will be returned even if initial connect fails. Otherwise error causing failure will be trown. Default is `$DEFAULT_RETRY_ON_INIT_FAIL`
 - `ignore_advertised_servers`: ignores other cluster servers returned by server. Default is `$DEFAULT_IGNORE_ADVERTISED_SERVERS`
 - `retain_servers_order`: try to connect server in order specified in `url` or list returned by the server. Defaylt is `$DEFAULT_RETAIN_SERVERS_ORDER`
 - `send_enqueue_when_disconnected`: allows buffering outgoing messages during disconnection. Default is `$DEFAULT_ENQUEUE_WHEN_DISCONNECTED`
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
-- `send_buffer_size`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_SIZE` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
+- `send_buffer_limit`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
 """
 function connect(
     url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
@@ -253,9 +254,11 @@ function connect(
         reconnect_count = 0,
         connect_init_count = 0,
         send_buffer_flushed = true,
-        options.send_buffer_size,
+        options.send_buffer_limit,
         options.send_retry_delays,
-        options.send_enqueue_when_disconnected)
+        options.send_enqueue_when_disconnected,
+        options.drain_timeout,
+        options.drain_poll)
     sock = nothing
     read_stream = nothing
     write_stream = nothing
@@ -385,7 +388,12 @@ end
 
 function reconnect(nc::NATS.Connection)
     @lock nc.status_change_cond begin
+        if nc.status == DRAINING || nc.status == DRAINED
+            error("Cannot reconnect drained connection.")
+        end
         notify(nc.reconnect_event)
-        # TODO: wait for status change
+        while nc.status != CONNECTING
+            wait(nc.status_change_cond)
+        end
     end
 end

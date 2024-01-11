@@ -11,8 +11,7 @@ using NATS, Test
         end
         publish("subject_1")
         publish("subject_1", "Some data") 
-        sleep(0.5)
-        unsubscribe(sub)
+        drain(sub)
     end
     @test was_delivered == true
 
@@ -29,7 +28,7 @@ using NATS, Test
         end
         answers = request(2, "service_1", nothing)
         @test length(answers) == 2
-        unsubscribe(sub.sid)
-        unsubscribe(sub2.sid)
+        drain(sub.sid)
+        drain(sub2.sid)
     end
 end

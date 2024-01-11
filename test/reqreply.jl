@@ -10,7 +10,7 @@ using Random
     @info "First reply time was $(1000 * tm) ms."
     result, tm = @timed request(nc, "SOME.REQUESTS")
     @info "Second reply time was $(1000 * tm) ms."
-    unsubscribe(nc, sub)
+    drain(nc, sub)
     @test result isa NATS.Msg
     @test payload(result) == "This is a reply."
 end

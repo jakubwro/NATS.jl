@@ -192,7 +192,6 @@ NATS.status()
         sleep(0.01) # Sleep causes that msga are not batches.
     end
     sleep(21)
-
     unsubscribe(nc, sub1)
     unsubscribe(nc, sub2)
 
@@ -212,14 +211,14 @@ end
 NATS.status()
 
 @testset "Send buffer overflow" begin
-    connection = NATS.connect(send_buffer_size = 5, send_retry_delays = [])
+    connection = NATS.connect(send_buffer_limit = 5, send_retry_delays = [])
 
     @test_throws ErrorException for _ in 1:100
         publish(connection, "overflow_buffer", "some long payload to overflow buffer")
     end
     NATS.ping(connection) # Ping should work even when buffer is overflown
     
-    connection = NATS.connect(send_buffer_size = 5)
+    connection = NATS.connect(send_buffer_limit = 5)
     counter = 0
     sub = subscribe(connection, "overflow_buffer") do msg
         counter += 1

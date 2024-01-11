@@ -19,8 +19,8 @@
 
 include("stats.jl")
 
-const DEFAULT_SEND_BUFFER_SIZE = 2 * 2^20
-const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=200, first_delay=0.01, max_delay=0.1)
+const DEFAULT_SEND_BUFFER_LIMIT_BYTES = 2 * 2^20 # TODO: rename to limit
+const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=53, first_delay=0.01, max_delay=0.1)
 
 struct SubscriptionData
     sub::Sub
@@ -39,7 +39,7 @@ end
     rng::AbstractRNG = MersenneTwister()
     send_buffer::IO = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
-    send_buffer_size::Int64 = DEFAULT_SEND_BUFFER_SIZE
+    send_buffer_limit::Int64 = DEFAULT_SEND_BUFFER_LIMIT_BYTES
     send_retry_delays::Any = SEND_RETRY_DELAYS
     send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()
@@ -49,6 +49,8 @@ end
     @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
     @atomic reconnect_count::Int64
     @atomic send_buffer_flushed::Bool
+    drain_timeout::Float64
+    drain_poll::Float64
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info

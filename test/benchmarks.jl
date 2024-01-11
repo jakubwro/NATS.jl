@@ -21,8 +21,7 @@ include("util.jl")
         end
     end
     publish(connection, subject, "Hi!")
-    unsubscribe(connection, sub)
-    sleep(2)
+    drain(connection, sub)
     close(c)
     NATS.status()
 end
@@ -33,22 +32,30 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     tm = Timer(time_to_wait_s)
+    msgs_after_timeout = Threads.Atomic{Int64}(0)
+    time_first_pub = 0.0
+    time_first_msg = 0.0
     sub = subscribe(connection, subject; spawn) do msg
+        if time_first_msg == 0.0
+            time_first_msg = time()
+        end
         if isopen(tm)
             try put!(c, msg) catch err @error err end
+        else 
+            Threads.atomic_add!(msgs_after_timeout, 1)
         end
     end
     pub = NATS.Pub(subject, nothing, UInt8[], uint8_vec("Hi!"))
-    # TLS connection is much slower, give it smaller batches.
-    batch_size = if something(connection2.info.tls_required, false) 150 else 150000 end
-    batch = repeat([pub], batch_size)
     t = Threads.@spawn :default begin
-        while isopen(tm)
-            # Using `try_send` to not grow send buffer too much.
-            NATS.try_send(connection2, batch)
-            sleep(0.01)
+        @time while isopen(tm)
+            if time_first_pub == 0.0
+                time_first_pub = time()
+            end
+            publish(connection2, subject, "Hi!")
+            # NATS.send(connection2, pub)
+
         end
-        unsubscribe(connection, sub)
+        drain(connection, sub)
     end
     errormonitor(t)
     # @async interactive_status(tm)
@@ -56,6 +63,9 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     received = Base.n_avail(c)
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."
     NATS.status()
+    @show connection.stats connection2.stats msgs_after_timeout[]
+    @show (time_first_msg - time_first_pub)
+    sleep(1)
 end
 
 @testset "Msgs per second." begin
@@ -81,7 +91,7 @@ end
         res = request(connection, subject)
         counter = counter + 1
     end
-    unsubscribe(connection, sub)
+    drain(connection, sub)
     @info "Sync handlers: $counter requests / second."
     NATS.status()
 end
@@ -98,7 +108,7 @@ end
         res = request(connection, subject)
         counter = counter + 1
     end
-    unsubscribe(connection, sub)
+    drain(connection, sub)
     @info "Async handlers: $counter requests / second."
     NATS.status()
 end

@@ -16,14 +16,13 @@
 #
 ### Code:
 
-const DRAIN_POLL_INTERVAL = 0.05
-
 # Actual drain logic, for thread safety executed in connection controller task.
-function _do_drain(nc::Connection, is_connected; timeout = Timer(DEFAULT_DRAIN_TIMEOUT))
+function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeout))
     all_subs = @lock nc.lock copy(nc.sub_data)
     for (sid, _) in all_subs
         send(nc, Unsub(sid, 0))
     end
+    sleep(nc.drain_poll)
     conn_stats = @lock nc.lock nc.stats
     while !is_every_message_handled(conn_stats)
         if !isopen(timeout)
@@ -31,7 +30,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(DEFAULT_DRAIN_T
             # TODO: add log about count of messages not handled.
             break
         end
-        sleep(DRAIN_POLL_INTERVAL)
+        sleep(nc.drain_poll)
     end
     # At this point no more publications can be done. Wait for `send_buffer` flush.
     while !is_send_buffer_flushed(nc)
@@ -45,7 +44,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(DEFAULT_DRAIN_T
             # TODO: add log about count of messages undelivered.
             break
         end
-        sleep(DRAIN_POLL_INTERVAL)
+        sleep(nc.drain_poll)
     end
     @lock nc.lock empty!(nc.sub_data)
 end

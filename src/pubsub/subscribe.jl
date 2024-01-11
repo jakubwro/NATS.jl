@@ -23,8 +23,8 @@ Subscribe to a subject.
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
 - `spawn`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
-- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$SUBSCRIPTION_CHANNEL_SIZE`
-- `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
+- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
+- `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds, can be configured globally with `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` env variable
 """
 function subscribe(
     f,
@@ -32,8 +32,8 @@ function subscribe(
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
     spawn = false,
-    channel_size = SUBSCRIPTION_CHANNEL_SIZE,
-    monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
+    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
+    monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
     arg_t = argtype(f)
     find_msg_conversion_or_throw(arg_t)

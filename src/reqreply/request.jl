@@ -20,17 +20,17 @@ $(SIGNATURES)
 
 Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) message.
 
-Default timeout is $REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timer`.
+Default timeout is $DEFAULT_REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timer`. It can be configured globally with `NATS_REQUEST_TIMEOUT_SECONDS` env variable.
 
 Optional keyword arguments are:
 - `timer`: error will be thrown if no replies received until `timer` expires
 
 # Examples
 ```julia-repl
-julia> NATS.request("help.please")
+julia> NATS.request(connection, "help.please")
 NATS.Msg("l9dKWs86", "7Nsv5SZs", nothing, "", "OK, I CAN HELP!!!")
 
-julia> request("help.please"; timer = Timer(0))
+julia> request(connection, "help.please"; timer = Timer(0))
 ERROR: No replies received.
 ```
 """
@@ -38,7 +38,7 @@ function request(
     connection::Connection,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     replies = request(connection, 1, subject, data; timer)
     if isempty(replies) || all(has_error_status, replies)
@@ -61,7 +61,7 @@ Optional keyword arguments are:
 
 # Examples
 ```julia-repl
-julia> request(nc, 2, "help.please"; timer = Timer(0))
+julia> request(connection, 2, "help.please"; timer = Timer(0))
 NATS.Msg[]
 ```
 """
@@ -70,7 +70,7 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     find_data_conversion_or_throw(typeof(data))
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
@@ -103,7 +103,7 @@ function request(
     connection::Connection,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     result = request(connection, subject, data; timer)
     convert(T, result)

@@ -16,7 +16,7 @@
 #
 ### Code:
 
-function drain(connection::Connection, sid::String; timer = Timer(DEFAULT_DRAIN_TIMEOUT))
+function drain(connection::Connection, sid::String; timer = Timer(connection.drain_timeout))
     sub_data = @lock connection.lock begin
         get(connection.sub_data, sid, nothing)
     end
@@ -25,12 +25,12 @@ function drain(connection::Connection, sid::String; timer = Timer(DEFAULT_DRAIN_
     end
     sub_stats = sub_data.stats
     send(connection, Unsub(sid, 0))
-    sleep(DRAIN_POLL_INTERVAL)
+    sleep(connection.drain_poll)
     while !is_every_message_handled(sub_stats)
         if !isopen(timer) 
             @error "Timeout for drain exceeded, not all msgs might be processed."
         end
-        sleep(DRAIN_POLL_INTERVAL) # TODO: exp backoff
+        sleep(connection.drain_poll)
     end
     _delete_sub_data(connection, sid)
 end

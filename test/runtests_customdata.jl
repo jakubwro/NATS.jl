@@ -24,37 +24,34 @@ nc = NATS.connect()
 sleep(5)
 @assert nc.status == NATS.CONNECTED "Cannot establish connection, ensure NATS is working on $(NATS.NATS_HOST):$(NATS.NATS_PORT)."
 
-nc = NATS.connect(default = true)
-
 @testset "Publish subscribe with custom data" begin
     c = Channel()
-    sub = subscribe("EMPLOYEES") do person::Person
+    sub = subscribe(nc, "EMPLOYEES") do person::Person
         put!(c, person)
     end
-    publish("EMPLOYEES", Person("Jacek", 33))
+    publish(nc, "EMPLOYEES", Person("Jacek", 33))
     result = take!(c)
     @test result isa Person
     @test result.name == "Jacek"
     @test result.age == 33
     @test length(nc.sub_data) == 1
-    unsubscribe(sub)
-    sleep(0.1)
+    drain(nc, sub)
     @test length(nc.sub_data) == 0
 end
 
 @testset "Request reply with custom data" begin
-    sub = reply("EMPLOYEES.SUPERVISOR") do person::Person
+    sub = reply(nc, "EMPLOYEES.SUPERVISOR") do person::Person
         if person.name == "Jacek"
             Person("Zbigniew", 44), ["A" => "B"]
         else
             Person("Maciej", 55), ["A" => "B"]
         end
     end
-    supervisor = request(Person, "EMPLOYEES.SUPERVISOR", Person("Jacek", 33))
+    supervisor = request(Person, nc, "EMPLOYEES.SUPERVISOR", Person("Jacek", 33))
     @test supervisor isa Person
     @test supervisor.name == "Zbigniew"
     @test supervisor.age == 44
 
-    msg = request("EMPLOYEES.SUPERVISOR", Person("Anna", 33))
+    msg = request(nc, "EMPLOYEES.SUPERVISOR", Person("Anna", 33))
     @test msg isa NATS.Msg
 end

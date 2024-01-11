@@ -68,8 +68,8 @@ function subscribe(
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
     spawn = false,
-    channel_size = SUBSCRIPTION_CHANNEL_SIZE,
-    monitoring_throttle_seconds = SUBSCRIPTION_ERROR_THROTTLING_SECONDS
+    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
+    monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
     subscribe(f, scoped_connection(), subject; queue_group, spawn, channel_size, monitoring_throttle_seconds)
 end
@@ -96,6 +96,24 @@ function unsubscribe(
     max_msgs::Union{Int, Nothing} = nothing
 )
     unsubscribe(scoped_connection(), sid; max_msgs)
+end
+
+"""
+$(SIGNATURES)
+
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+"""
+function drain(sub::Sub)
+    drain(scoped_connection(), sub)
+end
+
+"""
+$(SIGNATURES)
+
+This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
+"""
+function drain(sid::String)
+    drain(scoped_connection(), sid)
 end
 
 """
@@ -133,7 +151,7 @@ This method is supposed to be called from inside `with_connection` code block, o
 function request(
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     request(scoped_connection(), subject, data; timer)
 end
@@ -147,7 +165,7 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     request(scoped_connection(), nreplies, subject, data; timer)
 end
@@ -161,7 +179,7 @@ function request(
     T::Type,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(REQUEST_TIMEOUT_SECONDS)
+    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     request(T, scoped_connection(), subject, data; timer)
 end

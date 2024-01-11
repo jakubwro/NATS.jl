@@ -128,3 +128,25 @@ end
 function show(io::IO, ::MIME_PROTOCOL, unsub::Pong)
     write(io, "PONG\r\n")
 end
+
+# Pretty print Msg.
+function show(io::IO, mime::MIME"text/plain", msg::Msg)
+    payload_limit = 500
+    if msg.headers_length > 0
+        write(io, "H")
+    end
+    write(io, "MSG $(msg.subject) $(msg.sid) ")
+    if !(isnothing(msg.reply_to))
+        write(io, "$(msg.reply_to) ")
+    end
+    if msg.headers_length > 0
+        write(io, "$(length(msg.headers_length)) ")
+    end
+    write(io, "$(length(msg.payload))\r\n")
+    if length(msg.payload) > payload_limit
+        write(io, String(first(msg.payload, payload_limit)))
+        write(io, " ⋯ $(length(msg.payload) - payload_limit) bytes")
+    else
+        write(io, String(copy(msg.payload)))
+    end
+end
