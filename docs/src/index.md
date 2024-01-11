@@ -39,32 +39,32 @@ Current `NATS.jl` approach to handling signals is based on code and discussions 
 | `ENV` variable                                | Used in      | Default if not set | Description
 |-----------------------------------------------|--------------|--------------------|-------------
 | `NATS_AUTH_TOKEN`                             | `connect`    | `nothing`          | Client authorization token   
-| `NATS_CONNECT_URL`                            | `connect`    | `localhost:4222`   |           
-| `NATS_DRAIN_POLL_INTERVAL_SECONDS`            | `connect`    | `0.1`              |               
-| `NATS_DRAIN_TIMEOUT_SECONDS`                  | `connect`    | `5.0`              | 
+| `NATS_CONNECT_URL`                            | `connect`    | `localhost:4222`   | Connection url, multiple urls to the same NATS cluster can be provided, for example `nats:://localhost:4222,tls://localhost:4223`    
+| `NATS_DRAIN_POLL_INTERVAL_SECONDS`            | `connect`    | `0.1`              | Interval in seconds how often `drain` will check if all buffers are consumed.
+| `NATS_DRAIN_TIMEOUT_SECONDS`                  | `connect`    | `5.0`              | Maximum time (in seconds) `drain` will block before returning error
 | `NATS_ENQUEUE_WHEN_DISCONNECTED`              | `connect`    | `true`             | Allows buffering outgoing messages during disconnection
 | `NATS_IGNORE_ADVERTISED_SERVERS`              | `connect`    | `false`            | Ignores other cluster servers returned by server
 | `NATS_JWT`                                    | `connect`    | `nothing`          | The JWT that identifies a user permissions and account                                  
-| `NATS_MAX_PINGS_OUT`                          | `connect`    | `3`                | How many pings in a row might fail before connection will be restarted                                      
+| `NATS_MAX_PINGS_OUT`                          | `connect`    | `3`                | How many pings in a row might fail before connection will be restarted
 | `NATS_NKEY`                                   | `connect`    | `nothing`          | The public NKey to authenticate the client
 | `NATS_NKEY_SEED`                              | `connect`    | `nothing`          | the private NKey to authenticate the client
-| `NATS_PASS`                                   | `connect`    | `nothing`          | Connection password                                   
-| `NATS_PEDANTIC`                               | `connect`    | `false`            |  
-| `NATS_PING_INTERVAL`                          | `connect`    | `120.0`            |               
-| `NATS_RECONNECT_FACTOR`                       | `connect`    | ``                 | 
-| `NATS_RECONNECT_FIRST_DELAY`                  | `connect`    | ``                 |       
-| `NATS_RECONNECT_JITTER`                       | `connect`    | ``                 |  
-| `NATS_RECONNECT_MAX_DELAY`                    | `connect`    | ``                 |     
-| `NATS_RECONNECT_RETRIES`                      | `connect`    | ``                 |   
-| `NATS_REQUEST_TIMEOUT_SECONDS`                | `request`    | `5.0`              |            
-| `NATS_RETAIN_SERVERS_ORDER`                   | `connect`    | `false`            |           
-| `NATS_RETRY_ON_INIT_FAIL`                     | `connect`    | `false`            |         
+| `NATS_PASS`                                   | `connect`    | `nothing`          | Connection password, can be also passed in url `nats://john:passw0rd@localhost:4223` but env variable has higher priority
+| `NATS_PEDANTIC`                               | `connect`    | `false`            | Turns on additional strict format checking, e.g. for properly formed subjects
+| `NATS_PING_INTERVAL`                          | `connect`    | `120.0`            | Interval in seconds how often server should be pinged to check connection health
+| `NATS_RECONNECT_FACTOR`                       | `connect`    | `5.0`                 | Exponential reconnect delays configuration
+| `NATS_RECONNECT_FIRST_DELAY`                  | `connect`    | `0.001`               | Exponential reconnect delays configuration
+| `NATS_RECONNECT_JITTER`                       | `connect`    | `0.1`                 | Exponential reconnect delays configuration
+| `NATS_RECONNECT_MAX_DELAY`                    | `connect`    | `2.0`                 | Exponential reconnect delays configuration
+| `NATS_RECONNECT_RETRIES`                      | `connect`    | `220752000000000000`  | Exponential reconnect delays configuration
+| `NATS_REQUEST_TIMEOUT_SECONDS`                | `request`    | `5.0`              | Time how long `request` will block before returning error
+| `NATS_RETAIN_SERVERS_ORDER`                   | `connect`    | `false`            | Changes connection url selection policy from random to sequence they were provided.
+| `NATS_RETRY_ON_INIT_FAIL`                     | `connect`    | `false`            | If set to true `connect` will not throw and error if connection init fails, but will continue retrying in background returning immediately connection in `CONNECTING` state.
 | `NATS_SEND_BUFFER_LIMIT_BYTES`                | `connect`    | `2097152`          | Soft limit for buffer of messages pending. If too small operations that send messages to server (e.g. `publish`) may throw an exception
-| `NATS_SUBSCRIPTION_CHANNEL_SIZE`              | `subscribe`  | `524288`           |                 
-| `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS`  | `subscribe`  | `5.0`              |                          
-| `NATS_TLS_CA_PATH`                            | `connect`    | `nothing`          |    
-| `NATS_TLS_CERT_PATH`                          | `connect`    | `nothing`          |    
-| `NATS_TLS_KEY_PATH`                           | `connect`    | `nothing`          |   
-| `NATS_TLS_REQUIRED`                           | `connect`    | `false`            | 
-| `NATS_USER`                                   | `connect`    | `nothing`          | Connection username   
+| `NATS_SUBSCRIPTION_CHANNEL_SIZE`              | `subscribe`  | `524288`           | How many messages waiting for processing subscription buffer can hold, if it gets full messages will be dropped.
+| `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS`  | `subscribe`  | `5.0`              | How often subscription handler exceptions are reported in logs
+| `NATS_TLS_CA_PATH`                            | `connect`    | `nothing`          | Path to CA certificate file if TLS is used
+| `NATS_TLS_CERT_PATH`                          | `connect`    | `nothing`          | Path to client certificate file if TLS is used
+| `NATS_TLS_KEY_PATH`                           | `connect`    | `nothing`          | Path to client private certificate file if TLS is used 
+| `NATS_TLS_REQUIRED`                           | `connect`    | `false`            | Forces TLS connection. TLS can be also forced by using url with `tls` scheme, example `tls://localhost:4223`
+| `NATS_USER`                                   | `connect`    | `nothing`          | Connection username, can be also passed in url `nats://john:passw0rd@localhost:4223` but env variable has higher priority
 | `NATS_VERBOSE`                                | `connect`    | `false`            | Turns on protocol acknowledgements

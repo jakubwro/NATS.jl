@@ -19,9 +19,6 @@
 
 include("stats.jl")
 
-const DEFAULT_SEND_BUFFER_LIMIT_BYTES = 2 * 2^20 # TODO: rename to limit
-const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=53, first_delay=0.01, max_delay=0.1)
-
 struct SubscriptionData
     sub::Sub
     channel::Channel

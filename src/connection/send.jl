@@ -15,6 +15,8 @@
 #
 ### Code:
 
+const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=53, first_delay=0.01, max_delay=0.1)
+
 function can_send(nc::Connection, ::ProtocolMessage)
     # Drained conection is not usable, otherwise allow ping and pong and unsubs.
     status(nc) != DRAINED
@@ -85,20 +87,6 @@ function try_send(nc::Connection, msg::ProtocolMessage)
             false
         else
             show(nc.send_buffer, MIME_PROTOCOL(), msg)
-            notify(nc.send_buffer_cond)
-            true
-        end
-    end
-end
-
-function try_send(nc::Connection, msg::String)
-
-    @lock nc.send_buffer_cond begin
-        if nc.send_buffer.size > nc.send_buffer_limit
-            # Apply limits only for publications, to allow unsubs and subs be done with higher priority.
-            false
-        else
-            write(nc.send_buffer, msg)
             notify(nc.send_buffer_cond)
             true
         end
