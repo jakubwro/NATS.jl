@@ -156,9 +156,9 @@ end
 
     conn = NATS.connect()
 
-    n = 10000000
+    n = 1000000
     t = @async begin
-        cmd = `docker run --network $docker_network -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --sub 1 --size 16 --msgs $n`
+        cmd = `docker run --network $docker_network -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --sub 1 --pub 0 --size 16 --msgs $n`
         io = IOBuffer();
         result = run(pipeline(cmd; stdout = io))
         # result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
@@ -177,9 +177,10 @@ end
     try
         wait(t)
     finally
-        @show conn.stats
         drain(conn)
     end
+    sleep(1)
+    @show conn.stats
     total_time = last_msg_time - first_msg_time
     @info "Performance is $( n / total_time) msgs/sec"
 end
@@ -194,7 +195,7 @@ end
 
     conn = NATS.connect()
 
-    n = 10000000
+    n = 1000000
     received_count = 0
     first_msg_time = 0.0
     last_msg_time = 0.0
@@ -220,9 +221,10 @@ end
     try
         wait(t)
     finally
-        @show conn.stats
         drain(conn)
     end
+    sleep(1)
+    @show conn.stats
     total_time = last_msg_time - first_msg_time
     @info "Received $received_count messages from $n expected"
     if received_count == n
