@@ -44,7 +44,7 @@ function reply(
     connection::Connection,
     subject::String;
     queue_group::Union{Nothing, String} = nothing,
-    spawn = false
+    spawn::Bool = false
 )
     T = argtype(f)
     find_msg_conversion_or_throw(T)

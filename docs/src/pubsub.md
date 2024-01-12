@@ -7,4 +7,5 @@ Functions implementing [NATS Publish-Subscribe](https://docs.nats.io/nats-concep
 publish
 subscribe
 unsubscribe
+drain
 ```

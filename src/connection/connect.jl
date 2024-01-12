@@ -216,7 +216,10 @@ end
 """
 $(SIGNATURES)
 
-Connect to NATS server. The function is blocking until connection is initialized.
+Connect to NATS server. The function is blocking until connection is
+initialized. In case of error during initialization process `connect` will
+throw exception if `retry_on_init_fail` is set to `false` (what is default).
+Otherwise handle will be returned and reconnect will continue in background.
 
 Options are:
 - `verbose`: turns on protocol acknowledgements
@@ -242,6 +245,8 @@ Options are:
 - `send_enqueue_when_disconnected`: allows buffering outgoing messages during disconnection. Default is `$DEFAULT_ENQUEUE_WHEN_DISCONNECTED`
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
 - `send_buffer_limit`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
+- `drain_timeout`: Timeout for drain process. After timeout in case of not everyting is processed drain will stop and error will be reported.
+- `drain_poll`: Interval for `drain` to check if all messages in buffers are processed.
 """
 function connect(
     url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
@@ -310,7 +315,7 @@ function connect(
                 if status(nc) == CONNECTED
                     @atomic nc.reconnect_count += 1
                     info(nc, info_msg)
-                    @info "Reconnected to $(clustername(nc)) cluster after $(time() - start_time) seconds."
+                    @info "Reconnected to $(clustername(nc)) cluster on `$(nc.url)` after $(time() - start_time) seconds."
                 elseif status(nc) == DISCONNECTED
                     wait(nc.reconnect_event)
                     @debug "Reconnect requested"
@@ -375,7 +380,7 @@ function connect(
             @assert istaskdone(reconnect_await_task)
 
             # TODO: indicate what was the cause in warning message.
-            @warn "Connection lost, trynig to reconnect."
+            @warn "Connection to $(clustername(nc)) cluster on `$(nc.url)` lost, trynig to reconnect."
             status(nc, CONNECTING)
             @atomic nc.connect_init_count = 0
         end
@@ -386,14 +391,29 @@ function connect(
     nc
 end
 
-function reconnect(nc::NATS.Connection; should_wait = true)
-    @lock nc.status_change_cond begin
-        if nc.status == DRAINING || nc.status == DRAINED
-            error("Cannot reconnect drained connection.")
+"""
+$(SIGNATURES)
+
+Force a connection reconnect. If connection is `CONNECTED` this will close it
+and reopen again resubscribing all existing subscriptions. If connection is
+`DISCONNECTED` it will try to connect with all previously existing subscription
+restored. In case connection is already `CONNECTING` this method have no effect.
+If called on connection that is `DRAINING` or `DRAINED` error will be thrown.
+
+During reconnect period some messages both published and received by the
+connection might be lost.
+
+Optional keyword aruguments:
+- `should_wait`: If `true` method will block until reconnection process is started, default is `true`.
+"""
+function reconnect(connection::NATS.Connection; should_wait::Bool = true)
+    @lock connection.status_change_cond begin
+        if connection.status == DRAINING || connection.status == DRAINED
+            error("Cannot reconnect a drained connection.")
         end
-        notify(nc.reconnect_event)
-        while should_wait && nc.status != CONNECTING
-            wait(nc.status_change_cond)
+        notify(connection.reconnect_event)
+        while should_wait && connection.status != CONNECTING
+            wait(connection.status_change_cond)
         end
     end
 end

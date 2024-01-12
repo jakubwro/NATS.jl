@@ -30,9 +30,12 @@ using CodecBase
 using ScopedValues
 using URIs
 
-import Base: show, convert, close, put!, take!
+import Base: show, convert
 
-export connect, ping, publish, subscribe, unsubscribe, payload, request, reply, header, headers, drain
+export connect, reconnect, ping, drain
+export payload, header, headers
+export publish, subscribe, unsubscribe
+export request, reply
 export with_connection
 
 const DEFAULT_HOST = "localhost"

@@ -93,7 +93,7 @@ function try_send(nc::Connection, msg::ProtocolMessage)
     end
 end
 
-function send(nc::Connection, message::Union{String, ProtocolMessage, Vector{Pub}})
+function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
     if try_send(nc, message)
         return
     end
@@ -138,12 +138,14 @@ function sendloop(nc::Connection, io::IO)
     send_buffer = nc.send_buffer
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         buf = @lock nc.send_buffer_cond begin
+            # TODO: check for eof on io
             taken = take!(send_buffer)
             if isempty(taken)
                 wait(nc.send_buffer_cond)
                 if !isopen(send_buffer)
                     break
                 end
+                # TODO: check for eof on io
                 @atomic nc.send_buffer_flushed = false
                 take!(send_buffer)
             else

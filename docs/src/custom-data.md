@@ -4,29 +4,24 @@
 
 It is possible to use and return custom types inside subscription handlers if `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for example implementation for `String`.
 
-```julia
+```@repl
+using NATS
 struct Person
     name::String
     age::Int64
 end
-
 import Base: convert
-
 function convert(::Type{Person}, msg::NATS.Msg)
     name, age = split(payload(msg), ",")
     Person(name, parse(Int64, age))
 end
-```
-
-```julia
+connection = NATS.connect() # Important to create a connection after `convert` is defined
 sub = subscribe(connection, "EMPLOYEES") do person::Person
     @show person
 end
-
-julia> publish(connection, "EMPLOYEES", "John,44")
-
-person = Person("John", 44)
-
+publish(connection, "EMPLOYEES", "John,44")
+sleep(0.2) # Wait for message delivered to sub
+drain(connection, sub)
 ```
 
 ## Returning custom types from handler
@@ -43,17 +38,23 @@ const MIME_HEADERS  = MIME"application/nats-headers"
 
 Conversion method should look like this.
 
-```julia
-import Base: show
-
+```@repl
+using NATS
+struct Person
+    name::String
+    age::Int64
+end
+import Base: convert, show
+function convert(::Type{Person}, msg::NATS.Msg)
+    name, age = split(payload(msg), ",")
+    Person(name, parse(Int64, age))
+end
 function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, person.name)
     print(io, ",")
     print(io, person.age)
 end
-```
-
-```julia
+connection = NATS.connect()
 sub = reply(connection, "EMPLOYEES.SUPERVISOR") do person::Person
     if person.name == "Alice"
         Person("Bob", 44)
@@ -61,32 +62,26 @@ sub = reply(connection, "EMPLOYEES.SUPERVISOR") do person::Person
         Person("Unknown", 0)
     end
 end
-
-julia> request(Person, connection, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
-Person("Bob", 44)
-
+request(Person, connection, "EMPLOYEES.SUPERVISOR", Person("Alice", 22))
+drain(connection, sub)
 ```
 
 ## Error handling
 
 Errors can be handled with custom headers.
 
-```julia
+```@repl
 using NATS
-
 import Base: convert, show
-
 struct Person
     name::String
     age::Int64
     departament::String
 end
-
 function convert(::Type{Person}, msg::NATS.Msg)
     name, age, departament = split(payload(msg), ",")
     Person(name, parse(Int64, age), departament)
 end
-
 function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, person.name)
     print(io, ",")
@@ -94,8 +89,6 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
     print(io, ",")
     print(io, person.departament)
 end
-
-
 nc = NATS.connect()
 sub = reply(nc, "EMPLOYEES.SUPERVISOR") do person::Person
     
@@ -105,11 +98,8 @@ sub = reply(nc, "EMPLOYEES.SUPERVISOR") do person::Person
         Person("Unknown", 0, ""), ["status" => "error", "message" => "Supervisor not defined for $(person.name)" ]
     end
 end
-supervisor = request(Person, nc, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
-@show supervisor
-
+request(Person, nc, "EMPLOYEES.SUPERVISOR", Person("Alice", 33, "IT"))
 error_response = request(nc, "EMPLOYEES.SUPERVISOR", Person("Anna", 33, "ACCOUNTING"));
-@show headers(error_response)
-
-unsubscribe(nc, sub)
+headers(error_response)
+drain(nc, sub)
 ```

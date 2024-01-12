@@ -58,11 +58,6 @@ function with_connection(f, nc::Connection)
     with(f, sconnection => nc)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function subscribe(
     f,
     subject::String;
@@ -74,11 +69,6 @@ function subscribe(
     subscribe(f, scoped_connection(), subject; queue_group, spawn, channel_size, monitoring_throttle_seconds)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function unsubscribe(
     sub::Sub;
     max_msgs::Union{Int, Nothing} = nothing
@@ -86,11 +76,6 @@ function unsubscribe(
     unsubscribe(scoped_connection(), sub; max_msgs)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function unsubscribe(
     sid::String;
     max_msgs::Union{Int, Nothing} = nothing
@@ -98,29 +83,14 @@ function unsubscribe(
     unsubscribe(scoped_connection(), sid; max_msgs)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function drain(sub::Sub)
     drain(scoped_connection(), sub)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function drain(sid::String)
     drain(scoped_connection(), sid)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function publish(
     subject::String,
     data = nothing;
@@ -129,11 +99,6 @@ function publish(
     publish(scoped_connection(), subject, data; reply_to)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function reply(
     f,
     subject::String;
@@ -143,11 +108,6 @@ function reply(
     reply(f, scoped_connection(), subject; queue_group, spawn)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function request(
     subject::String,
     data = nothing;
@@ -156,11 +116,6 @@ function request(
     request(scoped_connection(), subject, data; timer)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function request(
     nreplies::Integer,
     subject::String,
@@ -170,11 +125,6 @@ function request(
     request(scoped_connection(), nreplies, subject, data; timer)
 end
 
-"""
-$(SIGNATURES)
-
-This method is supposed to be called from inside `with_connection` code block, otherwise error will be thrown.
-"""
 function request(
     T::Type,
     subject::String,

@@ -1,6 +1,8 @@
 
 # Connection
 
+To use NATS it is needed to crate connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
+
 ## Connection lifecycle
 
 ```@eval
@@ -25,14 +27,11 @@ nothing
 
 ## Connecting to NATS cluster
 
-To use NATS it is needed to crate connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
-
 There are several `ENV` variables defined to provide default parameters for `connect`. It is advised to rather define `ENV` variables and use parameter less invocation like `NATS.connect()` for better code portability.
 
 | Parameter          | `ENV` variable          |  Default value   | Sent to server |
 |--------------------|-------------------------|------------------|-----------------|
 | `url`              | `NATS_CONNECT_URL`      | `localhost:4222` | no
-| `send_buffer_limit` | `NATS_SEND_BUFFER_LIMIT_BYTES` | `2097152`        | no
 | `verbose`          | `NATS_VERBOSE`          | `false`          | yes
 | `verbose`          | `NATS_VERBOSE`          | `false`          | yes
 | `pedantic`         | `NATS_PEDANTIC`         | `false`          | yes
@@ -57,8 +56,10 @@ Additionally some parameters are provided to fine tune client for specific deplo
 | `ignore_advertised_servers` | `NATS_IGNORE_ADVERTISED_SERVERS`    | `false`          | no
 | `retain_servers_order`      | `NATS_RETAIN_SERVERS_ORDER `        | `false`          | no
 | `drain_timeout`             | `NATS_DRAIN_TIMEOUT_SECONDS`        | `5.0`            | no
+| `drain_poll`                | `NATS_DRAIN_POLL_INTERVAL_SECONDS   | `0.2`            | no
+| `send_buffer_limit`         | `NATS_SEND_BUFFER_LIMIT_BYTES`      | `2097152`        | no
 
-Additionally reconnect `reconnect_delays` default `ExponentialBackOff` might be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.
+Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.
 
 | `ENV` variable                  |  Default value       |
 |---------------------------------|----------------------|
@@ -72,10 +73,19 @@ Additionally reconnect `reconnect_delays` default `ExponentialBackOff` might be 
 connect
 ```
 
-## Disconnecting
+# Reconnecting
 
-To close connection `drain` function is provided.
+Reconnect can be forced by user with `reconnect` function. This function can be also used
+for reconnect a connection in `DISCONNECTED` state after reconnect retries were exhausted.
 
 ```@docs
-drain
+reconnect
+```
+
+## Disconnecting
+
+To gracefully close connection `drain` function is provided.
+
+```@docs
+drain(::NATS.Connection)
 ```

@@ -31,14 +31,6 @@ function unsubscribe(
     unsubscribe(connection, sub.sid; max_msgs)
 end
 
-"""
-$(SIGNATURES)
-
-Unsubscrible from a subject. `sid` is an client generated subscription id that is a field of an object returned from `subscribe`
-
-Optional keyword arguments are:
-- `max_msgs`: maximum number of messages server will send after `unsubscribe` message received in server side, what can occur after some time lag
-"""
 function unsubscribe(
     connection::Connection,
     sid::String;

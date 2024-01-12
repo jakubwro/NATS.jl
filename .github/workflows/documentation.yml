@@ -12,7 +12,21 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+
+    services:
+      nats:
+        image: nats:${{ matrix.nats-version }}
+        ports:
+          - 4222:4222
+        
     steps:
+      - name: "Start reply service"
+        run: |
+          docker ps
+          name=`docker create --network ${{ job.container.network }} -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 reply help.please 'OK, I CAN HELP!!!'`
+          container_id=`docker container start $name`
+          sleep 2
+          docker logs $container_id
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
@@ -24,3 +38,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
           #DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # If authenticating with SSH deploy key
         run: julia --project=docs/ docs/make.jl
+      - name: "Stop services"
+        run: |
+          docker kill $(docker ps -q )

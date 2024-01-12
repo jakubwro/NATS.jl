@@ -52,27 +52,32 @@ end
 """
 $SIGNATURES
 
-Unsubscribe all subscriptions, wait for precessing all messages in buffers, then close connection.
-Drained connection is no more usable. This method is used to gracefuly stop the process.
+Unsubscribe all subscriptions, wait for precessing all messages in buffers,
+then close connection. Drained connection is no more usable. This method is
+used to gracefuly stop the process.
+
+Underneeth it periodicaly checks for state of all buffers, interval for checks
+is configurable per connection with `drain_poll` parameter of `connect` method.
+It can also be set globally with `NATS_DRAIN_POLL_INTERVAL_SECONDS` environment
+variable. If not set explicitly default polling interval is
+`$DEFAULT_DRAIN_POLL_INTERVAL_SECONDS` seconds.
+
+Error will be written to log if drain not finished until timeout expires.
+Default timeout value is configurable per connection on `connect` with
+`drain_timeout`. Can be also set globally with `NATS_DRAIN_TIMEOUT_SECONDS`
+environment variable. If not set explicitly default drain timeout is
+`$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
 """
-function drain(nc::Connection)
-    @lock nc.status_change_cond begin
-        notify(nc.drain_event)
+function drain(connection::Connection)
+    @lock connection.status_change_cond begin
+        notify(connection.drain_event)
         # There is a chance that connection is DISCONNECTED or is in CONNECTING
         # state and became DISCONNECTED before drain event is handled. Wake it up
         # to force reconnect that will promptly do drain.
-        notify(nc.reconnect_event) 
-        while nc.status != DRAINED
-            wait(nc.status_change_cond)
+        notify(connection.reconnect_event) 
+        while connection.status != DRAINED
+            wait(connection.status_change_cond)
         end
     end
 end
 
-"""
-$SIGNATURES
-
-`drains` all connections.
-"""
-function drain()
-    drain.(NATS.state.connections)
-end
