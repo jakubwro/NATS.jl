@@ -147,7 +147,7 @@ end
 end
 
 @testset "Subscriber benchmark" begin
-    docker_network = get(ENV, TEST_JOB_CONTAINER_NETWORK, nothing)
+    docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
 
     if isnothing(docker_network)
         @info "No docker network specified, skipping benchmarks"
