@@ -146,6 +146,43 @@ end
     @info "Published $counter messages."
 end
 
+@testset "Publisher benchmark with `nats bench`" begin
+    docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
+
+    if isnothing(docker_network)
+        @info "No docker network specified, skipping benchmarks"
+        return
+    end
+
+    conn = NATS.connect()
+
+    n = 100000
+    t = @async begin
+        cmd = `docker run --network $docker_network -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --sub 1 --size 16 --msgs $n`
+        io = IOBuffer();
+        result = run(pipeline(cmd; stdout = io))
+        # result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
+        output = String(take!(io))
+        println(output)
+    end
+    
+    sleep(1)
+
+    first_msg_time = time()
+    for i in 1:n
+        publish(conn, "foo", "This is payload!")
+    end
+    last_msg_time = time()
+
+    try
+        wait(t)
+    finally
+        drain(conn)
+    end
+    total_time = last_msg_time - first_msg_time
+    @info "Performance is $( n / total_time) msgs/sec"
+end
+
 @testset "Subscriber benchmark with `nats bench`" begin
     docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
 
