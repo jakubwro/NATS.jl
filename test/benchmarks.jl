@@ -145,3 +145,21 @@ end
 
     @info "Published $counter messages."
 end
+
+@testset "Subscriber benchmark" begin
+    docker_network = get(ENV, TEST_JOB_CONTAINER_NETWORK, nothing)
+
+    if isnothing(docker_network)
+        @info "No docker network specified, skipping benchmarks"
+        return
+    end
+
+    cmd = `docker run --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --sub 1 --pub 1 --size 16`
+
+    io = IOBuffer();
+    cmd = `docker ps -f name=$name -q`
+    result = run(pipeline(cmd; stdout = io))
+    result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
+    output = String(take!(io))
+    println(output)
+end
