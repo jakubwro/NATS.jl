@@ -57,13 +57,13 @@ sub1 = reply(connection, "some_subject"; queue_group="group1") do
 sub2 = reply(connection, "some_subject"; queue_group="group1") do
            "Reply from worker 2"
        end
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-request(String, connection, "some_subject")
-drain(connection, sub1)
-drain(connection, sub2)
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time request(String, connection, "some_subject")
+@time drain(connection, sub1)
+@time drain(connection, sub2)
 ```
