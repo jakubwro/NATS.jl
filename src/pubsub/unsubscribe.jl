@@ -45,5 +45,5 @@ function unsubscribe(
             connection.unsubs[sid] = max_msgs
         end
     end
-    usnub
+    nothing
 end
