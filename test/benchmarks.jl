@@ -154,12 +154,25 @@ end
         return
     end
 
-    cmd = `docker run --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --sub 1 --pub 1 --size 16`
+    conn = NATS.connect()
 
-    io = IOBuffer();
-    cmd = `docker ps -f name=$name -q`
-    result = run(pipeline(cmd; stdout = io))
-    result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
-    output = String(take!(io))
-    println(output)
+    received_count = 0
+    sub = subscribe(conn, "foo") do msg
+              received_count += 1
+          end
+
+    t = @async begin
+        cmd = `docker run --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16`
+        io = IOBuffer();
+        result = run(pipeline(cmd; stdout = io))
+        result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
+        output = String(take!(io))
+        println(output)
+    end
+    
+    try
+        wait(t)
+    finally
+        drain(conn)
+    end
 end
