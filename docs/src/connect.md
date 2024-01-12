@@ -1,6 +1,29 @@
 
 # Connection
 
+## Connecting
+
+```@docs
+connect
+```
+
+## Reconnecting
+
+Reconnect can be forced by user with `reconnect` function. This function can be also used
+for reconnect a connection in `DISCONNECTED` state after reconnect retries were exhausted.
+
+```@docs
+reconnect
+```
+
+## Disconnecting
+
+To gracefully close connection `drain` function is provided.
+
+```@docs
+drain(::NATS.Connection)
+```
+
 To use NATS it is needed to create connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
 
 ## Connection lifecycle
@@ -25,7 +48,7 @@ nothing
 ![](lifecycle.svg)
 
 
-## Connecting to NATS cluster
+## Environment variables
 
 There are several `ENV` variables defined to provide default parameters for `connect`. It is advised to rather define `ENV` variables and use parameter less invocation like `NATS.connect()` for better code portability.
 
@@ -69,23 +92,3 @@ Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured
 | `NATS_RECONNECT_FACTOR`         | `5.0`                |
 | `NATS_RECONNECT_JITTER`         | `0.1`                |
 
-```@docs
-connect
-```
-
-# Reconnecting
-
-Reconnect can be forced by user with `reconnect` function. This function can be also used
-for reconnect a connection in `DISCONNECTED` state after reconnect retries were exhausted.
-
-```@docs
-reconnect
-```
-
-## Disconnecting
-
-To gracefully close connection `drain` function is provided.
-
-```@docs
-drain(::NATS.Connection)
-```
