@@ -11,6 +11,7 @@ docker run -p 4222:4222 nats:latest
 ```@repl
 using NATS
 nc = NATS.connect()
+@time NATS.ping(nc) # First one may be slow due to compilation
 @time NATS.ping(nc)
 ```
 

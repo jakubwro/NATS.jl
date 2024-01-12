@@ -1,7 +1,7 @@
 
 # Connection
 
-To use NATS it is needed to crate connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
+To use NATS it is needed to create connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
 
 ## Connection lifecycle
 
