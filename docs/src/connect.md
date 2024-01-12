@@ -64,8 +64,8 @@ Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured
 | `ENV` variable                  |  Default value       |
 |---------------------------------|----------------------|
 | `NATS_RECONNECT_RETRIES`        | `220752000000000000` |
-| `NATS_RECONNECT_FIRST_DELAY`    | `0.0001`             |
-| `NATS_RECONNECT_MAX_DELAY`      | `2.0`                |
+| `NATS_RECONNECT_FIRST_DELAY`    | `0.1`             |
+| `NATS_RECONNECT_MAX_DELAY`      | `5.0`                |
 | `NATS_RECONNECT_FACTOR`         | `5.0`                |
 | `NATS_RECONNECT_JITTER`         | `0.1`                |
 

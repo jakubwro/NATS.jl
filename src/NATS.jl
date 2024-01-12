@@ -51,8 +51,8 @@ const MIME_HEADERS  = MIME"application/nats-headers"
 # Granular reconnect retries configuration
 #TODO: ADR-40 says it should be 3.
 const DEFAULT_RECONNECT_RETRIES = 220752000000000000 # 7 bilion years.
-const DEFAULT_RECONNECT_FIRST_DELAY = 0.0001
-const DEFAULT_RECONNECT_MAX_DELAY = 2.0
+const DEFAULT_RECONNECT_FIRST_DELAY = 0.1
+const DEFAULT_RECONNECT_MAX_DELAY = 5.0
 const DEFAULT_RECONNECT_FACTOR = 5.0
 const DEFAULT_RECONNECT_JITTER = 0.1
 

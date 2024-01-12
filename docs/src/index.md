@@ -52,9 +52,9 @@ Current `NATS.jl` approach to handling signals is based on code and discussions 
 | `NATS_PEDANTIC`                               | `connect`    | `false`            | Turns on additional strict format checking, e.g. for properly formed subjects
 | `NATS_PING_INTERVAL`                          | `connect`    | `120.0`            | Interval in seconds how often server should be pinged to check connection health
 | `NATS_RECONNECT_FACTOR`                       | `connect`    | `5.0`                 | Exponential reconnect delays configuration
-| `NATS_RECONNECT_FIRST_DELAY`                  | `connect`    | `0.001`               | Exponential reconnect delays configuration
+| `NATS_RECONNECT_FIRST_DELAY`                  | `connect`    | `0.1`                 | Exponential reconnect delays configuration
 | `NATS_RECONNECT_JITTER`                       | `connect`    | `0.1`                 | Exponential reconnect delays configuration
-| `NATS_RECONNECT_MAX_DELAY`                    | `connect`    | `2.0`                 | Exponential reconnect delays configuration
+| `NATS_RECONNECT_MAX_DELAY`                    | `connect`    | `5.0`                 | Exponential reconnect delays configuration
 | `NATS_RECONNECT_RETRIES`                      | `connect`    | `220752000000000000`  | Exponential reconnect delays configuration
 | `NATS_REQUEST_TIMEOUT_SECONDS`                | `request`    | `5.0`              | Time how long `request` will block before returning error
 | `NATS_RETAIN_SERVERS_ORDER`                   | `connect`    | `false`            | Changes connection url selection policy from random to sequence they were provided.

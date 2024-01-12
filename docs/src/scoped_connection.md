@@ -10,7 +10,7 @@ with_connection
 
 ## Examples
 
-```julia
+```@repl
 using NATS
 conn1 = NATS.connect()
 conn2 = NATS.connect()
@@ -28,10 +28,10 @@ with_connection(conn1) do
     nothing
 end
 
-@assert conn1.stats.msgs_received == 1
-@assert conn1.stats.msgs_published == 0
+conn1.stats.msgs_received == 1
+conn1.stats.msgs_published == 0
 
-@assert conn2.stats.msgs_received == 0
-@assert conn2.stats.msgs_published == 1
+conn2.stats.msgs_received == 0
+conn2.stats.msgs_published == 1
 
 ```
