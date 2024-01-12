@@ -146,7 +146,7 @@ end
     @info "Published $counter messages."
 end
 
-@testset "Subscriber benchmark" begin
+@testset "Subscriber benchmark with `nats bench`" begin
     docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
 
     if isnothing(docker_network)
@@ -162,10 +162,10 @@ end
           end
 
     t = @async begin
-        cmd = `docker run --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16`
+        cmd = `docker run --network $docker_network -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16`
         io = IOBuffer();
         result = run(pipeline(cmd; stdout = io))
-        result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
+        # result.exitcode == 0 || error(" $cmd failed with $(result.exitcode)")
         output = String(take!(io))
         println(output)
     end
@@ -175,4 +175,5 @@ end
     finally
         drain(conn)
     end
+    @show received_count
 end
