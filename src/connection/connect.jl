@@ -337,20 +337,22 @@ function connect(
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
             reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event) end
 
+            tasks = [receiver_task, sender_task, ping_task, reconnect_await_task, drain_await_task]
+            names = ["receiver", "sender", "ping", "reconnect", "drain"]
             err_channel = Channel()
-            bind(err_channel, receiver_task)
-            bind(err_channel, sender_task)
-            bind(err_channel, ping_task)
-            bind(err_channel, drain_await_task)
-            bind(err_channel, reconnect_await_task)
+            for task in tasks
+                bind(err_channel, task)
+            end
             try
                 wait(err_channel)
-                @debug "Reconnect task woken at $(time())"
             catch err
                 if !(err isa InvalidStateException)
                     @debug "Error caused wake up" err
                 end
             end
+            cleanup_start = time()
+            reason = join(names[istaskdone.(tasks)], ", ")
+            @debug "Controller task woken by: $reason"
 
             if istaskdone(drain_await_task)
                 status(nc, DRAINING)
@@ -370,6 +372,7 @@ function connect(
             reopen_send_buffer(nc) # Finish sender_task.
             close(sock) # Finish receiver_task.
 
+            #TODO: maybe in some case waiting for tasks to finish is not needed, it will shortned reconnect time 10x
             try wait(sender_task) catch end
             try wait(receiver_task) catch end
             try wait(reconnect_await_task) catch end
@@ -379,10 +382,10 @@ function connect(
             @assert istaskdone(sender_task)
             @assert istaskdone(reconnect_await_task)
 
-            # TODO: indicate what was the cause in warning message.
             @warn "Connection to $(clustername(nc)) cluster on `$(nc.url)` lost, trynig to reconnect."
             status(nc, CONNECTING)
             @atomic nc.connect_init_count = 0
+            @debug "Cleanup time: $(time() - cleanup_start) seconds"
         end
     end
     errormonitor(reconnect_task)
