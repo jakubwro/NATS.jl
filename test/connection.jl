@@ -40,27 +40,10 @@ end
 NATS.status()
 
 @testset "Method error hints." begin
-    # hint = """To use `Type{Float64}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
-    #         ```
-    #         import Base: convert
-            
-    #         function convert(::Type{Type{Float64}}, msg::Msg)
-    #             # Implement conversion logic here.
-    #         end
-    #         """
-    @test_throws MethodError subscribe(nc, "SOME.THING") do msg::Float64 end
-    @test_throws MethodError request(nc, "SOME.REQUESTS", 4)
-    # hint = """Object of type `Int64` cannot be serialized into payload."""
-    @test_throws MethodError request(nc, 4, "SOME.REQUESTS", 4) # TODO: in this case there should be rather warning about missing payload.
-    # hint = """To use `Type{Integer}` as parameter of subscription handler apropriate conversion from `Type{NATS.Msg}` must be provided.
-    #         ```
-    #         import Base: convert
-            
-    #         function convert(::Type{Type{Integer}}, msg::Msg)
-    #             # Implement conversion logic here.
-    #         end
-    #         """
-    @test_throws MethodError reply(nc, "SOME.REQUESTS") do msg::Integer
+    @test_throws "Conversion of NATS message into type Float64 is not defined" subscribe(nc, "SOME.THING") do msg::Float64 end
+    @test_throws "Conversion of type Int64 to NATS payload is not defined." request(nc, "SOME.REQUESTS", 4)
+    @test_throws "Conversion of type Int64 to NATS payload is not defined." request(nc, 4, "SOME.REQUESTS", 4)
+    @test_throws "Conversion of NATS message into type Integer is not defined." reply(nc, "SOME.REQUESTS") do msg::Integer
         "Received $msg"
     end
 end
