@@ -203,7 +203,9 @@ Error
 ```
 
 ```julia
-function subscribe_for_one_second(nc::NATS.Connection, timeout = 1.0)
+using NATS
+nc = NATS.connect(send_buffer_limit = 1000000000)
+function subscribe_until_timeout(nc::NATS.Connection, timeout = 1.0)
     tm = Timer(timeout)
     counter = 0
     start = nothing
@@ -213,20 +215,32 @@ function subscribe_for_one_second(nc::NATS.Connection, timeout = 1.0)
         end
         counter += 1
     end
-    # while counter < 20000000
-    #     sleep(1)
-    # end
     wait(tm)
     unsubscribe(nc, sub)
     if counter == 0
         @info "No messages"
     else
-        @info "Processed $counter messages in $(time() - start) s."
+        @info "Processed $counter messages in $(time() - start) s. $(counter / (time() - start)) msgs/sec)"
     end
+    counter
 end
 
-julia> subscribe_for_one_second()
-[ Info: Processed 0 messages
+bench_task = @async begin
+    sub_task = Threads.@spawn :default subscribe_until_timeout(nc, 10.0)
+    Threads.@spawn :default while !istaskdone(sub_task)
+        publish(nc, "foo", "This is payload!")
+    end
+    wait(sub_task)
+    sub_task.result
+end
+_, tm = @timed wait(bench_task);
+received_messages = bench_task.result
+@info "$(received_messages / tm) msgs / sec"
+
+
+```
+
+```
 
 ```
 

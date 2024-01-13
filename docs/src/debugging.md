@@ -10,10 +10,10 @@ nc = NATS.connect()
 end
 NATS.reconnect(nc)
 NATS.drain(nc)
-sleep(0.1) # Wait a moment to get DRAINED status as well
+sleep(7) # Wait a moment to get DRAINED status as well
 ```
 
-## Connection an subscription statistics
+## Connection and subscription statistics
 
 There are detailed statistics of published and received messages collected.
 They can be accessed for each subscription and connection. Connection statistics
@@ -40,3 +40,4 @@ NATS.stats(nc, sub1)
 NATS.stats(nc, sub2)
 NATS.drain(nc)
 ```
+
