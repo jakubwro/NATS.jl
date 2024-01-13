@@ -121,3 +121,27 @@ function ping(nc; timer = Timer(1.0))
         error("No PONG received.")
     end
 end
+
+function stats(connection::Connection)
+    connection.stats
+end
+
+function stats(connection::Connection, sub::Sub)
+    sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
+    isnothing(sub_data) && return
+    sub_data.stats
+end
+
+function status_change(f, nc::Connection)
+    while true
+        st = status(nc)
+        if st == DRAINED
+            break
+        end
+        @lock nc.status_change_cond begin
+            wait(nc.status_change_cond)
+            st = nc.status
+        end
+        f(st)
+    end
+end

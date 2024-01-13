@@ -360,7 +360,6 @@ function connect(
                 status(nc, DRAINED)
                 close(sock)
                 reopen_send_buffer(nc)
-                @info "Connection is drained"
                 break
             end
             

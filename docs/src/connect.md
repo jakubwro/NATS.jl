@@ -29,7 +29,7 @@ To use NATS it is needed to create connection handle with `connect` function. Co
 ## Connection lifecycle
 
 When `connect` is called it tries to initialize connection with NATS server. If
-this process fails two things may happed depending on `retry_on_init_fail`
+this process fails two things may happen depending on `retry_on_init_fail`
 option:
 1. Rethrow exception causing protocol initialization failure.
 2. Return connection in state `CONNECTING` continuing reconnect process in background 
@@ -93,7 +93,7 @@ Additionally some parameters are provided to fine tune client for specific deplo
 | `ignore_advertised_servers` | `NATS_IGNORE_ADVERTISED_SERVERS`    | `false`          | no
 | `retain_servers_order`      | `NATS_RETAIN_SERVERS_ORDER `        | `false`          | no
 | `drain_timeout`             | `NATS_DRAIN_TIMEOUT_SECONDS`        | `5.0`            | no
-| `drain_poll`                | `NATS_DRAIN_POLL_INTERVAL_SECONDS   | `0.2`            | no
+| `drain_poll`                | `NATS_DRAIN_POLL_INTERVAL_SECONDS`  | `0.2`            | no
 | `send_buffer_limit`         | `NATS_SEND_BUFFER_LIMIT_BYTES`      | `2097152`        | no
 
 Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.

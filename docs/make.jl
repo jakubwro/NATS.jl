@@ -13,6 +13,7 @@ makedocs(
         "reqreply.md",
         "custom-data.md",
         "scoped_connection.md",
+        "debugging.md",
         "Internals" => [
             "protocol.md",
             "interrupt_handling.md",

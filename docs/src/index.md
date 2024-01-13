@@ -1,7 +1,9 @@
 # NATS.jl - NATS client for Julia.
 
-NATS.jl allows to connect to [NATS](https://nats.io) cluster from Julia.
-It allows to implement patterns like [publish-subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub), [request-reply](https://docs.nats.io/nats-concepts/core-nats/reqreply), and [queue groups](https://docs.nats.io/nats-concepts/core-nats/queue).
+NATS.jl allows to connect to [NATS](https://nats.io) cluster from Julia and use
+patterns like [publish-subscribe](https://docs.nats.io/nats-concepts/core-nats/pubsub),
+[request-reply](https://docs.nats.io/nats-concepts/core-nats/reqreply), and 
+[queue groups](https://docs.nats.io/nats-concepts/core-nats/queue).
 
 > **Warning**
 > 
@@ -22,7 +24,7 @@ Those tasks should be scheduled on interactive threads to ensure fast responses 
 
 ## Interrupt handling
 
-Graceful handling of interrupt is important in scenario of deployment in `kubernetes` cluster to handle pods auto scaling.
+Graceful handling of interrupt is important in scenario of deployment to `kubernetes` cluster to handle pods auto scaling.
 There are several issues with Julia if it comes to handling signals:
 1. by default when SIGINT is delivered process is exited immediately, this can be prevented by calling `Base.exit_on_sigint` with `false` parameter.
 2. even when this is configured interrupts are delivered to all tasks running on thread 1. Depending on `--threads` configuration this thread might run all tasks (when `--threads 1` which is default) or it can handle tasks scheduled on interactive threadpool (with `--threads M,N` where N is number of interactive threads). 
@@ -34,7 +36,7 @@ Future improvements in this matter might be introduced by [open PR](https://gith
 
 Current `NATS.jl` approach to handling signals is based on code and discussions from this PR. 
 
-## Environment variables
+## List of all environment variables
 
 | `ENV` variable                                | Used in      | Default if not set | Description
 |-----------------------------------------------|--------------|--------------------|-------------
