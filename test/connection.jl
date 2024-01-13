@@ -241,7 +241,7 @@ NATS.status()
     sleep(0.1)
     @test_throws ErrorException publish(connection, "test_publish_on_drained")
 
-    pub = NATS.Pub("test_publish_on_drained", nothing, UInt8[], UInt8[])
+    pub = NATS.Pub("test_publish_on_drained", nothing, 0, UInt8[])
     @test_throws ErrorException NATS.send(connection, repeat([pub], 10))
 end
 

@@ -16,6 +16,7 @@
 ### Code:
 
 include("structs.jl")
+include("validate.jl")
 include("parser.jl")
 include("payload.jl")
 include("headers.jl")

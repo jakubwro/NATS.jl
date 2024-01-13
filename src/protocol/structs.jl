@@ -127,9 +127,9 @@ struct Pub <: ProtocolMessage
     subject::String
     "The reply subject that subscribers can use to send a response back to the publisher/requestor."
     reply_to::Union{String, Nothing}
-    "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
-    headers::Vector{UInt8}
-    "The message payload data."
+    "Length of headers data inside payload"
+    headers_length::Int64
+    "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
     payload::Vector{UInt8}
 end
 
@@ -173,9 +173,9 @@ struct Msg <: ProtocolMessage
     sid::String
     "The subject on which the publisher is listening for responses."
     reply_to::Union{String, Nothing}
-    "Header version `NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`."
+    "Length of headers data inside payload"
     headers_length::Int64
-    "The message payload data."
+    "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
     payload::AbstractVector{UInt8}
 end
 
