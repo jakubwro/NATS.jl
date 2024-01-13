@@ -91,7 +91,7 @@ function show(io::IO, ::MIME_PROTOCOL, connect::Connect)
 end
 
 function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
-    hbytes = length(pub.headers)
+    hbytes = pub.headers_length
     nbytes = length(pub.payload)
     if hbytes > 0
         write(io, "H")
@@ -105,8 +105,7 @@ function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
     if hbytes > 0
         write(io, " $hbytes")
     end
-    write(io, " $(hbytes + nbytes)\r\n")
-    write(io, pub.headers)
+    write(io, " $(nbytes)\r\n")
     write(io, pub.payload)
     write(io, "\r\n")
 end

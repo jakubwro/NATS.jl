@@ -45,7 +45,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
             Threads.atomic_add!(msgs_after_timeout, 1)
         end
     end
-    pub = NATS.Pub(subject, nothing, UInt8[], uint8_vec("Hi!"))
+    pub = NATS.Pub(subject, nothing, 0, uint8_vec("Hi!"))
     t = Threads.@spawn :default begin
         @time while isopen(tm)
             if time_first_pub == 0.0
@@ -127,8 +127,6 @@ end
 
 @testset "Publisher benchmark." begin
     connection = NATS.connect()
-
-    # pub = NATS.Pub("zxc", nothing, UInt8[], uint8_vec("Hello world!!!!!"))
 
     tm = Timer(1.0)
     counter = 0

@@ -15,6 +15,9 @@
 #
 ### Code:
 
+const mime_payload = MIME_PAYLOAD()
+const mime_headers = MIME_HEADERS()
+
 """
 $(SIGNATURES)
 
@@ -38,9 +41,12 @@ function publish(
     data = nothing;
     reply_to::Union{String, Nothing} = nothing
 )
-    payload_bytes = repr(MIME_PAYLOAD(), data)
-    headers_bytes = repr(MIME_HEADERS(), data)
-    send(connection, Pub(subject, reply_to, headers_bytes, payload_bytes))
+    payload_io = IOBuffer()
+    show(payload_io, mime_headers, data)
+    headers_length = payload_io.size
+    show(payload_io, mime_payload, data)
+    payload_bytes = take!(payload_io)
+    send(connection, Pub(subject, reply_to, headers_length, payload_bytes))
     inc_stats(:msgs_published, 1, connection.stats, state.stats)
     sub_stats = ScopedValues.get(scoped_subscription_stats)
     if !isnothing(sub_stats)
