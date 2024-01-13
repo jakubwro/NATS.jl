@@ -46,7 +46,9 @@ function publish(
     headers_length = payload_io.size
     show(payload_io, mime_payload, data)
     payload_bytes = take!(payload_io)
-    send(connection, Pub(subject, reply_to, headers_length, payload_bytes))
+    pub = Pub(subject, reply_to, headers_length, payload_bytes)
+    validate(pub)
+    send(connection, pub)
     inc_stats(:msgs_published, 1, connection.stats, state.stats)
     sub_stats = ScopedValues.get(scoped_subscription_stats)
     if !isnothing(sub_stats)
