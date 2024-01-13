@@ -57,7 +57,7 @@ $(SIGNATURES)
 Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
 
 Optional keyword arguments are:
-- `timer`: error will be thrown if no replies received until `timer` expires
+- `timer`: empty vector will be returned if no replies received until `timer` expires
 
 # Examples
 ```julia-repl

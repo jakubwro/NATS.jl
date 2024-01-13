@@ -28,6 +28,20 @@ To use NATS it is needed to create connection handle with `connect` function. Co
 
 ## Connection lifecycle
 
+When `connect` is called it tries to initialize connection with NATS server. If
+this process fails two things may happed depending on `retry_on_init_fail`
+option:
+1. Rethrow exception causing protocol initialization failure.
+2. Return connection in state `CONNECTING` continuing reconnect process in background 
+
+Other wise connection in `CONNECTED` state is returned from `connect`.
+
+In case of some critical failure like TCP connection closing or mallformed
+protocol message conection will enter `CONNECTING` and try reconnect
+according `reconnect_delays` specified. If it is unable to establish
+connection with allowed retries connection will land in `DISCONNECTED`
+state and only manual invocation of `reconnect` may restore it.
+
 ```@eval
 using GraphViz
 
