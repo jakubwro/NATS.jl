@@ -16,7 +16,7 @@
 ### Code:
 
 function default_fallback_handler(::Connection, msg::Msg)
-    @warn "Unexpected message delivered." msg
+    # @warn "Unexpected message delivered." msg
 end
 
 @kwdef mutable struct State

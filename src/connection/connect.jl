@@ -365,7 +365,7 @@ function connect(
             
             notify(nc.reconnect_event) # Finish reconnect_await_task.
             # TODO: maybe `autoreset` should be used, but special care needs to be taken to not consume it anywhere else.
-            reset(nc.reconnect_event) # Reset event to prevent forever reconnect. 
+            reset(nc.reconnect_event) # Reset event to prevent forever reconnect.
             close(sock) # Finish receiver_task.
             reopen_send_buffer(nc) # Finish sender_task.
 

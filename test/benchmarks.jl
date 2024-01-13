@@ -229,3 +229,38 @@ end
         @info "Performance is $( n / total_time) msgs/sec"
     end
 end
+
+@testset "Benchmark msgs / sec roundtrip" begin
+    nc = NATS.connect()
+    function subscribe_until_timeout(nc::NATS.Connection, timeout = 1.0)
+        tm = Timer(timeout)
+        counter = 0
+        start = nothing
+        sub = subscribe(nc, "foo") do
+            if isnothing(start)
+                start = time()
+            end
+            counter += 1
+        end
+        wait(tm)
+        unsubscribe(nc, sub)
+        if counter == 0
+            @info "No messages"
+        else
+            @info "Processed $counter messages in $(time() - start) s. $(counter / (time() - start)) msgs/sec)"
+        end
+        counter
+    end
+
+    bench_task = @async begin
+        sub_task = Threads.@spawn :default subscribe_until_timeout(nc, 1.0)
+        Threads.@spawn :default while !istaskdone(sub_task)
+            publish(nc, "foo", "This is payload!")
+        end
+        wait(sub_task)
+        sub_task.result
+    end
+    _, tm = @timed wait(bench_task);
+    received_messages = bench_task.result
+    @info "$(received_messages / tm) msgs / sec"
+end
