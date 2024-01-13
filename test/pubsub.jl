@@ -95,7 +95,7 @@ NATS.status()
 @testset "Subscription with multiple arguments" begin
     subject = randstring(8)
     # TODO: test if error message is clear.
-    @test_throws MethodError subscribe(nc, subject) do x, y, z
+    @test_throws ErrorException subscribe(nc, subject) do x, y, z
         "nothing to do"
     end
 end
