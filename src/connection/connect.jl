@@ -358,16 +358,17 @@ function connect(
                 is_connected = !(istaskdone(sender_task) || istaskdone(receiver_task))
                 _do_drain(nc, is_connected)
                 status(nc, DRAINED)
-                close(sock)
                 reopen_send_buffer(nc)
+                close(sock)
                 break
             end
             
             notify(nc.reconnect_event) # Finish reconnect_await_task.
             # TODO: maybe `autoreset` should be used, but special care needs to be taken to not consume it anywhere else.
             reset(nc.reconnect_event) # Reset event to prevent forever reconnect.
-            close(sock) # Finish receiver_task.
+
             reopen_send_buffer(nc) # Finish sender_task.
+            close(sock) # Finish receiver_task.
 
             try wait(sender_task) catch end
             try wait(receiver_task) catch end

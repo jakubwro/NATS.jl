@@ -28,9 +28,9 @@ NATS.status()
             Threads.@spawn publish(conn, "some_other_subject", "Some payload")
         end
     end
-    sleep(0.1)
+    sleep(0.2)
     publish(conn, "stats_test")
-    sleep(0.1)
+    sleep(0.2)
     @test conn.stats.msgs_published == 2
     sub_stats = conn.sub_data[sub.sid].stats
     @test sub_stats.msgs_published == 1
