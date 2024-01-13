@@ -37,6 +37,7 @@ end
     send_buffer::IO = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_limit::Int64 = DEFAULT_SEND_BUFFER_LIMIT_BYTES
+    send_buffer_batch_interval::Float64
     send_retry_delays::Any = SEND_RETRY_DELAYS
     send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()

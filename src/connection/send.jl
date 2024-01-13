@@ -153,9 +153,15 @@ function sendloop(nc::Connection, io::IO)
                 taken
             end
         end
+        # batch_size = length(buf)
         write(io, buf)
         flush(io)
         @atomic nc.send_buffer_flushed = true
+        if nc.send_buffer_batch_interval > 0.0
+            # Wait for next batch, this increases troughput avoiding excesive task switching.
+            # @info "Batch size is $batch_size"
+            sleep(nc.send_buffer_batch_interval)
+        end
     end
     @debug "Sender task finished. $(send_buffer.size) bytes in send buffer."
 end
