@@ -105,6 +105,7 @@ function request(
     data = nothing;
     timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
+    find_msg_conversion_or_throw(T)
     result = request(connection, subject, data; timer)
     convert(T, result)
 end

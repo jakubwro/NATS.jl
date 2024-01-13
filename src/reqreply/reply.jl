@@ -46,9 +46,7 @@ function reply(
     queue_group::Union{Nothing, String} = nothing,
     spawn::Bool = false
 )
-    T = argtype(f)
-    find_msg_conversion_or_throw(T)
-    fast_f = _fast_call(f, T)
+    fast_f = _fast_call(f)
     subscribe(connection, subject; queue_group, spawn) do msg
         data = fast_f(msg)
         publish(connection, msg.reply_to, data)

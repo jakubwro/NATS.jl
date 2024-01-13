@@ -78,11 +78,9 @@ include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
 include("experimental/experimental.jl")
 include("interrupts.jl")
-include("hints.jl")
 
 function __init__()
     start_interrupt_handler()
-    register_hints()
 end
 
 end

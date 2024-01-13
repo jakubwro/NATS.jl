@@ -35,9 +35,7 @@ function subscribe(
     channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
     monitoring_throttle_seconds::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
-    arg_t = argtype(f)
-    find_msg_conversion_or_throw(arg_t)
-    f_typed = _fast_call(f, arg_t)
+    f_typed = _fast_call(f)
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
