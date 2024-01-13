@@ -1,4 +1,4 @@
-### publish.jl
+### validate.jl
 #
 # Copyright (C) 2024 Jakub Wronowski.
 #
