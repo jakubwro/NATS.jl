@@ -10,6 +10,7 @@ nc = NATS.connect()
 end
 NATS.reconnect(nc)
 NATS.drain(nc)
+sleep(0.1) # Wait a moment to get DRAINED status as well
 ```
 
 ## Connection an subscription statistics
@@ -30,6 +31,10 @@ sub2 = subscribe(nc, "other_topic") do msg
 end
 NATS.stats(nc)
 publish(nc, "topic", "Hi!")
+NATS.stats(nc)
+NATS.stats(nc, sub1)
+NATS.stats(nc, sub2)
+sleep(0.1) # Wait for message to be propagated
 NATS.stats(nc)
 NATS.stats(nc, sub1)
 NATS.stats(nc, sub2)
