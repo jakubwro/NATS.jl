@@ -286,6 +286,7 @@ function connect(
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
         while true
+            prev_sock = nothing
             if status(nc) == CONNECTING
                 start_time = time()
                 # TODO: handle repeating server Err messages.
@@ -333,6 +334,10 @@ function connect(
                 end
             end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
+            if !isnothing(prev_sock)
+                close(prev_sock)
+                prev_sock = nothing
+            end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
             reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event) end
@@ -370,17 +375,18 @@ function connect(
             reset(nc.reconnect_event) # Reset event to prevent forever reconnect.
 
             reopen_send_buffer(nc) # Finish sender_task.
-            close(sock) # Finish receiver_task.
+            # close(sock) # Finish receiver_task.
+            prev_sock = sock
 
             #TODO: maybe in some case waiting for tasks to finish is not needed, it will shortned reconnect time 10x
-            try wait(sender_task) catch end
-            try wait(receiver_task) catch end
-            try wait(reconnect_await_task) catch end
+            # try wait(sender_task) catch end
+            # try wait(receiver_task) catch end
+            # try wait(reconnect_await_task) catch end
             # `ping_task` will complete eventually seeing `reconnect_count` increased.
 
-            @assert istaskdone(receiver_task)
-            @assert istaskdone(sender_task)
-            @assert istaskdone(reconnect_await_task)
+            # @assert istaskdone(receiver_task)
+            # @assert istaskdone(sender_task)
+            # @assert istaskdone(reconnect_await_task)
 
             @warn "Connection to $(clustername(nc)) cluster on `$(nc.url)` lost, trynig to reconnect."
             status(nc, CONNECTING)
