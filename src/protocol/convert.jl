@@ -20,3 +20,7 @@ function convert(::Type{String}, msg::NATS.Msg)
     # This allows to use handlers that take just a payload string and do not use other fields.
     payload(msg)
 end
+
+function convert(::Type{JSON3.Object}, msg::NATS.Msg)
+    JSON3.read(@view msg.payload[(begin + msg.headers_length):end])
+end

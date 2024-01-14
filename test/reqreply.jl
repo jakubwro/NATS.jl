@@ -1,6 +1,7 @@
 using Test
 using NATS
 using Random
+using JSON3
 
 @testset "Request reply" begin
     sub = reply(nc, "SOME.REQUESTS") do msg
@@ -124,6 +125,14 @@ NATS.status()
     drain(nc, sub)
     @test result isa String
     @test result == "Received Hi!"
+
+    sub = reply(nc, "SOME.REQUESTS") do msg::JSON3.Object
+        word = msg[:message]
+        JSON3.read("""{"reply": "This is a reply for '$word'"}""")
+    end
+    result = request(JSON3.Object, nc, "SOME.REQUESTS", JSON3.read("""{"message": "Hi!"}"""))
+    drain(nc, sub)
+    @test result[:reply] == "This is a reply for 'Hi!'"
 end
 
 NATS.status()
