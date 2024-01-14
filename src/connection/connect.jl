@@ -285,8 +285,8 @@ function connect(
     # reconnect logic.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
+        prev_sock = nothing
         while true
-            prev_sock = nothing
             if status(nc) == CONNECTING
                 start_time = time()
                 # TODO: handle repeating server Err messages.
