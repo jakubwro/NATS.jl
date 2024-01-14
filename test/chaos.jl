@@ -199,7 +199,7 @@ end
     NATS.status()
 end
 
-@testset "Disconnects during heavy publications." begin
+@testset "Disconnect during heavy publications." begin
     received_count = Threads.Atomic{Int64}(0)
     published_count = Threads.Atomic{Int64}(0)
     subject = "pub_subject"
@@ -221,13 +221,13 @@ end
     end
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     sleep(2)
     @info "Published: $(published_count.value), received: $(received_count.value)."
-    # @test restart_nats_server() == 0
+    @test restart_nats_server() == 0
     wait(pub_task)
     sleep(4) # wait for published messages 
     unsubscribe(nc, sub)
