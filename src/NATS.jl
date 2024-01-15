@@ -80,7 +80,7 @@ include("experimental/experimental.jl")
 include("interrupts.jl")
 
 function __init__()
-    start_interrupt_handler()
+    # start_interrupt_handler()
 end
 
 end
