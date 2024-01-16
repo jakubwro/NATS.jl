@@ -3,6 +3,7 @@ using Test
 using NATS
 using Random
 using ScopedValues
+using StructTypes
 
 NATS.status()
 
@@ -111,7 +112,7 @@ NATS.status()
 
 @testset "Should reconnect on malformed msg" begin
     options = merge(NATS.default_connect_options(), (protocol=100,) )
-    con_msg = NATS.from_options(NATS.Connect, options)
+    con_msg = StructTypes.constructfrom(Connect, options)
     NATS.send(nc, con_msg)
     sleep(10)
     @test nc.status == NATS.CONNECTED

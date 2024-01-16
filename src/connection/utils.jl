@@ -91,10 +91,3 @@ function _fast_call(f::Function)
         msg -> f(convert(arg_t, msg))
     end
 end
-
-# """
-# Alternative for `@kwdef` that works better for NATS case. 
-# """
-function from_options(T::Type, options)
-    T(options[fieldnames(T)]...)
-end

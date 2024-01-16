@@ -146,7 +146,7 @@ function init_protocol(nc, url, options)
         provided_keys = keys(options)
         keys_df = setdiff(provided_keys, known_options)
         !isempty(keys_df) && error("Unknown `connect` options: $(join(keys_df, ", "))")
-        connect_msg = from_options(Connect, options)
+        connect_msg = StructTypes.constructfrom(Connect, options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
 
