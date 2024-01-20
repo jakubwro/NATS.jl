@@ -23,6 +23,8 @@ struct SubscriptionData
     sub::Sub
     channel::Channel
     stats::Stats
+    is_async::Bool
+    lock::ReentrantLock
 end
 
 @kwdef mutable struct Connection

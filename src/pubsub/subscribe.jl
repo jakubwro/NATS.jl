@@ -44,10 +44,59 @@ function subscribe(
         _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, subscription_channel, monitoring_throttle_seconds)
     end
     @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats)
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock())
     end
     send(connection, sub)
     sub
+end
+
+function subscribe(
+    connection::Connection,
+    subject::String;
+    queue_group::Union{String, Nothing} = nothing,
+    spawn::Bool = false,
+    channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
+)
+    sid = new_sid(connection)
+    sub = Sub(subject, queue_group, sid)
+    sub_stats = Stats()
+    subscription_channel = Channel(channel_size)
+    @lock connection.lock begin
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
+    end
+    send(connection, sub)
+    sub
+end
+
+function next(connection, sub; no_wait = false, no_throw = false)
+    sub_data = @lock connection.lock begin
+        connection.sub_data[sub.sid]
+    end
+    sub_data.is_async && error("`next` is available only for synchronous subscriptions")
+    ch = sub_data.channel
+    no_wait && Base.n_avail(ch) == 0 && return nothing
+    msg = 
+        try
+            @lock sub_data.lock begin
+                batch = fetch(ch)
+                result = popfirst!(batch)
+                isempty(batch) && take!(ch)
+                result
+            end
+        catch err
+            no_throw && return nothing
+            if err isa InvalidStateException
+                throw(NATSError(499, "Client unsubscribed."))
+            end
+            rethrow()
+        end
+    if !no_throw
+        status = statuscode(msg)
+        if status > 399
+            throw(NATSError(status, "")) # TODO: extract error message
+        end
+    end
+    msg
 end
 
 @kwdef mutable struct SubscriptionMonitoringData

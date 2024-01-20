@@ -217,3 +217,8 @@ end
 function Base.:(==)(a::M, b::M) where {M <: ProtocolMessage}
     all(field -> getfield(a, field) == getfield(b, field), fieldnames(M))
 end
+
+struct NATSError <: Exception
+    code::UInt64
+    message::String
+end
