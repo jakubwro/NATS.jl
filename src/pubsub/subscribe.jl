@@ -69,8 +69,10 @@ function subscribe(
 end
 
 function next(connection, sub; no_wait = false, no_throw = false)
-    sub_data = @lock connection.lock begin
-        connection.sub_data[sub.sid]
+    sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
+    if isnothing(sub_data)
+        no_throw && return nothing
+        throw(NATSError(499, "Client unsubscribed."))
     end
     sub_data.is_async && error("`next` is available only for synchronous subscriptions")
     ch = sub_data.channel

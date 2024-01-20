@@ -115,7 +115,8 @@ function request(
     errormonitor(timeout_task)
     result = Msg[]
     for _ in 1:nreplies
-        msg = next(connection, sub)
+        msg = next(connection, sub; no_throw = true)
+        isnothing(msg) && break
         push!(result, msg)
     end
     result
