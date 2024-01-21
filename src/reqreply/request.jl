@@ -65,36 +65,6 @@ julia> request(connection, 2, "help.please"; timer = Timer(0))
 NATS.Msg[]
 ```
 """
-function request_old(
-    connection::Connection,
-    nreplies::Integer,
-    subject::String,
-    data = nothing;
-    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
-)
-    find_data_conversion_or_throw(typeof(data))
-    nreplies < 1 && error("`nreplies` have to be greater than 0.")
-    reply_to = new_inbox(connection)
-    replies_channel = Channel{NATS.Msg}(nreplies)
-    sub = subscribe(connection, reply_to; spawn = false) do msg
-        put!(replies_channel, msg)
-        if Base.n_avail(replies_channel) == nreplies || has_error_status(msg)
-            close(replies_channel)
-        end
-    end
-    unsubscribe(connection, sub; max_msgs = nreplies)
-    publish(connection, subject, data; reply_to)
-    timeout_task = Threads.@spawn :interactive disable_sigint() do
-        try wait(timer) catch end
-        drain(connection, sub)
-    end
-    bind(replies_channel, timeout_task)
-    errormonitor(timeout_task)
-    replies = collect(replies_channel) # Waits until channel closed.
-    # @debug "Received $(length(replies)) messages with statuses: $(map(m -> statuscode(m), replies))"
-    replies
-end
-
 function request(
     connection::Connection,
     nreplies::Integer,

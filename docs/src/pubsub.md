@@ -6,6 +6,7 @@ Functions implementing [NATS Publish-Subscribe](https://docs.nats.io/nats-concep
 ```@docs
 publish
 subscribe
+next
 unsubscribe
 drain
 ```
