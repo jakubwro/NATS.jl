@@ -2,7 +2,6 @@
 function stream_message_get(connection::NATS.Connection, stream::StreamInfo, subject)
     if stream.config.allow_direct
         m = NATS.request(connection, "\$JS.API.DIRECT.GET.$(stream.config.name)", "{\"last_by_subj\": \"$subject\"}")
-        @show m.reply_to
         #TODO: structured NATSError
         m
     else
