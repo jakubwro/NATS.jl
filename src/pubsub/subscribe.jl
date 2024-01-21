@@ -50,11 +50,19 @@ function subscribe(
     sub
 end
 
+"""
+$(SIGNATURES)
+
+Subscribe to a subject in synchronous mode. Client is supposed to call `next` manually to obtain messages.
+
+Optional keyword arguments are:
+- `queue_group`: NATS server will distribute messages across queue group members
+- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
+"""
 function subscribe(
     connection::Connection,
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
-    spawn::Bool = false,
     channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
 )
     sid = new_sid(connection)
@@ -68,6 +76,13 @@ function subscribe(
     sub
 end
 
+"""
+Obtains next message for synchronous subscription.
+
+Optional keyword arguments:
+- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
+- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+"""
 function next(connection, sub; no_wait = false, no_throw = false)
     sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
     if isnothing(sub_data)

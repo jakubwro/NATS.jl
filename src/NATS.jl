@@ -35,7 +35,7 @@ import Base: show, convert
 export NATSError
 export connect, reconnect, ping, drain
 export payload, header, headers
-export publish, subscribe, unsubscribe
+export publish, subscribe, unsubscribe, next
 export request, reply
 export with_connection
 
