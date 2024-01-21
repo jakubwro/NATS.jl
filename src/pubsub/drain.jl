@@ -29,6 +29,7 @@ function drain(connection::Connection, sid::String; timer = Timer(connection.dra
     while !is_every_message_handled(sub_stats)
         if !isopen(timer)
             @error "Timeout for drain exceeded, not all msgs might be processed."
+            break
         end
         sleep(connection.drain_poll)
     end

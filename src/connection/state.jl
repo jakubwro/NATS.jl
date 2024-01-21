@@ -51,9 +51,15 @@ end
 function _delete_sub_data(nc::Connection, sid::String)
     @lock nc.lock begin
         sub_data = get(nc.sub_data, sid, nothing)
-        !isnothing(sub_data) && close(sub_data.channel)
-        delete!(nc.sub_data, sid)
-        delete!(nc.unsubs, sid)
+        if sub_data.is_async == true
+            !isnothing(sub_data) && close(sub_data.channel)
+            delete!(nc.sub_data, sid)
+            delete!(nc.unsubs, sid)
+        else
+            # `next` rely on lookup of sub data, in this case let sub data stay and do cleanup
+            # when `next` gets the last message of a closed channel.
+            !isnothing(sub_data) && close(sub_data.channel)
+        end
     end
 end
 

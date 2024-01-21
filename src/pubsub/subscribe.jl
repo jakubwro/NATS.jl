@@ -76,7 +76,15 @@ function next(connection, sub; no_wait = false, no_throw = false)
     end
     sub_data.is_async && error("`next` is available only for synchronous subscriptions")
     ch = sub_data.channel
-    no_wait && Base.n_avail(ch) == 0 && return nothing
+    if no_wait && Base.n_avail(ch) == 0
+        if !isopen(ch)
+            @lock connection.lock begin
+                delete!(connection.sub_data, sub.sid)
+                delete!(connection.unsubs, sub.sid)
+            end
+        end
+        return nothing
+    end
     msg = 
         try
             @lock sub_data.lock begin
@@ -91,6 +99,13 @@ function next(connection, sub; no_wait = false, no_throw = false)
                 throw(NATSError(499, "Client unsubscribed."))
             end
             rethrow()
+        finally
+            if !isopen(ch) && Base.n_avail(ch) == 0
+                @lock connection.lock begin
+                    delete!(connection.sub_data, sub.sid)
+                    delete!(connection.unsubs, sub.sid)
+                end
+            end
         end
     if !no_throw
         status = statuscode(msg)

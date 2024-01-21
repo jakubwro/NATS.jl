@@ -112,7 +112,7 @@ end
 NATS.status()
 
 @testset "No responders." begin
-    @test_throws ErrorException request(nc, "SOME.NULL")
+    @test_throws NATSError request(nc, "SOME.NULL")
 end
 
 NATS.status()

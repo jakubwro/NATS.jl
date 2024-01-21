@@ -32,6 +32,7 @@ using URIs
 
 import Base: show, convert
 
+export NATSError
 export connect, reconnect, ping, drain
 export payload, header, headers
 export publish, subscribe, unsubscribe
