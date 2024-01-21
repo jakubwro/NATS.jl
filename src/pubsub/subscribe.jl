@@ -107,6 +107,7 @@ function next(connection, sub; no_wait = false, no_throw = false)
                 end
             end
         end
+    inc_stats(:msgs_handled, 1, sub_data.stats, connection.stats, state.stats)
     if !no_throw
         status = statuscode(msg)
         if status > 399
