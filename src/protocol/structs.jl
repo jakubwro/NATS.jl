@@ -219,6 +219,6 @@ function Base.:(==)(a::M, b::M) where {M <: ProtocolMessage}
 end
 
 struct NATSError <: Exception
-    code::UInt64
+    code::Int64
     message::String
 end

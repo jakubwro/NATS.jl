@@ -109,6 +109,7 @@ function next(connection, sub; no_wait = false, no_throw = false)
                 result
             end
         catch err
+            err isa InterruptException && rethrow()
             no_throw && return nothing
             if err isa InvalidStateException
                 throw(NATSError(499, "Client unsubscribed."))
@@ -122,6 +123,7 @@ function next(connection, sub; no_wait = false, no_throw = false)
                 end
             end
         end
+    dec_stats(:msgs_pending, 1, sub_data.stats, connection.stats, state.stats)
     inc_stats(:msgs_handled, 1, sub_data.stats, connection.stats, state.stats)
     if !no_throw
         status = statuscode(msg)

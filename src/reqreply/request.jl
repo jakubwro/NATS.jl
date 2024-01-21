@@ -78,15 +78,18 @@ function request(
     sub = subscribe(connection, reply_to)
     unsubscribe(connection, sub; max_msgs = nreplies)
     publish(connection, subject, data; reply_to)
-    timeout_task = Threads.@spawn :interactive disable_sigint() do
+    timeout_task = Threads.@spawn :interactive begin
+        Base.sigatomic_begin() # `disable_sigint` is not enought here, must be sure that this task never receives interrupt
         try wait(timer) catch end
         drain(connection, sub)
     end
     errormonitor(timeout_task)
     result = Msg[]
     for _ in 1:nreplies
-        msg = next(connection, sub)
-        isnothing(msg) && break
+        msg = next(connection, sub; no_throw = true)
+        isnothing(msg) && break # Do not throw when unsubscribed.
+        status = statuscode(msg)
+        status >= 400 && throw(NATSError(status, ""))
         push!(result, msg)
     end
     result
