@@ -91,8 +91,8 @@ function next(connection, sub; no_wait = false, no_throw = false)
     end
     sub_data.is_async && error("`next` is available only for synchronous subscriptions")
     ch = sub_data.channel
-    if no_wait && Base.n_avail(ch) == 0
-        if !isopen(ch)
+    if no_wait && Base.n_avail(ch) == 0 # Double check emptiness for thread safety.
+        if !isopen(ch) && Base.n_avail(ch) == 0 
             @lock connection.lock begin
                 delete!(connection.sub_data, sub.sid)
                 delete!(connection.unsubs, sub.sid)
