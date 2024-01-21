@@ -79,6 +79,7 @@ include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
 include("experimental/experimental.jl")
 include("interrupts.jl")
+include("jetstream/jetstream.jl")
 
 function __init__()
     # start_interrupt_handler()
