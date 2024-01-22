@@ -50,6 +50,8 @@ end
     @atomic send_buffer_flushed::Bool
     drain_timeout::Float64
     drain_poll::Float64
+    allow_direct::Dict{String, Bool} = Dict{String, Bool}() # Cache for jetstream for fast lookup of streams that have direct access.
+    allow_direct_lock = ReentrantLock()
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info

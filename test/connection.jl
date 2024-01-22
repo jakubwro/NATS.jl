@@ -275,7 +275,7 @@ NATS.status()
     end
     sleep(0.2)
     t = @async with(NATS.scoped_subscription_stats => NATS.Stats()) do
-        tm = Timer(3)
+        tm = Timer(3) #TODO: this test makes no sense, refactor
         while isopen(tm)
             publish(connection, "other_topic")
         end

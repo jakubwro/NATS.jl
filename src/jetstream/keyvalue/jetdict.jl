@@ -40,3 +40,19 @@ end
 function history(jetdict::JetDict)::Vector{JetEntry}
 
 end
+
+function watch(f, jetdict::JetDict; skip_deletes = false)
+    keyvalue_watch(jetdict.connection, jetdict.bucket) do msg
+        if !(skip_deletes && isdeleted(msg))
+            f(entry)
+        end
+    end
+end
+
+function watch(f, jetdict::JetDict, key::String; skip_deletes = false)
+    keyvalue_watch(jetdict.connection, jetdict.bucket, key) do msg
+        if !(skip_deletes && isdeleted(msg))
+            f(entry)
+        end
+    end
+end

@@ -1,6 +1,5 @@
 
-include("create.jl")
-include("delete.jl")
+include("manage.jl")
 include("list.jl")
 include("next.jl")
 include("ack.jl")
