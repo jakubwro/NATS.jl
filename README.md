@@ -7,6 +7,7 @@
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/tls.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions/workflows/tls.yaml)
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/auth.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions/workflows/auth.yaml)
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/cluster.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions/workflows/cluster.yaml)
+[![](https://github.com/jakubwro/NATS.jl/actions/workflows/jetstream.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions/workflows/jetstream.yaml)
 [![](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/jakubwro/NATS.jl/actions/workflows/documentation.yml)
 [![codecov](https://codecov.io/gh/jakubwro/NATS.jl/graph/badge.svg?token=8X0HPK1T8E)](https://codecov.io/gh/jakubwro/NATS.jl)
 [![](https://img.shields.io/badge/NATS.jl%20docs-dev-blue.svg)](https://jakubwro.github.io/NATS.jl/dev)
@@ -15,7 +16,7 @@
 
 [NATS](https://nats.io) client for Julia.
 
-This client is feature complete in terms of `Core NATS` protocol (without [JetStream](https://docs.nats.io/nats-concepts/jetstream))
+This client is feature complete in terms of `Core NATS` protocol and most of [JetStream](https://docs.nats.io/nats-concepts/jetstream) API.
 - [x] All `NATS` authentication methods
 - [x] TLS support
 - [x] Zero copy protocol parser
