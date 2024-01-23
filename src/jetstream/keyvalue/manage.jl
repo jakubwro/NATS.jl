@@ -58,3 +58,9 @@ function keyvalue_delete(connection::NATS.Connection, bucket::String, key)::PubA
     subject = "$(keyvalue_subject_prefix(bucket)).$key"
     stream_publish(connection, subject, (nothing, hdrs))
 end
+
+function keyvalue_buckets(connection::NATS.Connection)
+    map(stream_names(connection::NATS.Connection, "\$KV.>")) do stream_name
+        stream_name[begin+length(KV_STREAM_NAME_PREFIX):end]
+    end
+end
