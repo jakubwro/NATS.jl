@@ -41,10 +41,17 @@ function request(
     timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     replies = request(connection, 1, subject, data; timer)
-    if isempty(replies) || all(has_error_status, replies)
-        error("No replies received.")
+    if isempty(replies) 
+        throw(NATSError(408, "No replies received in specified time."))
     end
-    first(filter(!has_error_status, replies))
+    if length(replies) > 1
+        @warn "Multiple replies."
+    end
+    msg = first(replies)
+    if statuscode(msg) >= 400
+        throw(NATSError(statuscode(msg), ""))
+    end
+    msg
 end
 
 function has_error_status(msg::NATS.Msg)
@@ -55,6 +62,7 @@ end
 $(SIGNATURES)
 
 Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
+Can return less messages than specified (also empty array if timeout occurs), errors are not filtered.
 
 Optional keyword arguments are:
 - `timer`: empty vector will be returned if no replies received until `timer` expires
@@ -73,6 +81,9 @@ function request(
     timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     find_data_conversion_or_throw(typeof(data))
+    if NATS.status(connection) in [NATS.DRAINED, NATS.DRAINING]
+        throw(NATS.NATSError(499, "Connection is drained."))
+    end
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = new_inbox(connection)
     sub = subscribe(connection, reply_to)
@@ -88,9 +99,8 @@ function request(
     for _ in 1:nreplies
         msg = next(connection, sub; no_throw = true)
         isnothing(msg) && break # Do not throw when unsubscribed.
-        status = statuscode(msg)
-        status >= 400 && throw(NATSError(status, ""))
         push!(result, msg)
+        has_error_status(msg) && break
     end
     result
 end

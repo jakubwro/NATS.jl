@@ -23,3 +23,16 @@ end
 function consumer_update(consumer::ConsumerConfiguration, stream::Union{StreamInfo, String})
 
 end
+
+function consumer_delete(connection::NATS.Connection, stream_name::String, consumer_name::String)
+    subject = "\$JS.API.CONSUMER.DELETE.$stream_name.$consumer_name"
+    res = NATS.request(Union{ApiResult, ApiError}, connection, subject)
+    if res isa ApiError
+        throw(res)
+    end
+    res
+end
+
+function consumer_delete(connection, consumer::ConsumerInfo)
+    consumer_delete(connection, consumer.stream_name, consumer.name)
+end
