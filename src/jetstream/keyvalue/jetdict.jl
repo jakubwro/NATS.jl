@@ -28,10 +28,8 @@ function JetDict{T}(connection::NATS.Connection, bucket::String, encoding = :non
             Symbol(get(stream.config.metadata, "encoding", "none"))
         end
     end
-    if encoding != :none
-        encoding != stream_encoding && error("Encoding do not match, cannot use $encoding encoding on stream with $stream_encoding encoding")
-    else
-        encoding != stream_encoding && @warn "Steam uses $stream_encoding key encoding, keys may look odd"
+    if encoding != stream_encoding
+        error("Encoding do not match, cannot use :$encoding encoding on stream with :$stream_encoding encoding")
     end
     JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}(), encoding)
 end
