@@ -11,7 +11,7 @@ end
 
 const MAX_HISTORY = 64
 
-function keyvalue_stream_create(connection::NATS.Connection, bucket::String, history = 1)
+function keyvalue_stream_create(connection::NATS.Connection, bucket::String, encoding::Symbol, history = 1)
     history in 1:MAX_HISTORY || error("History must be greater than 0 and cannot be greater than $MAX_HISTORY")
     stream_config = StreamConfiguration(
         name = keyvalue_stream_name(bucket),
@@ -20,7 +20,8 @@ function keyvalue_stream_create(connection::NATS.Connection, bucket::String, his
         deny_delete = true,
         allow_direct = true,
         max_msgs_per_subject = history,
-        discard = :new;
+        discard = :new,
+        metadata = Dict("encoding" => string(encoding))
     )
     stream_create(connection::NATS.Connection, stream_config)
 end

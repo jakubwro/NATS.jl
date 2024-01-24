@@ -6,32 +6,46 @@ struct JetDict{T} <: AbstractDict{String, T}
     stream_info::StreamInfo
     T::DataType
     revisions::ScopedValue{Dict{String, UInt64}}
+    encoding::Symbol
 end
 
-function JetDict{T}(connection::NATS.Connection, bucket::String) where T
+function JetDict{T}(connection::NATS.Connection, bucket::String, encoding = :none) where T
     NATS.find_msg_conversion_or_throw(T)
     NATS.find_data_conversion_or_throw(T)
     stream = begin
         res = stream_info(connection, "$KV_STREAM_NAME_PREFIX$bucket"; no_throw = true)
         if res isa ApiError
             res.code != 404 && throw(res)
-            keyvalue_stream_create(connection, bucket)
+            keyvalue_stream_create(connection, bucket, encoding)
         else
             res
         end
     end
-    JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}())
+    stream_encoding = begin
+        if isnothing(stream.config.metadata)
+            :none
+        else
+            Symbol(get(stream.config.metadata, "encoding", "none"))
+        end
+    end
+    if encoding != :none
+        encoding != stream_encoding && error("Encoding do not match, cannot use $encoding encoding on stream with $stream_encoding encoding")
+    else
+        encoding != stream_encoding && @warn "Steam uses $stream_encoding key encoding, keys may look odd"
+    end
+    JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}(), encoding)
 end
 
 function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
-    validate_key(key)
+    escaped = encodekey(key, jetdict.encoding)
+    validate_key(escaped)
     revisions = ScopedValues.get(jetdict.revisions)
     hdrs = NATS.Headers()
     if !isnothing(revisions)
         revision = get(revisions, key, 0)
         push!(hdrs, "Nats-Expected-Last-Subject-Sequence" => string(revision))
     end
-    ack = JetStream.stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$key", (value, hdrs))
+    ack = JetStream.stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$escaped", (value, hdrs))
     @assert !isnothing(ack.seq)
     if !isnothing(revisions)
         revisions[key] = ack.seq
@@ -40,8 +54,10 @@ function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
 end
 
 function getindex(jetdict::JetDict, key::String)
-    validate_key(key)
-    subject = "\$KV.$(jetdict.bucket).$key"
+    escaped = encodekey(key, jetdict.encoding)
+    validate_key(escaped)
+
+    subject = "\$KV.$(jetdict.bucket).$escaped"
     msg = try
             stream_message_get(jetdict.connection, jetdict.stream_info, subject)
           catch err
@@ -64,8 +80,9 @@ function getindex(jetdict::JetDict, key::String)
 end
 
 function delete!(jetdict::JetDict, key::String)
+    escaped = encodekey(key, jetdict.encoding)
     hdrs = [ "KV-Operation" => "DEL" ]
-    ack = stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$key", (nothing, hdrs))
+    ack = stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$escaped", (nothing, hdrs))
     @assert ack isa PubAck
     jetdict
 end
@@ -105,7 +122,7 @@ function iterate(jetdict::JetDict)
                 rethrow()
             end
           end
-    key = replace(msg.subject, "\$KV.$(jetdict.bucket)." => "")
+    key = decodekey(replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""), jetdict.encoding)
     value = convert(jetdict.T, msg)
     push!(unique_keys, key)
     (key => value, (consumer, unique_keys))
@@ -121,7 +138,7 @@ function iterate(jetdict::JetDict, (consumer, unique_keys))
             rethrow()
         end
       end
-    key = replace(msg.subject, "\$KV.$(jetdict.bucket)." => "")
+    key = decodekey(replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""), jetdict.encoding)
     op = _kv_op(msg)
     if key in unique_keys
         @warn "Key \"$key\" changed during iteration."
