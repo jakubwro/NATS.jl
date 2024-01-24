@@ -176,39 +176,29 @@ function empty!(jetdict::JetDict)
     jetdict
 end
 
+function with_optimistic_concurrency(f, kv::JetDict)
+    with(f, kv.revisions => Dict{String, UInt64}())
+end
 
+function isdeleted(msg)
+    "KV-Operation" in first.(NATS.headers(msg)) && NATS.header(msg, "KV-Operation") == "DEL"
+end
 
-const DEFAULT_JETSTREAM_OPTIMISTIC_RETRIES = 3
-
-function with_optimistic_concurrency(f, kv::JetDict; retry = true)
-    with(kv.revisions => Dict{String, UInt64}()) do
-        for _ in 1:DEFAULT_JETSTREAM_OPTIMISTIC_RETRIES
-            try
-                f()
-            catch err
-                if err isa ApiError && err.err_code == 10071
-                    @warn "Key update clash."
-                    retry && continue
+function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
+    keyvalue_watch(jetdict.connection, jetdict.bucket, key) do msg
+        deleted = isdeleted(msg)
+        if !(skip_deletes && isdeleted(msg))
+            encoded_key = msg.subject[begin + length("\$KV.test6."):end]
+            key = decodekey(encoded_key, jetdict.encoding)
+            value = begin
+                if deleted
+                    missing
                 else
-                    rethrow()
+                    convert(jetdict.T, msg)
                 end
             end
+            f(key => value)
         end
     end
 end
 
-function watch(f, jetdict::JetDict; skip_deletes = false)
-    keyvalue_watch(jetdict.connection, jetdict.bucket) do msg
-        if !(skip_deletes && isdeleted(msg))
-            f(msg)
-        end
-    end
-end
-
-function watch(f, jetdict::JetDict, key::String; skip_deletes = false)
-    keyvalue_watch(jetdict.connection, jetdict.bucket, key) do msg
-        if !(skip_deletes && isdeleted(msg))
-            f(msg)
-        end
-    end
-end
