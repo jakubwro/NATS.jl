@@ -27,6 +27,7 @@ include("api/api.jl")
 include("stream/stream.jl")
 include("consumer/consumer.jl")
 include("keyvalue/keyvalue.jl")
+include("jetdict/jetdict.jl")
 
 export PubAck, StreamConfiguration, stream_create, limits, interest, workqueue, memory, file, NATS, publish
 

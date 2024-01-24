@@ -15,5 +15,3 @@ end
 
 include("manage.jl")
 include("watch.jl")
-include("escape.jl")
-include("jetdict.jl")

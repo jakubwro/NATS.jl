@@ -1,5 +1,7 @@
 
-#TODO key escape
+
+include("encode.jl")
+
 struct JetDict{T} <: AbstractDict{String, T}
     connection::NATS.Connection
     bucket::String
