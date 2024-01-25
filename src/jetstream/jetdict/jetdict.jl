@@ -8,10 +8,11 @@ struct JetDict{T} <: AbstractDict{String, T}
     stream_info::StreamInfo
     T::DataType
     revisions::ScopedValue{Dict{String, UInt64}}
-    encoding::Symbol
+    encoding::KeyEncoding
 end
 
-function JetDict{T}(connection::NATS.Connection, bucket::String, encoding = :none) where T
+function JetDict{T}(connection::NATS.Connection, bucket::String, encoding::Symbol = :none) where T
+    check_encoding_implemented(encoding)
     NATS.find_msg_conversion_or_throw(T)
     NATS.find_data_conversion_or_throw(T)
     stream = begin
@@ -33,11 +34,11 @@ function JetDict{T}(connection::NATS.Connection, bucket::String, encoding = :non
     if encoding != stream_encoding
         error("Encoding do not match, cannot use :$encoding encoding on stream with :$stream_encoding encoding")
     end
-    JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}(), encoding)
+    JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}(), KeyEncoding{encoding}())
 end
 
 function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
-    escaped = encodekey(key, jetdict.encoding)
+    escaped = encodekey(jetdict.encoding, key)
     validate_key(escaped)
     revisions = ScopedValues.get(jetdict.revisions)
     hdrs = NATS.Headers()
@@ -54,7 +55,7 @@ function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
 end
 
 function getindex(jetdict::JetDict, key::String)
-    escaped = encodekey(key, jetdict.encoding)
+    escaped = encodekey(jetdict.encoding, key)
     validate_key(escaped)
 
     subject = "\$KV.$(jetdict.bucket).$escaped"
@@ -80,7 +81,7 @@ function getindex(jetdict::JetDict, key::String)
 end
 
 function delete!(jetdict::JetDict, key::String)
-    escaped = encodekey(key, jetdict.encoding)
+    escaped = encodekey(jetdict.encoding, key)
     hdrs = [ "KV-Operation" => "DEL" ]
     ack = stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$escaped", (nothing, hdrs))
     @assert ack isa PubAck
@@ -122,7 +123,7 @@ function iterate(jetdict::JetDict)
                 rethrow()
             end
           end
-    key = decodekey(replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""), jetdict.encoding)
+    key = decodekey(jetdict.encoding, replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""))
     value = convert(jetdict.T, msg)
     push!(unique_keys, key)
     (key => value, (consumer, unique_keys))
@@ -138,7 +139,7 @@ function iterate(jetdict::JetDict, (consumer, unique_keys))
             rethrow()
         end
       end
-    key = decodekey(replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""), jetdict.encoding)
+    key = decodekey(jetdict.encoding, replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""))
     op = _kv_op(msg)
     if key in unique_keys
         @warn "Key \"$key\" changed during iteration."
@@ -189,7 +190,7 @@ function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
         deleted = isdeleted(msg)
         if !(skip_deletes && isdeleted(msg))
             encoded_key = msg.subject[begin + length("\$KV.test6."):end]
-            key = decodekey(encoded_key, jetdict.encoding)
+            key = decodekey(jetdict.encoding, encoded_key)
             value = begin
                 if deleted
                     missing

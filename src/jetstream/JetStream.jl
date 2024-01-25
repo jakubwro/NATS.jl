@@ -7,7 +7,7 @@ using Random
 using JSON3
 using DocStringExtensions
 using ScopedValues
-using Base64
+using CodecBase
 
 import NATS
 
