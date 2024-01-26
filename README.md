@@ -23,8 +23,6 @@ This client is feature complete in terms of `Core NATS` protocol and most of [Je
 
 Performance is matching reference `go` implementation.
 
-For [JetStream](https://docs.nats.io/nats-concepts/jetstream) check [JetStream.jl](https://github.com/jakubwro/JetStream.jl) - work in progress.
-
 ## Compatibility
 
 ### Julia

@@ -38,7 +38,8 @@ function headers(m::Msg, key::String)
 end
 
 function header(m::Msg, key::String)
-    only(headers(m, key))
+    hdrs = headers(m, key)
+    isempty(hdrs) ? nothing : only(hdrs)
 end
 
 function statuscode(header_str::String)

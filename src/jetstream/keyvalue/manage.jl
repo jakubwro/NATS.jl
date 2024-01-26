@@ -46,6 +46,7 @@ function keyvalue_get(connection::NATS.Connection, bucket::String, key::String):
 end
 
 function keyvalue_put(connection::NATS.Connection, bucket::String, key::String, value, revision = 0)::PubAck
+    validate_key(key)
     hdrs = NATS.Headers() #TODO: can preserve original headers?
     if revision > 0
         push!(hdrs, "Nats-Expected-Last-Subject-Sequence" => string(revision))
@@ -55,6 +56,7 @@ function keyvalue_put(connection::NATS.Connection, bucket::String, key::String, 
 end
 
 function keyvalue_delete(connection::NATS.Connection, bucket::String, key)::PubAck
+    validate_key(key)
     hdrs = [ "KV-Operation" => "DEL" ]
     subject = "$(keyvalue_subject_prefix(bucket)).$key"
     stream_publish(connection, subject, (nothing, hdrs))

@@ -41,15 +41,14 @@ function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
     escaped = encodekey(jetdict.encoding, key)
     validate_key(escaped)
     revisions = ScopedValues.get(jetdict.revisions)
-    hdrs = NATS.Headers()
     if !isnothing(revisions)
         revision = get(revisions, key, 0)
-        push!(hdrs, "Nats-Expected-Last-Subject-Sequence" => string(revision))
-    end
-    ack = JetStream.stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$escaped", (value, hdrs))
-    @assert !isnothing(ack.seq)
-    if !isnothing(revisions)
+        ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value, revision)
+        @assert ack isa PubAck
         revisions[key] = ack.seq
+    else
+        ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value)
+        @assert ack isa PubAck
     end
     jetdict
 end
@@ -57,10 +56,8 @@ end
 function getindex(jetdict::JetDict, key::String)
     escaped = encodekey(jetdict.encoding, key)
     validate_key(escaped)
-
-    subject = "\$KV.$(jetdict.bucket).$escaped"
     msg = try
-            stream_message_get(jetdict.connection, jetdict.stream_info, subject)
+            keyvalue_get(jetdict.connection, jetdict.bucket, escaped)
           catch err
             if err isa NATS.NATSError && err.code == 404
                 throw(KeyError(key))
@@ -68,13 +65,12 @@ function getindex(jetdict::JetDict, key::String)
                 rethrow()
             end
           end
-    op = NATS.headers(msg, "KV-Operation")
-    if !isempty(op) && only(op) == "DEL"
+    if isdeleted(msg)
         throw(KeyError(key))
     end
-    seq = NATS.header(msg, "Nats-Sequence")
     revisions = ScopedValues.get(jetdict.revisions)
     if !isnothing(revisions)
+        seq = NATS.header(msg, "Nats-Sequence")
         revisions[key] = parse(UInt64, seq)
     end
     convert(jetdict.T, msg)
@@ -82,8 +78,7 @@ end
 
 function delete!(jetdict::JetDict, key::String)
     escaped = encodekey(jetdict.encoding, key)
-    hdrs = [ "KV-Operation" => "DEL" ]
-    ack = stream_publish(jetdict.connection, "\$KV.$(jetdict.bucket).$escaped", (nothing, hdrs))
+    ack = keyvalue_delete(jetdict.connection, jetdict.bucket, escaped)
     @assert ack isa PubAck
     jetdict
 end
@@ -92,21 +87,6 @@ end
 IteratorSize(::JetDict) = Base.SizeUnknown()
 IteratorSize(::Base.KeySet{String, JetDict{T}}) where {T} = Base.SizeUnknown()
 IteratorSize(::Base.ValueIterator{JetDict{T}}) where {T} = Base.SizeUnknown()
-
-function _kv_op(msg::NATS.Msg)
-    hdrs = String(@view msg.payload[begin:msg.headers_length])
-    range = findfirst("KV-Operation", hdrs)
-    isnothing(range) && return :put
-    ending = findfirst("\r\n", hdrs[last(range):end])
-    op = hdrs[(last(range) + 3):(last(range) + first(ending)-2)]
-    if op == "DEL"
-        :del
-    elseif op == "PURGE"
-        :purge
-    else
-        :unexpected
-    end
-end
 
 function iterate(jetdict::JetDict)
     unique_keys = Set{String}()
@@ -140,14 +120,12 @@ function iterate(jetdict::JetDict, (consumer, unique_keys))
         end
       end
     key = decodekey(jetdict.encoding, replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""))
-    op = _kv_op(msg)
     if key in unique_keys
         @warn "Key \"$key\" changed during iteration."
         # skip item
         iterate(jetdict, (consumer, unique_keys))
-    elseif op == :del || op == :purge 
-        # Item is deleted, continue.
-        #TODO change cond order
+    elseif isdeleted(msg)
+        # skip item
         iterate(jetdict, (consumer, unique_keys))
     else
         value = convert(jetdict.T, msg)
@@ -182,7 +160,7 @@ function with_optimistic_concurrency(f, kv::JetDict)
 end
 
 function isdeleted(msg)
-    "KV-Operation" in first.(NATS.headers(msg)) && NATS.header(msg, "KV-Operation") == "DEL"
+    NATS.header(msg, "KV-Operation") in [ "DEL", "PURGE" ]
 end
 
 function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
