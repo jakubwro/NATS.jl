@@ -38,6 +38,7 @@ export payload, header, headers
 export publish, subscribe, unsubscribe, next
 export request, reply
 export with_connection
+export JetStream
 
 const DEFAULT_HOST = "localhost"
 const DEFAULT_PORT = "4222"
