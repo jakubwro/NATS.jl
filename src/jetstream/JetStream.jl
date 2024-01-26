@@ -31,6 +31,14 @@ include("jetdict/jetdict.jl")
 include("jetchannel/jetchannel.jl")
 
 import Base: put!, take!
-export PubAck, StreamConfiguration, stream_create, limits, interest, workqueue, memory, file, NATS, publish
+
+export StreamConfiguration, PubAck
+export stream_create, stream_update, stream_delete
+export stream_publish, stream_subscribe, stream_unsubscribe
+export ConsumerConfiguration
+export consumer_create, consumer_delete, consumer_ack, consumer_nak
+export keyvalue_stream_create, keyvalue_stream_delete
+export JetDict, watch
+export JetChannel, channel_stream_create, channel_stream_delete
 
 end

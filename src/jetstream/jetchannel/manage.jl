@@ -3,7 +3,7 @@ const CHANNEL_STREAM_PREFIX = "JCH"
 
 channel_stream_name(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_name)"
 channel_consumer_name(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_name)_consumer"
-channel_subject(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$channel_subject"
+channel_subject(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_name)"
 
 function channel_stream_create(connection::NATS.Connection, name::String)
     config = StreamConfiguration(
@@ -15,7 +15,7 @@ function channel_stream_create(connection::NATS.Connection, name::String)
 end
 
 function channel_stream_delete(connection::NATS.Connection, channel_name::String)
-    stream_delete(connection, channel_stream_name(name))
+    stream_delete(connection, channel_stream_name(channel_name))
 end
 
 function channel_consumer_create(connection::NATS.Connection, stream::StreamInfo)

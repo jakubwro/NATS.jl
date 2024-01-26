@@ -189,7 +189,7 @@ function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
     keyvalue_watch(jetdict.connection, jetdict.bucket, key) do msg
         deleted = isdeleted(msg)
         if !(skip_deletes && isdeleted(msg))
-            encoded_key = msg.subject[begin + length("\$KV.test6."):end]
+            encoded_key = msg.subject[begin + 1 + length(keyvalue_subject_prefix(jetdict.bucket)):end]
             key = decodekey(jetdict.encoding, encoded_key)
             value = begin
                 if deleted

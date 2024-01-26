@@ -7,13 +7,19 @@ makedocs(
     modules = [NATS],
     pages = [
         "index.md",
-        "examples.md",
-        "connect.md",
-        "pubsub.md",
-        "reqreply.md",
-        "custom-data.md",
-        "scoped_connection.md",
-        "debugging.md",
+        "Core NATS" => [
+            "examples.md",
+            "connect.md",
+            "pubsub.md",
+            "reqreply.md",
+            "custom-data.md",
+            "scoped_connection.md",
+            "debugging.md",
+        ],
+        "JetStream" => [
+            "jetstream/jetdict.md"
+            "jetstream/jetchannel.md"
+        ],
         "Internals" => [
             "protocol.md",
             "interrupt_handling.md",
