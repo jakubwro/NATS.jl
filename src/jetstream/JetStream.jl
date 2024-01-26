@@ -28,7 +28,9 @@ include("stream/stream.jl")
 include("consumer/consumer.jl")
 include("keyvalue/keyvalue.jl")
 include("jetdict/jetdict.jl")
+include("jetchannel/jetchannel.jl")
 
+import Base: put!, take!
 export PubAck, StreamConfiguration, stream_create, limits, interest, workqueue, memory, file, NATS, publish
 
 end
