@@ -14,23 +14,8 @@ import NATS
 import Base: show, showerror
 import Base: setindex!, getindex, empty!, delete!, iterate, length
 import Base: IteratorSize
-
-abstract type JetStreamPayload end
-
-const STREAM_RETENTION_OPTIONS       = [:limits, :interest, :workqueue]
-const STREAM_STORAGE_OPTIONS         = [:file, :memory]
-const STREAM_COMPRESSION_OPTIONS     = [:none, :s2]
-const CONSUMER_ACK_POLICY_OPTIONS    = [:none, :all, :explicit]
-const CONSUMER_REPLAY_POLICY_OPTIONS = [:instant, :original]
-
-include("api/api.jl")
-include("stream/stream.jl")
-include("consumer/consumer.jl")
-include("keyvalue/keyvalue.jl")
-include("jetdict/jetdict.jl")
-include("jetchannel/jetchannel.jl")
-
 import Base: put!, take!
+
 
 export StreamConfiguration
 export stream_create, stream_update, stream_delete
@@ -45,5 +30,18 @@ export JetDict, watch, with_optimistic_concurrency
 
 export channel_stream_create, channel_consumer_delete
 export JetChannel, channel_stream_create, channel_stream_delete
+
+const STREAM_RETENTION_OPTIONS       = [:limits, :interest, :workqueue]
+const STREAM_STORAGE_OPTIONS         = [:file, :memory]
+const STREAM_COMPRESSION_OPTIONS     = [:none, :s2]
+const CONSUMER_ACK_POLICY_OPTIONS    = [:none, :all, :explicit]
+const CONSUMER_REPLAY_POLICY_OPTIONS = [:instant, :original]
+
+include("api/api.jl")
+include("stream/stream.jl")
+include("consumer/consumer.jl")
+include("keyvalue/keyvalue.jl")
+include("jetdict/jetdict.jl")
+include("jetchannel/jetchannel.jl")
 
 end

@@ -59,7 +59,7 @@ end
     max_ack_pending::Union{Int64, Nothing} = nothing
 end
 
-@kwdef struct StreamConfiguration <: JetStreamPayload
+@kwdef struct StreamConfiguration
     "A unique name for the Stream."
     name::String
     "A short description of the purpose of this stream"
