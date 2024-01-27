@@ -24,10 +24,11 @@ export stream_publish, stream_subscribe, stream_unsubscribe
 export stream_message_get, stream_message_delete
 
 export ConsumerConfiguration
-export consumer_create, consumer_delete, consumer_ack, consumer_nak
+export consumer_create, consumer_update, consumer_delete
+export consumer_next, consumer_ack, consumer_nak
 
-export keyvalue_stream_create, keyvalue_stream_delete
-export keyvalue_get, keyvalue_put, keyvalue_delete
+export keyvalue_stream_create, keyvalue_stream_purge, keyvalue_stream_delete
+export keyvalue_get, keyvalue_put, keyvalue_delete, keyvalue_watch
 export JetDict, watch, with_optimistic_concurrency
 
 export channel_stream_create, channel_consumer_delete

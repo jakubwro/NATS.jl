@@ -1,4 +1,9 @@
 
+"""
+$(SIGNATURES)
+
+Create a stream.
+"""
 function stream_create(connection::NATS.Connection, config::StreamConfiguration; no_throw = false)
     validate(config)
     response = NATS.request(Union{StreamInfo, ApiError}, connection, "\$JS.API.STREAM.CREATE.$(config.name)", JSON3.write(config))
@@ -6,6 +11,11 @@ function stream_create(connection::NATS.Connection, config::StreamConfiguration;
     response
 end
 
+"""
+$(SIGNATURES)
+
+Update a stream.
+"""
 function stream_update(connection::NATS.Connection, config::StreamConfiguration; no_throw = false)
     validate(config)
     response = NATS.request(Union{StreamInfo, ApiError}, connection, "\$JS.API.STREAM.UPDATE.$(config.name)", JSON3.write(config))
@@ -26,6 +36,11 @@ function stream_update_or_create(connection::NATS.Connection, config::StreamConf
     end
 end
 
+"""
+$(SIGNATURES)
+
+Delete a stream.
+"""
 function stream_delete(connection::NATS.Connection, stream::String; no_throw = false)
     res = NATS.request(Union{ApiResult, ApiError}, connection, "\$JS.API.STREAM.DELETE.$(stream)")
     no_throw || res isa ApiError && throw(res)
@@ -36,6 +51,11 @@ function stream_delete(connection::NATS.Connection, stream::StreamInfo; no_throw
     stream_delete(connection, stream.config.name; no_throw)
 end
 
+"""
+$(SIGNATURES)
+
+Purge a stream. It is equivalent of deleting all messages.
+"""
 function stream_purge(connection::NATS.Connection, stream::String; no_throw = false)
     res = NATS.request(Union{ApiResult, ApiError}, connection, "\$JS.API.STREAM.PURGE.$stream")
     no_throw || res isa ApiError && throw(res)

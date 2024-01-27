@@ -12,6 +12,11 @@ function check_allow_direct(connection::NATS.Connection, stream_name::String)
     end
 end
 
+"""
+$(SIGNATURES)
+
+Get a message from stream.
+"""
 function stream_message_get(connection::NATS.Connection, stream_name::String, subject::String; allow_direct = nothing)
     allow_direct = @something allow_direct check_allow_direct(connection, stream_name)
     if allow_direct
@@ -38,10 +43,20 @@ function stream_message_get(connection::NATS.Connection, stream_name::String, su
     end
 end
 
+"""
+$(SIGNATURES)
+
+Get a message from stream.
+"""
 function stream_message_get(connection::NATS.Connection, stream::StreamInfo, subject::String)
     stream_message_get(connection, stream.config.name, subject; stream.config.allow_direct)
 end
 
+"""
+$(SIGNATURES)
+
+Delete a message from stream.
+"""
 function stream_message_delete(connection::NATS.Connection, stream::StreamInfo, msg::NATS.Msg)
     seq = NATS.header(msg, "Nats-Sequence")
     if isnothing(seq)

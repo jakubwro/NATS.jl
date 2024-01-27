@@ -2,6 +2,11 @@
 
 # Subscribe to a stream by creating a consumer.
 # Might be more performant to configure republish subject on steram.
+"""
+$(SIGNATURES)
+
+Subscribe to a stream.
+"""
 function stream_subscribe(f, connection, subject)
     subject_streams = stream_infos(connection, subject)
     if isempty(subject_streams)

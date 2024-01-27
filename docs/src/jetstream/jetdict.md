@@ -86,3 +86,21 @@ sleep(1) # Wait for changes
 stream_unsubscribe(nc, sub)
 keyvalue_stream_delete(nc, "example_kv_watch")
 ```
+
+## Optimistic concurrency
+
+```@repl
+using NATS
+using NATS.JetStream
+connection = NATS.connect()
+kv = JetStream.JetDict{String}(connection, "test_kv_concurrency")
+kv["a"] = "1"
+@async (sleep(2); kv["a"] = "2")
+with_optimistic_concurrency(kv) do 
+    old = kv["a"]
+    sleep(3)
+    kv["a"] = "$(old)_updated"
+end
+kv["a"]
+keyvalue_stream_delete(connection, "test_kv_concurrency")
+```

@@ -13,14 +13,29 @@ function consumer_create_or_update(connection::NATS.Connection, config::Consumer
     consumer_create_or_update(connection, config, stream.config.name)
 end
 
+"""
+$(SIGNATURES)
+
+Create a stream consumer.
+"""
 function consumer_create(connection::NATS.Connection, config::ConsumerConfiguration, stream::Union{String, StreamInfo})
     consumer_create_or_update(connection, config, stream)
 end
 
+"""
+$(SIGNATURES)
+
+Update stream consumer configuration.
+"""
 function consumer_update(connection::NATS.Connection, consumer::ConsumerConfiguration, stream::Union{StreamInfo, String})
     consumer_create_or_update(connection, consumer, stream)
 end
 
+"""
+$(SIGNATURES)
+
+Delete a consumer.
+"""
 function consumer_delete(connection::NATS.Connection, stream_name::String, consumer_name::String)
     subject = "\$JS.API.CONSUMER.DELETE.$stream_name.$consumer_name"
     res = NATS.request(Union{ApiResult, ApiError}, connection, subject)

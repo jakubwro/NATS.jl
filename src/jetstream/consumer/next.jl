@@ -1,5 +1,10 @@
 const NEXT_EXPIRES = 500 * 1000 * 1000 # 500 ms, TODO: add to env
 
+"""
+$(SIGNATURES)
+
+Get next message for a consumer.
+"""
 function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo, batch::Int64; no_wait = false)
     req = Dict()
     req[:no_wait] = no_wait

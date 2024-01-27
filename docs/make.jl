@@ -1,5 +1,6 @@
 using Documenter
 using NATS
+using NATS.JetStream
 
 makedocs(
     sitename = "NATS",
@@ -17,6 +18,9 @@ makedocs(
             "debugging.md",
         ],
         "JetStream" => [
+            "jetstream/stream.md"
+            "jetstream/consumer.md"
+            "jetstream/keyvalue.md"
             "jetstream/jetdict.md"
             "jetstream/jetchannel.md"
         ],

@@ -59,6 +59,11 @@ end
     max_ack_pending::Union{Int64, Nothing} = nothing
 end
 
+"""
+Configuration options for a stream.
+
+$(TYPEDFIELDS)
+"""
 @kwdef struct StreamConfiguration
     "A unique name for the Stream."
     name::String

@@ -1,4 +1,9 @@
 
+"""
+Configuration options for a consumer.
+
+$(TYPEDFIELDS)
+"""
 @kwdef struct ConsumerConfiguration
     "A unique name for a durable consumer"
     durable_name::Union{String, Nothing} = nothing
