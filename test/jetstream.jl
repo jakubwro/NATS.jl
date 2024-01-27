@@ -185,3 +185,18 @@ end
     @test changes == ["a" => "1", "b" => "2", "a" => nothing, "b" => "3", "a" => "4"]
     keyvalue_stream_delete(connection, "test_kv")
 end
+
+
+@testset "Channel message passing" begin
+    connection = NATS.connect()
+    ch = JetChannel{String}(connection, "test_channel")
+    put!(ch, "msg 1")
+    @test take!(ch) == "msg 1"
+
+    t = @async take!(ch)
+    sleep(5)
+    put!(ch, "msg 2")
+    wait(t)
+    @test t.result == "msg 2"
+    channel_stream_delete(connection, "test_channel")
+end
