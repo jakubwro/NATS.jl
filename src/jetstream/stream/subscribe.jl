@@ -29,5 +29,5 @@ function stream_subscribe(f, connection, subject)
             f_typed(msg)
         end
     end
-    sub, consumer
+    StreamSub(sub, consumer)
 end
