@@ -155,7 +155,7 @@ end
 
     kv = JetStream.JetDict{String}(connection, "test_kv", :base64url)
     kv["!@#%^&"] = "5"
-    @test kv["!@#%^&"] = "5"
+    @test kv["!@#%^&"] == "5"
     keyvalue_stream_delete(connection, "test_kv")
     
     @test_throws "No `encodekey` implemented for wrongencoding encoding" JetStream.JetDict{String}(connection, "test_kv", :wrongencoding)
