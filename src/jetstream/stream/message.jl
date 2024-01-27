@@ -15,17 +15,26 @@ end
 function stream_message_get(connection::NATS.Connection, stream_name::String, subject::String; allow_direct = nothing)
     allow_direct = @something allow_direct check_allow_direct(connection, stream_name)
     if allow_direct
-        m = NATS.request(connection, "\$JS.API.DIRECT.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
-        #TODO: structured NATSError
-        m
+        msg = NATS.request(connection, "\$JS.API.DIRECT.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
+        msg_status = NATS.statuscode(msg) 
+        if msg_status >= 400
+            throw(NATSError(msg_status, ""))
+        end
+        msg
     else
-        @warn "not working"
         res = NATS.request(connection, "\$JS.API.STREAM.MSG.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
-        @show res
         json = JSON3.read(NATS.payload(res))
-        throw(StructTypes.constructfrom(ApiError, json.error))
-        #TODO: implement
-        # first(replies)
+        if haskey(json, :error)
+            throw(StructTypes.constructfrom(ApiError, json.error))
+        end
+        subject = json.message.subject
+        hdrs = haskey(json.message, :hdrs) ? base64decode(json.message.hdrs) : UInt8[]
+        append!(hdrs, "Nats-Stream: $(stream_name)\r\n")
+        append!(hdrs, "Nats-Subject: $(json.message.subject)\r\n")
+        append!(hdrs, "Nats-Sequence: $(json.message.seq)\r\n")
+        append!(hdrs, "Nats-Time-Stamp: $(json.message.time)\r\n")
+        payload = base64decode(json.message.data)
+        NATS.Msg(res.subject, res.sid, nothing, length(hdrs), vcat(hdrs, payload))
     end
 end
 
@@ -33,9 +42,14 @@ function stream_message_get(connection::NATS.Connection, stream::StreamInfo, sub
     stream_message_get(connection, stream.config.name, subject; stream.config.allow_direct)
 end
 
-
-function stream_message_delete(stream_name::String, seq::UInt64; connection = NATS.connection(:default))
-    replies = NATS.request(connection, "\$JS.API.STREAM.MSG.DELETE.$stream_name", "{\"seq\": \"\$KV.asdf.$subject\"}", 1)
-    isempty(replies) && error("No replies.")
-    first(replies)
+function stream_message_delete(connection::NATS.Connection, stream::StreamInfo, msg::NATS.Msg)
+    seq = NATS.header(msg, "Nats-Sequence")
+    if isnothing(seq)
+        error("Message has no `Nats-Sequence` header")
+    end
+    # TODO: validate stream name
+    req = Dict()
+    req[:seq] = parse(UInt8, seq)
+    req[:no_erase] = true
+    NATS.request(ApiResult, connection, "\$JS.API.STREAM.MSG.DELETE.$(stream.config.name)", JSON3.write(req))
 end

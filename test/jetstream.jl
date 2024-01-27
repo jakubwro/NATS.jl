@@ -49,6 +49,46 @@ end
     stream_delete(connection, stream_info)
 end
 
+@testset "Stream message access" begin
+    connection = NATS.connect()
+    stream_config = StreamConfiguration(
+        name = "SOME_STREAM",
+        description = "SOME_STREAM stream",
+        subjects = ["SOME_STREAM.*"],
+        retention = :workqueue,  
+        storage = :memory,
+    )
+    stream_info = stream_create(connection, stream_config)
+    @test_throws "no message found" stream_message_get(connection, stream_info, "SOME_STREAM.not_existing")
+    stream_publish(connection, "SOME_STREAM.msg1", ("some msg", ["a" => "xy"]))
+    received = stream_message_get(connection, stream_info, "SOME_STREAM.msg1")
+    @test NATS.payload(received) == "some msg"
+    @test NATS.header(received, "a") == "xy"
+    stream_message_delete(connection, stream_info, received)
+    @test_throws "not found" stream_message_delete(connection, stream_info, received)
+
+    # The same but with `allow_direct`
+    stream_config = StreamConfiguration(
+        name = "SOME_STREAM",
+        description = "SOME_STREAM stream",
+        subjects = ["SOME_STREAM.*"],
+        retention = :workqueue,  
+        storage = :memory,
+        allow_direct = true
+    )
+    @test_throws "stream name already in use with a different configuration" stream_create(connection, stream_config)
+    stream_delete(connection, stream_info)
+    stream_info = stream_create(connection, stream_config)
+    @test_throws NATSError stream_message_get(connection, stream_info, "SOME_STREAM.not_existing")
+    stream_publish(connection, "SOME_STREAM.msg1", ("some msg", ["a" => "xy"]))
+    received = stream_message_get(connection, stream_info, "SOME_STREAM.msg1")
+    @test NATS.payload(received) == "some msg"
+    @test NATS.header(received, "a") == "xy"
+    stream_message_delete(connection, stream_info, received)
+    @test_throws "not found" stream_message_delete(connection, stream_info, received)
+    stream_delete(connection, stream_info)
+end
+
 # @testset "Stream names handling error." begin
 #     connection = NATS.connect()
 #     # @test_throws ErrorException JetStream.stream_names(; connection, timer = Timer(0))

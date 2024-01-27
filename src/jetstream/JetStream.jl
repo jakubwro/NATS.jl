@@ -7,6 +7,7 @@ using Random
 using JSON3
 using DocStringExtensions
 using ScopedValues
+using Base64
 using CodecBase
 
 import NATS
@@ -20,6 +21,7 @@ import Base: put!, take!
 export StreamConfiguration
 export stream_create, stream_update, stream_update_or_create, stream_purge, stream_delete
 export stream_publish, stream_subscribe, stream_unsubscribe
+export stream_message_get, stream_message_delete
 
 export ConsumerConfiguration
 export consumer_create, consumer_delete, consumer_ack, consumer_nak
