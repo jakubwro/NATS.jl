@@ -39,9 +39,14 @@ end
     names = JetStream.stream_names(connection, "SOME_STREAM.*")
     @test "SOME_STREAM" in names
     @test length(names) == 1
-    JetStream.stream_delete(connection, stream_info)
+    stream_delete(connection, stream_info)
     names = JetStream.stream_names(connection, "SOME_STREAM.*")
     @test !("SOME_STREAM" in names)
+
+    stream_info = stream_update_or_create(connection, stream_config)
+    stream_info = stream_update(connection, stream_config)
+    stream_purge(connection, stream_info)
+    stream_delete(connection, stream_info)
 end
 
 # @testset "Stream names handling error." begin

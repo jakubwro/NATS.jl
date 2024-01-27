@@ -13,13 +13,13 @@ function stream_update(connection::NATS.Connection, config::StreamConfiguration;
     response
 end
 
-function stream_update_or_create(connection::NATS.Connection, stream::StreamConfiguration)
+function stream_update_or_create(connection::NATS.Connection, config::StreamConfiguration)
     res = stream_update(connection, config; no_throw = true)
     if res isa StreamInfo
         res
     elseif res isa ApiError
-        if err.code == 404
-            stream_create(connection, stream)
+        if res.code == 404
+            stream_create(connection, config)
         else
             throw(res)
         end
@@ -43,5 +43,5 @@ function stream_purge(connection::NATS.Connection, stream::String; no_throw = fa
 end
 
 function stream_purge(connection::NATS.Connection, stream::StreamInfo; no_throw = false)
-    purge(connection, stream.name; no_throw)
+    stream_purge(connection, stream.config.name; no_throw)
 end

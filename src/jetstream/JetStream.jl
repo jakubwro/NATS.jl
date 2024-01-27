@@ -18,7 +18,7 @@ import Base: put!, take!
 
 
 export StreamConfiguration
-export stream_create, stream_update, stream_delete
+export stream_create, stream_update, stream_update_or_create, stream_purge, stream_delete
 export stream_publish, stream_subscribe, stream_unsubscribe
 
 export ConsumerConfiguration
