@@ -138,6 +138,9 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     for i in 1:100
         @test kv["key_$i"] == "value_$i"
     end
+    
+    @test length(collect(kv)) == 100
+    keyvalue_stream_delete(connection, "test_kv")
 end
 
 @testset "Create and delete KV bucket" begin
@@ -151,4 +154,34 @@ end
     @test_throws KeyError kv["some_key"]
     JetStream.keyvalue_stream_delete(connection, bucket)
     @test_throws "stream not found" first(kv)
+end
+
+@test "Watch kv changes" begin
+    connection = NATS.connect()
+    kv = JetStream.JetDict{String}(connection, "test_kv")
+
+    changes = []
+    sub = watch(kv) do change
+        push!(changes, change)
+    end
+
+    t = @async begin
+        kv["a"] = "1"
+        sleep(0.1)
+        kv["b"] = "2"
+        sleep(0.1)
+        delete!(kv, "a")
+        sleep(0.1)
+        kv["b"] = "3"
+        sleep(0.1)
+        kv["a"] = "4"
+        sleep(0.5)
+    end
+
+    wait(t)
+    stream_unsubscribe(connection, sub)
+
+    @test length(changes) == 5
+    @test changes == ["a" => "1", "b" => "2", "a" => nothing, "b" => "3", "a" => "4"]
+    keyvalue_stream_delete(connection, "test_kv")
 end

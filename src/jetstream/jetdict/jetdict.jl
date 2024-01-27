@@ -171,7 +171,7 @@ function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
             key = decodekey(jetdict.encoding, encoded_key)
             value = begin
                 if deleted
-                    missing
+                    nothing
                 else
                     convert(jetdict.T, msg)
                 end
