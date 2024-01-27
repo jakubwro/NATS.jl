@@ -1,7 +1,12 @@
 
 struct StreamSub
+    subject::String
     sub::NATS.Sub
     consumer::ConsumerInfo
+end
+
+function show(io::IO, stream_sub::StreamSub) where T
+    print(io, "StreamSub(\"$(stream_sub.subject)\")")
 end
 
 

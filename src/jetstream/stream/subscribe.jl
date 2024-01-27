@@ -7,7 +7,7 @@ $(SIGNATURES)
 
 Subscribe to a stream.
 """
-function stream_subscribe(f, connection, subject)
+function stream_subscribe(f, connection::NATS.Connection, subject::String)
     subject_streams = stream_infos(connection, subject)
     if isempty(subject_streams)
         error("No stream found for subject `$subject`")
@@ -29,5 +29,5 @@ function stream_subscribe(f, connection, subject)
             f_typed(msg)
         end
     end
-    StreamSub(sub, consumer)
+    StreamSub(subject, sub, consumer)
 end
