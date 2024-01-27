@@ -82,8 +82,4 @@ include("experimental/experimental.jl")
 include("interrupts.jl")
 include("jetstream/JetStream.jl")
 
-function __init__()
-    # start_interrupt_handler()
-end
-
 end
