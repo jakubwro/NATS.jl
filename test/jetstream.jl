@@ -186,6 +186,26 @@ end
     keyvalue_stream_delete(connection, "test_kv")
 end
 
+@testset "Optimistic concurrency" begin
+    connection = NATS.connect()
+    kv = JetStream.JetDict{String}(connection, "test_kv")
+
+    with_optimistic_concurrency(kv) do 
+        kv["a"] = "4"
+        kv["a"] = "5"        
+    end
+
+    @async (sleep(2); kv["a"] = "6")
+
+    @test_throws "wrong last sequence" with_optimistic_concurrency(kv) do 
+        old = kv["a"]
+        sleep(3)
+        kv["a"] = "$(old)_updated"
+    end
+    @test kv["a"] == "6"
+    keyvalue_stream_delete(connection, "test_kv")
+end
+
 
 @testset "Channel message passing" begin
     connection = NATS.connect()

@@ -41,7 +41,7 @@ export consumer_create, consumer_delete, consumer_ack, consumer_nak
 
 export keyvalue_stream_create, keyvalue_stream_delete
 export keyvalue_get, keyvalue_put, keyvalue_delete
-export JetDict, watch
+export JetDict, watch, with_optimistic_concurrency
 
 export channel_stream_create, channel_consumer_delete
 export JetChannel, channel_stream_create, channel_stream_delete

@@ -42,10 +42,10 @@ function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
     validate_key(escaped)
     revisions = ScopedValues.get(jetdict.revisions)
     if !isnothing(revisions)
-        revision = get(revisions, key, 0)
+        revision = get(revisions.value, key, 0)
         ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value, revision)
         @assert ack isa PubAck
-        revisions[key] = ack.seq
+        revisions.value[key] = ack.seq
     else
         ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value)
         @assert ack isa PubAck
@@ -71,7 +71,7 @@ function getindex(jetdict::JetDict, key::String)
     revisions = ScopedValues.get(jetdict.revisions)
     if !isnothing(revisions)
         seq = NATS.header(msg, "Nats-Sequence")
-        revisions[key] = parse(UInt64, seq)
+        revisions.value[key] = parse(UInt64, seq)
     end
     convert(jetdict.T, msg)
 end
