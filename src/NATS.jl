@@ -79,7 +79,6 @@ include("connection/connection.jl")
 include("pubsub/pubsub.jl")
 include("reqreply/reqreply.jl")
 include("experimental/experimental.jl")
-include("interrupts.jl")
 include("jetstream/JetStream.jl")
 
 end
