@@ -156,7 +156,7 @@ end
     @test_throws "stream not found" first(kv)
 end
 
-@test "Watch kv changes" begin
+@testset "Watch kv changes" begin
     connection = NATS.connect()
     kv = JetStream.JetDict{String}(connection, "test_kv")
 
