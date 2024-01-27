@@ -139,6 +139,9 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
         @test kv["key_$i"] == "value_$i"
     end
     
+    @test length(kv) == 100
+    @test length(keys(kv)) == 100
+    @test length(values(kv)) == 100
     @test length(collect(kv)) == 100
     keyvalue_stream_delete(connection, "test_kv")
 end
