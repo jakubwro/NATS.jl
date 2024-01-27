@@ -22,7 +22,6 @@ end
 include("stream.jl")
 include("consumer.jl")
 include("errors.jl")
-include("keyvalue.jl")
 include("validate.jl")
 include("show.jl")
 include("convert.jl")

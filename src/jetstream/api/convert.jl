@@ -29,15 +29,3 @@ function convert(::Type{Union{T, ApiError}}, msg::NATS.Msg) where { T <: ApiResp
         StructTypes.constructfrom(T, response)
     end
 end
-
-function convert(::Type{KeyValueEntry}, msg::NATS.Msg)
-    splitted = split(msg.reply_to, ".")
-    bucket = splitted[3]
-    key = msg.subject
-    value = NATS.payload(msg)
-    _, _, stream, cons, _, seq, _, nanos, rem = splitted
-    seq = splitted[7]
-    revision = splitted[6]
-
-    KeyValueEntry(bucket, key, value, parse(UInt64, seq), NanoDate(), 0, :none)
-end
