@@ -146,6 +146,21 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     keyvalue_stream_delete(connection, "test_kv")
 end
 
+@testset "Encoded keys" begin
+    connection = NATS.connect()
+
+    kv = JetStream.JetDict{String}(connection, "test_kv")
+    @test_throws "Key \"!@#%^&\" contains invalid character" kv["!@#%^&"] = "5"
+    keyvalue_stream_delete(connection, "test_kv")
+
+    kv = JetStream.JetDict{String}(connection, "test_kv", :base64url)
+    kv["!@#%^&"] = "5"
+    @test kv["!@#%^&"] = "5"
+    keyvalue_stream_delete(connection, "test_kv")
+    
+    @test_throws "No `encodekey` implemented for wrongencoding encoding" JetStream.JetDict{String}(connection, "test_kv", :wrongencoding)
+end
+
 @testset "Create and delete KV bucket" begin
     connection = NATS.connect()
     bucket = randstring(10)
