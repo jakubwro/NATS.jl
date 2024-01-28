@@ -147,3 +147,15 @@ end
     sig = "g4HDazX_ZZig_FOFBzhorLSYCEDRlv20Y5vErFjDlTRZMqaaF27ImP16es_GI83Fn59xr9V98Ux5GlEvvaeADQ"
     @test NATS.sign(nonce, seed) == sig
 end
+
+@testset "Plain text messages" begin
+    msg = NATS.Msg("FOO.BAR", "9", "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"))
+    io = IOBuffer()
+    msg_text = repr(MIME("text/plain"), msg)
+    @test msg_text == "HMSG FOO.BAR 9 some_inbox 1 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"
+end
+
+@testset "Subject validation" begin
+    pub = NATS.Pub("subject with space", nothing, 0, uint8_vec("Hello NATS!"))
+    @test_throws "Publication subject contains invalid character ' '" NATS.validate(pub)
+end
