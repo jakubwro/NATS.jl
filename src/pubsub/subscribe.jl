@@ -213,7 +213,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
         errormonitor(subscription_task)
     end
 
-    subscription_monitoring_task = Threads.@spawn :interactive begin
+    subscription_monitoring_task = Threads.@spawn :interactive disable_sigint() do
         while isopen(subscription_channel) || Base.n_avail(subscription_channel) > 0
             sleep(monitoring_throttle_seconds)
             # Warn about too many handlers running.
