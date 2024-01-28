@@ -5,7 +5,7 @@ struct StreamSub
     consumer::ConsumerInfo
 end
 
-function show(io::IO, stream_sub::StreamSub) where T
+function show(io::IO, stream_sub::StreamSub)
     print(io, "StreamSub(\"$(stream_sub.subject)\")")
 end
 

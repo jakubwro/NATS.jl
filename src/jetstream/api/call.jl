@@ -1,21 +1,11 @@
 
-
-const JETSTREAM_API_CALL_DELAYS = ExponentialBackOff(n = 5, first_delay = 0.2, max_delay = 0.5)
-
-function check_api_response(s, e)
-    e isa NATSError && e.code == 503 # No responders indicate leader is down
+function check_api_call_error(s, e)
+    e isa Union{NATS.NATSError, ApiError} && e.code == 503
 end
 
-function jetstream_api_call(T::Type{<:ApiResponse}, connection, subject, data)
-    response = retry(retries = JETSTREAM_API_CALL_DELAYS, check = check_api_response) do
-        req = NATS.request(T, connection, subject, data)
-    end
-    response
-end
+const DEFAULT_API_CALL_DELAYS = ExponentialBackOff(n = typemax(Int64), first_delay = 0.2, max_delay = 0.5)
 
-function jetstream_api_call(T::Type{Union{<:ApiResponse, ApiError}}, connection, subject, data)
-    response = retry(retries = JETSTREAM_API_CALL_DELAYS, check = check_api_response) do
-        req = NATS.request(T, connection, subject, data)
-    end
-    response
+function jetstream_api_call(T, connection::NATS.Connection, subject, data = nothing; delays = DEFAULT_API_CALL_DELAYS)
+    call_retry = retry(NATS.request; delays, check = check_api_call_error)
+    call_retry(T, connection, subject, data)
 end
