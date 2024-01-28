@@ -272,7 +272,7 @@ end
 
 @testset "Channel message passing" begin
     connection = NATS.connect()
-    ch = JetChannel{String}(connection, "test_channel")
+    ch = JetChannel{String}(connection, "test_channel", 3)
     put!(ch, "msg 1")
     @test take!(ch) == "msg 1"
 
@@ -281,5 +281,26 @@ end
     put!(ch, "msg 2")
     wait(t)
     @test t.result == "msg 2"
+
+    t = @async begin
+        sleep(0.5)
+        put!(ch, "msg 3")
+        sleep(0.5)
+        put!(ch, "msg 4")
+        sleep(0.5)
+        put!(ch, "msg 5")
+        sleep(0.5)
+        put!(ch, "msg 6")
+        sleep(0.5)
+    end
+    sleep(3)
+    @test !istaskdone(t)
+    @test take!(ch) == "msg 3"
+    wait(t)
+    @test istaskdone(t)
+    @test take!(ch) == "msg 4"
+    @test take!(ch) == "msg 5"
+    @test take!(ch) == "msg 6"
+
     channel_stream_delete(connection, "test_channel")
 end

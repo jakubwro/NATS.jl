@@ -219,7 +219,7 @@ end
     alternates::Union{Vector{StreamAlternate}, Nothing} = nothing
 end
 
-@kwdef struct PubAck
+@kwdef struct PubAck <: ApiResponse
     stream::String
     seq::Union{Int64, Nothing}
     duplicate::Union{Bool, Nothing}

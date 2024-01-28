@@ -8,11 +8,19 @@ struct JetChannel{T} <: AbstractChannel{T}
     consumer::ConsumerInfo
 end
 
-function JetChannel{T}(connection::NATS.Connection, name::String) where T
-    stream = channel_stream_create(connection, name)
+const DEFAULT_JETCHANNEL_SIZE = 1
+
+function JetChannel{T}(connection::NATS.Connection, name::String, size::Int64 = DEFAULT_JETCHANNEL_SIZE) where T
+    stream = channel_stream_create(connection, name, size)
     consumer = channel_consumer_create(connection, stream)
 
     JetChannel{T}(connection, name, stream, consumer)
+end
+
+function show(io::IO, jetchannel::JetChannel{T}) where T
+    sz = jetchannel.stream.config.max_msgs
+    sz_str = sz == -1 ? "Inf" : string(sz)
+    print(io, "JetChannel{$T}(\"$(jetchannel.name)\", $sz_str)")
 end
 
 function Base.take!(jetchannel::JetChannel{T}) where T
@@ -27,5 +35,5 @@ function Base.put!(jetchannel::JetChannel{T}, v::T) where T
     subject = channel_subject(jetchannel.name)
     ack = stream_publish(jetchannel.connection, subject, v)
     @assert ack.stream == jetchannel.stream.config.name
-    jetchannel
+    v
 end

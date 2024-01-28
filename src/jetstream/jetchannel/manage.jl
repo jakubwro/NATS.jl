@@ -5,11 +5,15 @@ channel_stream_name(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_
 channel_consumer_name(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_name)_consumer"
 channel_subject(channel_name::String) = "$(CHANNEL_STREAM_PREFIX)_$(channel_name)"
 
-function channel_stream_create(connection::NATS.Connection, name::String)
+const INFINITE_CHANNEL_SIZE = -1
+
+function channel_stream_create(connection::NATS.Connection, name::String, max_msgs = INFINITE_CHANNEL_SIZE)
     config = StreamConfiguration(
         name = channel_stream_name(name),
         subjects = [ channel_subject(name) ],
-        retention  = :workqueue
+        retention  = :workqueue,
+        max_msgs = max_msgs,
+        discard = :new,
     )
     stream_create(connection, config)
 end
