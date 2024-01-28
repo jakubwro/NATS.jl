@@ -1,6 +1,8 @@
 
 include("manage.jl")
 
+const DEFAULT_JETCHANNEL_DELAYS = ExponentialBackOff(n = typemax(Int64), first_delay = 0.2, max_delay = 0.5)
+
 struct JetChannel{T} <: AbstractChannel{T}
     connection::NATS.Connection
     name::String
@@ -25,7 +27,7 @@ end
 
 function Base.take!(jetchannel::JetChannel{T}) where T
     msg = consumer_next(jetchannel.connection, jetchannel.consumer)
-    ack = consumer_ack(jetchannel.connection, msg)
+    ack = consumer_ack(jetchannel.connection, msg; delays = DEFAULT_JETCHANNEL_DELAYS)
     @assert ack isa NATS.Msg
     convert(T, msg)
 end
@@ -33,7 +35,7 @@ end
 
 function Base.put!(jetchannel::JetChannel{T}, v::T) where T
     subject = channel_subject(jetchannel.name)
-    ack = stream_publish(jetchannel.connection, subject, v)
+    ack = stream_publish(jetchannel.connection, subject, v; delays = DEFAULT_JETCHANNEL_DELAYS)
     @assert ack.stream == jetchannel.stream.config.name
     v
 end
