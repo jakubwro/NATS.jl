@@ -17,13 +17,10 @@
 ### Code:
 
 function drain(connection::Connection, sid::String; timer = Timer(connection.drain_timeout))
-    sub_data = @lock connection.lock begin
-        get(connection.sub_data, sid, nothing)
-    end
-    if isnothing(sub_data)
+    sub_stats = stats(connection, sid)
+    if isnothing(sub_stats)
         return # Already drained.
     end
-    sub_stats = sub_data.stats
     send(connection, Unsub(sid, 0))
     sleep(connection.drain_poll)
     while !is_every_message_handled(sub_stats)

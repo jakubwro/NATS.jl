@@ -130,10 +130,14 @@ function stats(connection::Connection)
     connection.stats
 end
 
-function stats(connection::Connection, sub::Sub)
-    sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
+function stats(connection::Connection, sid::String)
+    sub_data = @lock connection.lock get(connection.sub_data, sid, nothing)
     isnothing(sub_data) && return
     sub_data.stats
+end
+
+function stats(connection::Connection, sub::Sub)
+    stats(connection, sub.sid)
 end
 
 function status_change(f, nc::Connection)

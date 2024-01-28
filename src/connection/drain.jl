@@ -23,7 +23,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeou
         send(nc, Unsub(sid, 0))
     end
     sleep(nc.drain_poll)
-    conn_stats = @lock nc.lock nc.stats
+    conn_stats = stats(nc)
     while !is_every_message_handled(conn_stats)
         if !isopen(timeout)
             @error "Timeout for drain exceeded, not all subs might be drained."
