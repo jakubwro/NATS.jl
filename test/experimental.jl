@@ -28,7 +28,7 @@ using NATS, Test
         end
         answers = request(2, "service_1", nothing)
         @test length(answers) == 2
-        drain(sub.sid)
-        drain(sub2.sid)
+        drain(sub)
+        drain(sub2)
     end
 end

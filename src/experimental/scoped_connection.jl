@@ -87,10 +87,6 @@ function drain(sub::Sub)
     drain(scoped_connection(), sub)
 end
 
-function drain(sid::String)
-    drain(scoped_connection(), sid)
-end
-
 function publish(
     subject::String,
     data = nothing;
