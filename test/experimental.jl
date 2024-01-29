@@ -40,8 +40,8 @@ using NATS, Test
         sub2 = reply("some_service") do 
             "Response content"
         end
-        usnsubscribe(sub1)
-        usnsubscribe(sub2.sid)
+        unsubscribe(sub1)
+        unsubscribe(sub2.sid)
     end
     drain(sc)
 end
