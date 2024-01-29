@@ -7,7 +7,7 @@ Create a stream.
 function stream_create(connection::NATS.Connection, config::StreamConfiguration; no_throw = false)
     validate(config)
     response = NATS.request(Union{StreamInfo, ApiError}, connection, "\$JS.API.STREAM.CREATE.$(config.name)", JSON3.write(config))
-    no_throw || response isa ApiError && throw(response)
+    no_throw || throw_on_api_error(response)
     response
 end
 
@@ -19,7 +19,7 @@ Update a stream.
 function stream_update(connection::NATS.Connection, config::StreamConfiguration; no_throw = false)
     validate(config)
     response = NATS.request(Union{StreamInfo, ApiError}, connection, "\$JS.API.STREAM.UPDATE.$(config.name)", JSON3.write(config))
-    no_throw || response isa ApiError && throw(response)
+    no_throw || throw_on_api_error(response)
     response
 end
 
