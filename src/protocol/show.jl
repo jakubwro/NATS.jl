@@ -145,7 +145,7 @@ function show(io::IO, mime::MIME"text/plain", msg::Msg)
         write(io, "$(msg.reply_to) ")
     end
     if msg.headers_length > 0
-        write(io, "$(length(msg.headers_length)) ")
+        write(io, "$(msg.headers_length) ")
     end
     write(io, "$(length(msg.payload))\r\n")
     if length(msg.payload) > payload_limit

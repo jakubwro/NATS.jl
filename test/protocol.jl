@@ -150,9 +150,12 @@ end
 
 @testset "Plain text messages" begin
     msg = NATS.Msg("FOO.BAR", "9", "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"))
-    io = IOBuffer()
     msg_text = repr(MIME("text/plain"), msg)
-    @test msg_text == "HMSG FOO.BAR 9 some_inbox 1 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"
+    @test msg_text == "HMSG FOO.BAR 9 some_inbox 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"
+
+    msg = NATS.Msg("FOO.BAR", "9", "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n$(repeat("X", 1000))"))
+    msg_text = repr(MIME("text/plain"), msg)
+    @test msg_text == "HMSG FOO.BAR 9 some_inbox 34 1034\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\n$(repeat("X", 466)) ⋯ 534 bytes"
 end
 
 @testset "Subject validation" begin

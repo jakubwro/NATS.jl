@@ -31,4 +31,17 @@ using NATS, Test
         drain(sub)
         drain(sub2)
     end
+    drain(sc)
+    sc = NATS.connect()
+    with_connection(sc) do 
+        sub1 = reply("some_service") do 
+            "Response content"
+        end
+        sub2 = reply("some_service") do 
+            "Response content"
+        end
+        usnsubscribe(sub1)
+        usnsubscribe(sub2.sid)
+    end
+    drain(sc)
 end
