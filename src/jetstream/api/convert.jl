@@ -10,10 +10,7 @@ import Base.convert
 function convert(::Type{T}, msg::NATS.Msg) where { T <: ApiResponse }
     # TODO: check headers
     response  = JSON3.read(@view msg.payload[(begin + msg.headers_length):end])
-    if haskey(response, :error)
-        err = StructTypes.constructfrom(ApiError, response.error)
-        throw(err)
-    end
+    throw_on_api_error(response)
     StructTypes.constructfrom(T, response)
 end
 
@@ -22,10 +19,6 @@ function convert(::Type{Union{T, ApiError}}, msg::NATS.Msg) where { T <: ApiResp
     pl = NATS.payload(msg)
     pl = replace(pl, "0001-01-01T00:00:00Z" => "0001-01-01T00:00:00.000Z")
     response  = JSON3.read(pl)
-
-    if haskey(response, :error)
-        StructTypes.constructfrom(ApiError, response.error)
-    else
-        StructTypes.constructfrom(T, response)
-    end
+    throw_on_api_error(response)
+    StructTypes.constructfrom(T, response)
 end

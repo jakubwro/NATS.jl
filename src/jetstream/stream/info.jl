@@ -7,7 +7,7 @@ function stream_info(connection::NATS.Connection,
                      subjects_filter::Union{String, Nothing} = nothing)
     validate_name(stream_name)
     res = NATS.request(Union{StreamInfo, ApiError}, connection, "\$JS.API.STREAM.INFO.$(stream_name)")
-    no_throw || res isa ApiError && throw(res)
+    no_throw || throw_on_api_error(res)
     res
 end
 

@@ -1,8 +1,16 @@
 
 function throw_on_api_error(response::JSON3.Object)
     if haskey(response, :error)
-        throw(JSON3.read(JSON3.write(response.error), ApiError))
+        throw(StructTypes.constructfrom(ApiError, response.error))
     end
+end
+
+function throw_on_api_error(response::ApiError)
+    throw(response)
+end
+
+function throw_on_api_error(response::ApiResponse)
+    # Nothing to do
 end
 
 function Base.showerror(io::IO, err::ApiError)

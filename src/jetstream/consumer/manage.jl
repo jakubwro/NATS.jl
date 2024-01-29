@@ -39,9 +39,7 @@ Delete a consumer.
 function consumer_delete(connection::NATS.Connection, stream_name::String, consumer_name::String)
     subject = "\$JS.API.CONSUMER.DELETE.$stream_name.$consumer_name"
     res = NATS.request(Union{ApiResult, ApiError}, connection, subject)
-    if res isa ApiError
-        throw(res)
-    end
+    throw_on_api_error(res)
     res
 end
 

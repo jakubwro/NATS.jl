@@ -43,7 +43,7 @@ Delete a stream.
 """
 function stream_delete(connection::NATS.Connection, stream::String; no_throw = false)
     res = NATS.request(Union{ApiResult, ApiError}, connection, "\$JS.API.STREAM.DELETE.$(stream)")
-    no_throw || res isa ApiError && throw(res)
+    no_throw || throw_on_api_error(res)
     res
 end
 
@@ -58,7 +58,7 @@ Purge a stream. It is equivalent of deleting all messages.
 """
 function stream_purge(connection::NATS.Connection, stream::String; no_throw = false)
     res = NATS.request(Union{ApiResult, ApiError}, connection, "\$JS.API.STREAM.PURGE.$stream")
-    no_throw || res isa ApiError && throw(res)
+    no_throw || throw_on_api_error(res)
     res
 end
 

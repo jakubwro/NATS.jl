@@ -89,14 +89,6 @@ end
     stream_delete(connection, stream_info)
 end
 
-# @testset "Stream names handling error." begin
-#     connection = NATS.connect()
-#     # @test_throws ErrorException JetStream.stream_names(; connection, timer = Timer(0))
-
-#     response = JSON3.read("""{"error": {"code": 400, "description": "failed"}}""")
-#     @test_throws JetStream.ApiError JetStream.throw_on_api_error(response)
-# end
-
 @testset "Invalid stream name." begin
     connection = NATS.connect()
     stream_config = StreamConfiguration(
