@@ -14,7 +14,7 @@ const DEFAULT_JETCHANNEL_SIZE = 1
 
 function JetChannel{T}(connection::NATS.Connection, name::String, size::Int64 = DEFAULT_JETCHANNEL_SIZE) where T
     stream = channel_stream_create(connection, name, size)
-    consumer = channel_consumer_create(connection, stream)
+    consumer = channel_consumer_create(connection, name)
 
     JetChannel{T}(connection, name, stream, consumer)
 end

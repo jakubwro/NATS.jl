@@ -22,20 +22,12 @@ function channel_stream_delete(connection::NATS.Connection, channel_name::String
     stream_delete(connection, channel_stream_name(channel_name))
 end
 
-function channel_consumer_create(connection::NATS.Connection, stream::StreamInfo)
+function channel_consumer_create(connection::NATS.Connection, channel_name::String)
+    stream_name = channel_stream_name(channel_name)
     config = ConsumerConfiguration(
         ack_policy = :explicit,
-        name = "$(stream.config.name)_consumer",
-        durable_name = "$(stream.config.name)_consumer"
+        name = channel_consumer_name(channel_name),
+        durable_name = channel_consumer_name(channel_name)
     )
-    consumer_create(connection, config, stream)
-end
-
-function channel_consumer_delete(connection::NATS.Connection, stream::StreamInfo)
-    config = ConsumerConfiguration(
-
-    )
-
-    consumer_create(connection, config, stream)
-
+    consumer_create(connection, config, stream_name)
 end
