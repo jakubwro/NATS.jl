@@ -295,5 +295,5 @@ end
     @test take!(ch) == "msg 5"
     @test take!(ch) == "msg 6"
 
-    channel_stream_delete(connection, "test_channel")
+    destroy!(ch)
 end

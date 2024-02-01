@@ -31,8 +31,7 @@ export keyvalue_stream_create, keyvalue_stream_purge, keyvalue_stream_delete
 export keyvalue_get, keyvalue_put, keyvalue_delete, keyvalue_watch
 export JetDict, watch, with_optimistic_concurrency
 
-export channel_stream_create, channel_consumer_delete
-export JetChannel, channel_stream_create, channel_stream_delete
+export JetChannel, destroy!
 
 const STREAM_RETENTION_OPTIONS       = [:limits, :interest, :workqueue]
 const STREAM_STORAGE_OPTIONS         = [:file, :memory]

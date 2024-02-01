@@ -19,6 +19,10 @@ function JetChannel{T}(connection::NATS.Connection, name::String, size::Int64 = 
     JetChannel{T}(connection, name, stream, consumer)
 end
 
+function destroy!(jetchannel::JetChannel)
+    channel_stream_delete(jetchannel.connection, jetchannel.name)
+end
+
 function show(io::IO, jetchannel::JetChannel{T}) where T
     sz = jetchannel.stream.config.max_msgs
     sz_str = sz == -1 ? "Inf" : string(sz)
@@ -31,7 +35,6 @@ function Base.take!(jetchannel::JetChannel{T}) where T
     @assert ack isa NATS.Msg
     convert(T, msg)
 end
-
 
 function Base.put!(jetchannel::JetChannel{T}, v::T) where T
     subject = channel_subject(jetchannel.name)
