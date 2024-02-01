@@ -265,6 +265,7 @@ end
 @testset "Channel message passing" begin
     connection = NATS.connect()
     ch = JetChannel{String}(connection, "test_channel", 3)
+    @test repr(ch) == "JetChannel{String}(\"test_channel\", 3)"
     put!(ch, "msg 1")
     @test take!(ch) == "msg 1"
 
