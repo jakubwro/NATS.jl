@@ -49,6 +49,29 @@ end
     stream_delete(connection, stream_info)
 end
 
+@testset "Stream subscriptions" begin
+    connection = NATS.connect()
+    stream_config = StreamConfiguration(
+        name = "SOME_STREAM",
+        description = "SOME_STREAM stream",
+        subjects = ["SOME_STREAM.*"],
+    )
+    stream_info = JetStream.stream_create(connection, stream_config)
+    n = 3
+    for i in 1:n
+        stream_publish(connection, "SOME_STREAM.foo", "test $i")
+    end
+    results = []
+    stream_sub = stream_subscribe(connection, "SOME_STREAM.foo") do msg
+        push!(results, msg)
+    end
+    @test repr(stream_sub) == "StreamSub(\"SOME_STREAM.foo\")"
+    sleep(0.5)
+    stream_unsubscribe(connection, stream_sub)
+    @test length(results) == n
+    stream_delete(connection, stream_info)
+end
+
 @testset "Stream message access" begin
     connection = NATS.connect()
     stream_config = StreamConfiguration(
