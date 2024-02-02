@@ -22,9 +22,7 @@ function stream_message_get(connection::NATS.Connection, stream_name::String, su
     if allow_direct
         msg = NATS.request(connection, "\$JS.API.DIRECT.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
         msg_status = NATS.statuscode(msg) 
-        if msg_status >= 400
-            throw(NATSError(msg_status, ""))
-        end
+        msg_status >= 400 && throw(NATSError(msg_status, ""))
         msg
     else
         res = NATS.request(connection, "\$JS.API.STREAM.MSG.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
@@ -59,9 +57,7 @@ Delete a message from stream.
 """
 function stream_message_delete(connection::NATS.Connection, stream::StreamInfo, msg::NATS.Msg)
     seq = NATS.header(msg, "Nats-Sequence")
-    if isnothing(seq)
-        error("Message has no `Nats-Sequence` header")
-    end
+    isnothing(seq) && error("Message has no `Nats-Sequence` header")
     # TODO: validate stream name
     req = Dict()
     req[:seq] = parse(UInt8, seq)

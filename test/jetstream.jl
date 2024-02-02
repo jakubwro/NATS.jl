@@ -87,6 +87,9 @@ end
     received = stream_message_get(connection, stream_info, "SOME_STREAM.msg1")
     @test NATS.payload(received) == "some msg"
     @test NATS.header(received, "a") == "xy"
+    received = stream_message_get(connection, "SOME_STREAM", "SOME_STREAM.msg1")
+    @test NATS.payload(received) == "some msg"
+    @test NATS.header(received, "a") == "xy"
     stream_message_delete(connection, stream_info, received)
     @test_throws "not found" stream_message_delete(connection, stream_info, received)
 
