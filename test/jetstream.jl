@@ -87,6 +87,9 @@ end
     received = stream_message_get(connection, stream_info, "SOME_STREAM.msg1")
     @test NATS.payload(received) == "some msg"
     @test NATS.header(received, "a") == "xy"
+    @test !haskey(connection.allow_direct, "SOME_STREAM")
+    received = stream_message_get(connection, "SOME_STREAM", "SOME_STREAM.msg1")
+    @test haskey(connection.allow_direct, "SOME_STREAM")
     received = stream_message_get(connection, "SOME_STREAM", "SOME_STREAM.msg1")
     @test NATS.payload(received) == "some msg"
     @test NATS.header(received, "a") == "xy"
