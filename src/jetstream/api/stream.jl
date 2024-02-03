@@ -33,16 +33,6 @@ end
     external::Union{ExternalStreamSource, Nothing} = nothing
 end
 
-import Base: convert
-
-function convert(::Type{StreamSource}, name::String)
-    StreamSource(; name)
-end
-
-function convert(::Type{StreamSource}, t::NamedTuple)
-    StreamSource(; t...)
-end
-
 @kwdef struct Republish
     "The source subject to republish"
     src::String

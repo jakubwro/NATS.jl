@@ -30,7 +30,7 @@ end
         name = "SOME_STREAM",
         description = "SOME_STREAM stream",
         subjects = ["SOME_STREAM.*"],
-        retention = :workqueue,  
+        retention = :workqueue,
         storage = :memory,
     )
     stream_info = JetStream.stream_create(connection, stream_config)
@@ -82,7 +82,7 @@ end
         name = "SOME_STREAM",
         description = "SOME_STREAM stream",
         subjects = ["SOME_STREAM.*"],
-        retention = :workqueue,  
+        retention = :workqueue,
         storage = :memory,
     )
     stream_info = stream_create(connection, stream_config)
@@ -105,7 +105,7 @@ end
         name = "SOME_STREAM",
         description = "SOME_STREAM stream",
         subjects = ["SOME_STREAM.*"],
-        retention = :workqueue,  
+        retention = :workqueue,
         storage = :memory,
         allow_direct = true
     )
@@ -134,7 +134,7 @@ end
 
 @testset "Create stream, publish and subscribe." begin
     connection = NATS.connect()
-    
+
     stream_name = randstring(10)
     subject_prefix = randstring(4)
 
@@ -214,7 +214,7 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     for i in 1:100
         @test kv["key_$i"] == "value_$i"
     end
-    
+
     @test length(kv) == 100
     @test length(collect(kv)) == 100
     @test length(keys(kv)) == 100
@@ -236,7 +236,7 @@ end
     @test kv["!@#%^&"] == "5"
     @test collect(kv) == ["!@#%^&" => "5"]
     keyvalue_stream_delete(connection, "test_kv")
-    
+
     @test_throws "No `encodekey` implemented for wrongencoding encoding" JetStream.JetDict{String}(connection, "test_kv", :wrongencoding)
 end
 
@@ -287,14 +287,14 @@ end
     connection = NATS.connect()
     kv = JetStream.JetDict{String}(connection, "test_kv")
 
-    with_optimistic_concurrency(kv) do 
+    with_optimistic_concurrency(kv) do
         kv["a"] = "4"
-        kv["a"] = "5"        
+        kv["a"] = "5"
     end
 
     @async (sleep(2); kv["a"] = "6")
 
-    @test_throws "wrong last sequence" with_optimistic_concurrency(kv) do 
+    @test_throws "wrong last sequence" with_optimistic_concurrency(kv) do
         old = kv["a"]
         sleep(3)
         kv["a"] = "$(old)_updated"
@@ -338,4 +338,55 @@ end
     @test take!(ch) == "msg 6"
 
     destroy!(ch)
+end
+
+@testset "Stream with complicated configuration" begin
+    connection = NATS.connect()
+    stream_config = StreamConfiguration(
+        name = "SOME_STREAM",
+        description = "SOME_STREAM stream",
+        subjects = ["SOME_STREAM.*"],
+        retention = :workqueue,
+        storage = :memory,
+        republish = Republish(
+            src = "SOME_STREAM.foo",
+            dest = "REPUBLISHED.foo"
+        ),
+        consumer_limits = StreamConsumerLimit(
+            max_ack_pending = 100,
+        ),
+
+    )
+    stream_info = JetStream.stream_create(connection, stream_config)
+
+    # mirror_stream_config = StreamConfiguration(
+    #     name = "MIRROR_STREAM",
+    #     description = "MIRROR_STREAM stream",
+    #     storage = :memory,
+    #     mirror = StreamSource(
+    #         name = "SOME_STREAM"
+    #     )
+    # )
+    # mirror_stream_info = JetStream.stream_create(connection, mirror_stream_config)
+
+    republished = []
+    sub = subscribe(connection, "REPUBLISHED.foo") do msg
+        push!(republished, msg)
+    end
+
+    sleep(0.1)
+    stream_publish(connection, "SOME_STREAM.foo", "test message")
+    drain(connection, sub)
+
+    # mirror_consumer_config = ConsumerConfiguration(
+    #     name ="mirror_consumer_test",
+    #     ack_policy = :explicit
+    # )
+    # consumer_info = consumer_create(connection, mirror_consumer_config, mirror_stream_info)
+    # msg = consumer_next(connection, consumer_info)
+    # @test msg isa NATS.Msg
+    # @test msg.subject == "SOME_STREAM.foo"
+    @test length(republished) == 1
+    stream_delete(connection, stream_info)
+    # stream_delete(connection, mirror_stream_info)
 end
