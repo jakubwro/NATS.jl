@@ -9,12 +9,8 @@ Subscribe to a stream.
 """
 function stream_subscribe(f, connection::NATS.Connection, subject::String)
     subject_streams = stream_infos(connection, subject)
-    if isempty(subject_streams)
-        error("No stream found for subject `$subject`")
-    end
-    if length(subject_streams) > 1
-        error("Multiple streams found")
-    end
+    isempty(subject_streams) && error("No stream found for subject \"$subject\"")
+    length(subject_streams) > 1 && error("Multiple streams found for subject \"$subject\"")
     stream = only(subject_streams)
     name = randstring(20)
     deliver_subject = randstring(8)

@@ -70,6 +70,10 @@ end
     stream_unsubscribe(connection, stream_sub)
     @test length(results) == n
     stream_delete(connection, stream_info)
+
+    @test_throws "No stream found for subject" stream_subscribe(connection, "NOT_EXISTS.foo") do msg
+        @info msg
+    end
 end
 
 @testset "Stream message access" begin
@@ -156,11 +160,13 @@ end
         filter_subjects=["$subject_prefix.*"],
         ack_policy = :explicit,
         name ="c1",
-        durable_name = "c1" #TODO: make it not durable
+        durable_name = "c1", #TODO: make it not durable
+        ack_wait = 5 * 10^9
     )
     consumer = JetStream.consumer_create(connection, consumer_config, stream_info)
     for i in 1:3
         msg = JetStream.consumer_next(connection, consumer, no_wait = true)
+        consumer_ack(connection, msg)
         @test msg isa NATS.Msg
     end
 
