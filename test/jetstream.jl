@@ -203,6 +203,8 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     kv = JetStream.JetDict{String}(connection, "test_kv")
     @test keyvalue_stream_info(connection, "test_kv") isa JetStream.StreamInfo
     @test "test_kv" in keyvalue_buckets(connection)
+    @test length(kv) == 0
+    @test length(collect(kv)) == 0
     @time @sync for i in 1:100
         @async kv["key_$i"] = "value_$i"
     end
@@ -214,9 +216,11 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
     end
     
     @test length(kv) == 100
-    @test length(keys(kv)) == 100
-    @test length(values(kv)) == 100
     @test length(collect(kv)) == 100
+    @test length(keys(kv)) == 100
+    @test length(collect(keys(kv))) == 100
+    @test length(values(kv)) == 100
+    @test length(collect(values(kv))) == 100
     keyvalue_stream_delete(connection, "test_kv")
 end
 
@@ -230,6 +234,7 @@ end
     kv = JetStream.JetDict{String}(connection, "test_kv", :base64url)
     kv["!@#%^&"] = "5"
     @test kv["!@#%^&"] == "5"
+    @test collect(kv) == ["!@#%^&" => "5"]
     keyvalue_stream_delete(connection, "test_kv")
     
     @test_throws "No `encodekey` implemented for wrongencoding encoding" JetStream.JetDict{String}(connection, "test_kv", :wrongencoding)

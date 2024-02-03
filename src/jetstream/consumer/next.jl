@@ -5,7 +5,7 @@ $(SIGNATURES)
 
 Get next message for a consumer.
 """
-function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo, batch::Int64; no_wait = false)
+function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo, batch::Int64; no_wait = false, no_throw = false)
     req = Dict()
     req[:no_wait] = no_wait
     req[:batch] = batch
@@ -22,12 +22,13 @@ function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo, batc
         # 408 indicates timeout
         if !isempty(critical)
             # TODO warn other errors if any
-            throw(NATS.NATSError(NATS.statuscode(first(critical)), ""))
+            no_throw || throw(NATS.NATSError(NATS.statuscode(first(critical)), ""))
+            return critical
         end
     end
 end
 
-function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo; no_wait = false)
-    batch = consumer_next(connection, consumer, 1; no_wait)
+function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo; no_wait = false, no_throw = false)
+    batch = consumer_next(connection, consumer, 1; no_wait, no_throw)
     only(batch)
 end

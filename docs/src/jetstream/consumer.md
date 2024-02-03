@@ -17,5 +17,4 @@ consumer_delete
 ```@docs
 consumer_next
 consumer_ack
-consumer_nak
 ```
