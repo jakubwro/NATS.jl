@@ -27,6 +27,7 @@ export ConsumerConfiguration
 export consumer_create, consumer_update, consumer_delete
 export consumer_next, consumer_ack
 
+export keyvalue_stream_info, keyvalue_buckets
 export keyvalue_stream_create, keyvalue_stream_purge, keyvalue_stream_delete
 export keyvalue_get, keyvalue_put, keyvalue_delete, keyvalue_watch
 export JetDict, watch, with_optimistic_concurrency

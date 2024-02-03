@@ -201,6 +201,8 @@ uint8_vec(s::String) = convert.(UInt8, collect(s))
 @testset "Key value - 100 keys" begin
     connection = NATS.connect()
     kv = JetStream.JetDict{String}(connection, "test_kv")
+    @test keyvalue_stream_info(connection, "test_kv") isa JetStream.StreamInfo
+    @test "test_kv" in keyvalue_buckets(connection)
     @time @sync for i in 1:100
         @async kv["key_$i"] = "value_$i"
     end
