@@ -21,8 +21,7 @@ function stream_message_get(connection::NATS.Connection, stream_name::String, su
     allow_direct = @something allow_direct check_allow_direct(connection, stream_name)
     if allow_direct
         msg = NATS.request(connection, "\$JS.API.DIRECT.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")
-        msg_status = NATS.statuscode(msg) 
-        msg_status >= 400 && throw(NATSError(msg_status, ""))
+        NATS.throw_on_error_status(msg)
         msg
     else
         res = NATS.request(connection, "\$JS.API.STREAM.MSG.GET.$(stream_name)", "{\"last_by_subj\": \"$subject\"}")

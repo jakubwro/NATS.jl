@@ -96,11 +96,8 @@ function iterate(jetdict::JetDict)
     consumer = consumer_create(jetdict.connection, consumer_config, jetdict.stream_info)
     msg = consumer_next(jetdict.connection, consumer, no_wait = true, no_throw = true)
     msg_status = NATS.statuscode(msg)
-    if msg_status == 404
-        return nothing
-    elseif msg_status >= 400
-        throw(NATS.NATSError(msg_status, ""))
-    end
+    msg_status == 404 && return nothing
+    NATS.throw_on_error_status(msg)
     key = decodekey(jetdict.encoding, replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""))
     value = convert(jetdict.T, msg)
     push!(unique_keys, key)
@@ -110,11 +107,8 @@ end
 function iterate(jetdict::JetDict, (consumer, unique_keys))
     msg = consumer_next(jetdict.connection, consumer, no_wait = true, no_throw = true) 
     msg_status = NATS.statuscode(msg)
-    if msg_status == 404
-        return nothing
-    elseif msg_status >= 400
-        throw(NATS.NATSError(msg_status, ""))
-    end
+    msg_status == 404 && return nothing
+    NATS.throw_on_error_status(msg)
     key = decodekey(jetdict.encoding, replace(msg.subject, "\$KV.$(jetdict.bucket)." => ""))
     if key in unique_keys
         @warn "Key \"$key\" changed during iteration."
@@ -139,14 +133,10 @@ function length(jetdict::JetDict)
     consumer = consumer_create(jetdict.connection, consumer_config, "KV_$(jetdict.bucket)")
     msg = consumer_next(jetdict.connection, consumer, no_wait = true, no_throw = true)
     msg_status = NATS.statuscode(msg)
-    if msg_status == 404
-        0
-    elseif msg_status >= 400
-        throw(NATS.NATSError(msg_status, ""))
-    else
-        remaining = last(split(msg.reply_to, "."))
-        parse(Int64, remaining) + 1
-    end
+    msg_status == 404 && return 0
+    NATS.throw_on_error_status(msg)
+    remaining = last(split(msg.reply_to, "."))
+    parse(Int64, remaining) + 1
 end
 
 function empty!(jetdict::JetDict)

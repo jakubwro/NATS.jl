@@ -15,14 +15,14 @@ function consumer_next(connection::NATS.Connection, consumer::ConsumerInfo, batc
     subject = "\$JS.API.CONSUMER.MSG.NEXT.$(consumer.stream_name).$(consumer.name)"
     while true
         msgs = NATS.request(connection, batch, subject, JSON3.write(req))
-        ok = filter(m -> NATS.statuscode(m)  < 400, msgs)
+        ok = filter(!NATS.has_error_status, msgs)
         !isempty(ok) && return ok
-        err = filter(m -> NATS.statuscode(m) >= 400, msgs)
+        err = filter(NATS.has_error_status, msgs)
         critical = filter(m -> NATS.statuscode(m) != 408, err)
         # 408 indicates timeout
         if !isempty(critical)
             # TODO warn other errors if any
-            no_throw || throw(NATS.NATSError(NATS.statuscode(first(critical)), ""))
+            no_throw || NATS.throw_on_error_status(first(critical))
             return critical
         end
     end

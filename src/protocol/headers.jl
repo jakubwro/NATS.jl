@@ -42,20 +42,22 @@ function header(m::Msg, key::String)
     isempty(hdrs) ? nothing : only(hdrs)
 end
 
-function statuscode(header_str::String)
+function statusinfo(header_str::String)
     hdr = split(header_str, "\r\n"; keepempty = false, limit = 2)
-    if ' ' in first(hdr)
-        version, status = split(first(hdr), ' ')
-        parse(Int, status)
+    splitted = split(first(hdr), ' ', limit = 3)
+    status = length(splitted) >= 2 ? parse(Int, splitted[2]) : 200
+    message = length(splitted) >= 3 ? splitted[3] : ""
+    status, message
+end
+
+function statusinfo(msg::Msg)::Tuple{Int64, String}
+    if msg.headers_length == 0
+        200, ""
     else
-        200
+        statusinfo(headers_str(msg))
     end
 end
 
-function statuscode(msg::Msg)
-    if msg.headers_length == 0
-        200
-    else
-        statuscode(headers_str(msg))
-    end
+function statuscode(msg::Msg)::Int64
+    first(statusinfo(msg))
 end

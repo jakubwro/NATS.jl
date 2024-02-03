@@ -41,21 +41,15 @@ function request(
     timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     replies = request(connection, 1, subject, data; timer)
-    if isempty(replies) 
+    if isempty(replies)
         throw(NATSError(408, "No replies received in specified time."))
     end
     if length(replies) > 1
         @warn "Multiple replies."
     end
     msg = first(replies)
-    if statuscode(msg) >= 400
-        throw(NATSError(statuscode(msg), ""))
-    end
+    throw_on_error_status(msg)
     msg
-end
-
-function has_error_status(msg::NATS.Msg)
-    statuscode(msg) in 400:599
 end
 
 """

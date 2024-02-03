@@ -125,12 +125,7 @@ function next(connection, sub; no_wait = false, no_throw = false)
         end
     dec_stats(:msgs_pending, 1, sub_data.stats, connection.stats, state.stats)
     inc_stats(:msgs_handled, 1, sub_data.stats, connection.stats, state.stats)
-    if !no_throw
-        status = statuscode(msg)
-        if status > 399
-            throw(NATSError(status, "")) # TODO: extract error message
-        end
-    end
+    no_throw || throw_on_error_status(msg)
     msg
 end
 
