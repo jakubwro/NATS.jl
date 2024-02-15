@@ -15,5 +15,5 @@ istaskdone(t)
 put!(ch, "some value");
 sleep(0.1)
 t.result
-channel_stream_delete(nc, "example_jetstream_channel")
+destroy!(ch)
 ```
