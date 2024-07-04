@@ -10,7 +10,7 @@ include("util.jl")
 
 @testset "Warmup" begin
     connection = NATS.connect()
-    empty!(NATS.state.fallback_handlers)
+    empty!(connection.fallback_handlers)
     c = Channel(1000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 1.0
@@ -27,7 +27,7 @@ include("util.jl")
 end
 
 function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, spawn = false)
-    empty!(NATS.state.fallback_handlers)
+    empty!(connection.fallback_handlers)
     c = Channel(100000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
