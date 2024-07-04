@@ -52,6 +52,8 @@ end
     drain_poll::Float64
     allow_direct::Dict{String, Bool} = Dict{String, Bool}() # Cache for jetstream for fast lookup of streams that have direct access.
     allow_direct_lock = ReentrantLock()
+    "Handles messages for which handler was not found."
+    fallback_handlers::Vector{Function} = Function[]
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info

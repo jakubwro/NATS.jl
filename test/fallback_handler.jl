@@ -16,9 +16,9 @@ end
 NATS.status()
 
 @testset "Test custom fallback handler" begin
-    empty!(NATS.state.fallback_handlers)
+    empty!(nc.fallback_handlers)
     was_called = false
-    NATS.install_fallback_handler() do nc, msg
+    NATS.install_fallback_handler(nc) do nc, msg
         was_called = true
         @info "Custom fallback called." msg
     end
