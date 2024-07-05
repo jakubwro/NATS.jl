@@ -15,7 +15,7 @@ $(SIGNATURES)
 
 Create a stream for KV bucket.
 """
-function keyvalue_stream_create(connection::NATS.Connection, bucket::String, encoding::Symbol, history = 1)
+function keyvalue_stream_create(connection::NATS.Connection, bucket::String, encoding::Symbol, history = MAX_HISTORY)
     history in 1:MAX_HISTORY || error("History must be greater than 0 and cannot be greater than $MAX_HISTORY")
     stream_config = StreamConfiguration(
         name = keyvalue_stream_name(bucket),
