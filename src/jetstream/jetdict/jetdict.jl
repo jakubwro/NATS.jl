@@ -15,7 +15,7 @@ function get_jetdict_stream_info(connection, bucket, encoding)
     res = stream_info(connection, "$KV_STREAM_NAME_PREFIX$bucket"; no_throw = true)
     if res isa ApiError
         res.code != 404 && throw(res)
-        keyvalue_stream_create(connection, bucket, encoding)
+        keyvalue_stream_create(connection, bucket, encoding, 1)
     else
         stream_encoding = isnothing(res.config.metadata) ? :none : Symbol(get(res.config.metadata, "encoding", "none"))
         if encoding != stream_encoding
@@ -159,4 +159,3 @@ function watch(f, jetdict::JetDict, key = ALL_KEYS; skip_deletes = false)
         end
     end
 end
-

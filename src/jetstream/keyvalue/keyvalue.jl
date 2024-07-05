@@ -15,3 +15,4 @@ end
 
 include("manage.jl")
 include("watch.jl")
+include("history.jl")
