@@ -190,7 +190,8 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 append!(buffer, rest, '\n')
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
-                push!(data.args, data.arg_begin:(pos-1))
+                argrange = range(data.arg_begin, pos-1)
+                isempty(argrange) || push!(data.args, argrange)
                 data.arg_begin = pos+1
             elseif byte == (@uint8 '\r')
                 push!(data.args, data.arg_begin:(pos-1))
