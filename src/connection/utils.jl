@@ -82,12 +82,12 @@ end
 # """
 function _fast_call(f::Function)
     arg_t = argtype(f)
-    find_msg_conversion_or_throw(arg_t)
     if arg_t === Any || arg_t == NATS.Msg
         f
     elseif arg_t == Nothing
         _ -> f()
     else
+        find_msg_conversion_or_throw(arg_t)
         msg -> f(convert(arg_t, msg))
     end
 end
