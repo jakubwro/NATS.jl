@@ -22,7 +22,7 @@
     state::ParserState = OP_START
     has_header::Bool = false
     subject::String = ""
-    sid::String = ""
+    sid::Int64 = 0
     replyto::Union{String, Nothing} = nothing
     header_bytes::Int64 = 0
     total_bytes::Int64 = 0
@@ -31,13 +31,12 @@
     arg_begin::Int64 = -1
     payload_buffer::Vector{UInt8} = UInt8[]
     results::Vector{ProtocolMessage} = ProtocolMessage[]
-    subjects::Trie{String} = Trie{String}()
-    subject_node::Union{Nothing, Trie{String}} = nothing
 end
 
 function parse_error(buffer, pos, data::ParserData)
     buf = String(buffer[max(begin, pos-100):min(end,pos+100)])
-    error("Parser error: $buf")
+    # @error data
+    error("Parser error on position $pos: $buf\nBuffer length: $(length(buffer))")
 end
 
 function parser_loop(f, io::IO)
@@ -51,8 +50,9 @@ function parser_loop(f, io::IO)
         batch_ready_time = time()
         f(data.results)
         handler_call_time = time()
-        # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
+        @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
         data.results = ProtocolMessage[]
+        sleep(0.001)
     end
 end
 
@@ -179,26 +179,38 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 # Skip all spaces.
             else
                 data.arg_begin = pos
+                if pos == len
+                    rest = readuntil(io, "\r\n")
+                    append!(buffer, rest, "\r\n")
+                    len += length(rest) + 2
+                end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
             if pos == len && byte != (@uint8 '\n')
-                rest = readuntil(io, "\n")
+                # rest = read(io, 1)
+                rest = readuntil(io, "\r\n")
+                 
+                # @info data.args
+                # @info map(a -> String(buffer[a]), data.args)
+                # @info rest 
                 # @warn "loading args" rest pos len length(buffer) byte
                 # @warn "buffer" buffer[pos:end]
-                len += length(rest) + 1
-                append!(buffer, rest, '\n')
+                # @info "old len" len length(buffer)
+                len += length(rest) + 2
+                # @info "new len" len
+                append!(buffer, rest, "\r\n")
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
                 isempty(argrange) || push!(data.args, argrange)
                 data.arg_begin = pos+1
             elseif byte == (@uint8 '\r')
-                push!(data.args, data.arg_begin:(pos-1))
+                push!(data.args, range(data.arg_begin,(pos-1)))
             elseif byte == (@uint8 '\n')
                 # args = map(a -> String(buffer[a]), data.args) 
                 data.subject = String(buffer[data.args[1]])
-                data.sid = String(buffer[data.args[2]]) # TODO: make this number
+                data.sid = bytes_to_int64(buffer, data.args[2])
                 if data.has_header
                     if length(data.args) == 4
                         data.replyto = nothing
@@ -221,7 +233,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                         data.header_bytes = 0
                         data.total_bytes = bytes_to_int64(buffer, data.args[4])
                     else
-                        @info map(a -> String(buffer[a]), data.args)
+                        # @info map(a -> String(buffer[a]), data.args)
                         parse_error(buffer, pos, data)
                     end
                 end
@@ -229,18 +241,17 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 if ending > len
                     # @error "expand"
                     rest = read(io, ending - len)
+                    # @warn "pl" String(buffer[end-25:end]) length(rest) String(copy(rest))
                     len += length(rest)
                     append!(buffer, rest)
                 end
                 data.payload = @view buffer[(pos + 1):(pos + data.total_bytes)]
-                pos = pos + data.total_bytes + 1
+                pos = pos + data.total_bytes + 2
+                msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
+                push!(data.results, msg)
                 empty!(data.args)
-                data.state = MSG_END
+                data.state = OP_START
             end
-        elseif data.state == MSG_END
-            msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
-            push!(data.results, msg)
-            data.state = OP_START
         elseif data.state == OP_P
             if byte == (@uint8 'I') || byte == (@uint8 'i')
                 data.state = OP_PI

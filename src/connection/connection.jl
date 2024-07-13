@@ -32,10 +32,11 @@ end
     status::ConnectionStatus = CONNECTING
     stats::Stats = Stats()
     info::Union{Info, Nothing}
-    sub_data::Dict{String, SubscriptionData} = Dict{String, SubscriptionData}()
-    unsubs::Dict{String, Int64} = Dict{String, Int64}()
+    sub_data::Dict{Int64, SubscriptionData} = Dict{Int64, SubscriptionData}()
+    unsubs::Dict{Int64, Int64} = Dict{Int64, Int64}()
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
+    last_sid::Int64 = 0
     send_buffer::IO = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_limit::Int64 = DEFAULT_SEND_BUFFER_LIMIT_BYTES
@@ -81,7 +82,10 @@ function new_inbox(connection::Connection, prefix::String = "inbox.")
 end
 
 function new_sid(connection::Connection)
-    @lock connection.lock randstring(connection.rng, 6)
+    @lock connection.lock begin
+        connection.last_sid += 1
+        connection.last_sid 
+    end
 end
 
 include("state.jl")
@@ -132,7 +136,7 @@ function stats(connection::Connection)
     connection.stats
 end
 
-function stats(connection::Connection, sid::String)
+function stats(connection::Connection, sid::Int64)
     sub_data = @lock connection.lock get(connection.sub_data, sid, nothing)
     isnothing(sub_data) && return
     sub_data.stats

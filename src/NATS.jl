@@ -29,7 +29,6 @@ using Sodium
 using CodecBase
 using ScopedValues
 using URIs
-using DataStructures
 
 import Base: show, convert
 

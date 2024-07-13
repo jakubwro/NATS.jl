@@ -2,16 +2,16 @@
 
     expected = [
         NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
-        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
-        NATS.Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World")),
-        NATS.Msg("FOO.BAR", "9", nothing, 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
-        NATS.Msg("FOO.BAR", "9", "BAZ.69", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
-        NATS.Msg("FOO.BAR", "9", nothing, 16, uint8_vec("NATS/1.0 503\r\n\r\n")),
+        NATS.Msg("FOO.BAR", 9, nothing, 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", 9, "GREETING.34", 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", 9, nothing, 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", 9, "BAZ.69", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World")),
+        NATS.Msg("FOO.BAR", 9, nothing, 16, uint8_vec("NATS/1.0 503\r\n\r\n")),
         NATS.Ping(),
         NATS.Pong(),
         NATS.Ok(),
         NATS.Err("Unknown Protocol Operation"),
-        NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World")),
+        NATS.Msg("FOO.BAR", 9, nothing, 0, uint8_vec("Hello World")),
     ]
 
     # Basic protocol parsing
@@ -97,23 +97,23 @@ end
     @test serialize(Pub("NOTIFY", nothing, 22, uint8_vec("NATS/1.0\r\nBar: Baz\r\n\r\n"))) == "HPUB NOTIFY 22 22\r\nNATS/1.0\r\nBar: Baz\r\n\r\n\r\n"
     @test serialize(Pub("MORNING.MENU", nothing, 47, uint8_vec("NATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\nYum!"))) == "HPUB MORNING.MENU 47 51\r\nNATS/1.0\r\nBREAKFAST: donut\r\nBREAKFAST: eggs\r\n\r\nYum!\r\n"
 
-    @test serialize(Sub("FOO", nothing, "1")) == "SUB FOO 1\r\n"
-    @test serialize(Sub("BAR", "G1", "44")) == "SUB BAR G1 44\r\n"
+    @test serialize(Sub("FOO", nothing, 1)) == "SUB FOO 1\r\n"
+    @test serialize(Sub("BAR", "G1", 44)) == "SUB BAR G1 44\r\n"
 
-    @test serialize(Unsub("1", nothing)) == "UNSUB 1\r\n"
-    @test serialize(Unsub("1", 5)) == "UNSUB 1 5\r\n"
+    @test serialize(Unsub(1, nothing)) == "UNSUB 1\r\n"
+    @test serialize(Unsub(1, 5)) == "UNSUB 1 5\r\n"
 end
 
 @testset "Serializing headers." begin
-    msg = Msg("FOO.BAR", "9", "BAZ.69", 30, uint8_vec("NATS/1.0\r\nA: B\r\nC: D\r\nC: E\r\n\r\nHello World"))
+    msg = Msg("FOO.BAR", 9, "BAZ.69", 30, uint8_vec("NATS/1.0\r\nA: B\r\nC: D\r\nC: E\r\n\r\nHello World"))
     @test headers(msg) == ["A" => "B", "C" => "D", "C" => "E"]
     @test headers(msg, "C") == ["D", "E"]
     @test_throws ArgumentError header(msg, "C")
     @test header(msg, "A") == "B"
     @test String(repr(MIME_HEADERS(), headers(msg))) == String(msg.payload[begin:msg.headers_length])
-    @test isempty(headers(Msg("FOO.BAR", "9", "GREETING.34", 0, uint8_vec("Hello World"))))
+    @test isempty(headers(Msg("FOO.BAR", 9, "GREETING.34", 0, uint8_vec("Hello World"))))
 
-    no_responder_msg = Msg("FOO.BAR", "9", "BAZ.69", 16, uint8_vec("NATS/1.0 503\r\n\r\n"))
+    no_responder_msg = Msg("FOO.BAR", 9, "BAZ.69", 16, uint8_vec("NATS/1.0 503\r\n\r\n"))
     @test NATS.statuscode(no_responder_msg) == 503
 
 end
@@ -149,11 +149,11 @@ end
 end
 
 @testset "Plain text messages" begin
-    msg = NATS.Msg("FOO.BAR", "9", "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"))
+    msg = NATS.Msg("FOO.BAR", 9, "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"))
     msg_text = repr(MIME("text/plain"), msg)
     @test msg_text == "HMSG FOO.BAR 9 some_inbox 34 45\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"
 
-    msg = NATS.Msg("FOO.BAR", "9", "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n$(repeat("X", 1000))"))
+    msg = NATS.Msg("FOO.BAR", 9, "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\n$(repeat("X", 1000))"))
     msg_text = repr(MIME("text/plain"), msg)
     @test msg_text == "HMSG FOO.BAR 9 some_inbox 34 1034\r\nNATS/1.0\r\nFoodGroup: vegetable\r\n\r\n$(repeat("X", 466)) ⋯ 534 bytes"
 end
