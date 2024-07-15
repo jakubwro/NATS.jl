@@ -22,29 +22,21 @@
     state::ParserState = OP_START
     has_header::Bool = false
     subject::String = ""
-    sid::String = ""
+    sid::Int64 = 0
     replyto::Union{String, Nothing} = nothing
     header_bytes::Int64 = 0
     total_bytes::Int64 = 0
     payload::AbstractVector{UInt8} = UInt8[]
-    arg_buffers::Vector{Vector{UInt8}} = [UInt8[], UInt8[], UInt8[], UInt8[], UInt8[]]
-    current_arg_buffer::Int64 = 0
+    args::Vector{UnitRange{Int64}} = UnitRange{Int64}[0:0, 0:0, 0:0, 0:0, 0:0]
+    argno::Int64 = 0
+    arg_begin::Int64 = -1
     payload_buffer::Vector{UInt8} = UInt8[]
     results::Vector{ProtocolMessage} = ProtocolMessage[]
 end
 
-function next_arg(data::ParserData)
-    if data.current_arg_buffer == 0 || !isempty(data.arg_buffers[data.current_arg_buffer])
-        data.current_arg_buffer += 1
-    end
-end
-
-function write_arg(byte::UInt8, data::ParserData)
-    push!(data.arg_buffers[data.current_arg_buffer], byte)
-end
-
-function parse_error(data::ParserData)
-    error("parser error")
+function parse_error(buffer, pos, data::ParserData)
+    buf = String(buffer[max(begin, pos-100):min(end,pos+100)])
+    error("Parser error on position $pos: $buf\nBuffer length: $(length(buffer))")
 end
 
 function parser_loop(f, io::IO)
@@ -59,7 +51,7 @@ function parser_loop(f, io::IO)
         f(data.results)
         handler_call_time = time()
         # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
-        data.results = ProtocolMessage[]
+        empty!(data.results)
     end
 end
 
@@ -67,10 +59,20 @@ macro uint8(char::Char)
     convert(UInt8, char)
 end
 
+
+@inline function bytes_to_int64(buffer, range)::Int64
+    ret = Int64(0)
+    for i in range
+        ret = (ret << 3) + (ret << 1)
+        ret += buffer[i] - 0x30
+    end
+    ret
+end
+
 function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
     pos = 0
     len = length(buffer)
-    while pos < length(buffer)
+    while pos < len
         pos += 1
         byte = buffer[pos]
         if data.state == OP_START
@@ -89,19 +91,19 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             elseif byte == (@uint8 'I') || byte == (@uint8 'i')
                 data.state = OP_I
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PLUS
             if byte == (@uint8 'O') || byte == (@uint8 'o')
                 data.state = OP_PLUS_O
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PLUS_O
             if byte == (@uint8 'K') || byte == (@uint8 'k')
                 data.state = OP_PLUS_OK
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PLUS_OK
             if byte == (@uint8 '\r')
@@ -109,31 +111,31 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 push!(data.results, Ok())
                 data.state = OP_START
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MINUS 
             if byte == (@uint8 'E') || byte == (@uint8 'e')
                 data.state = OP_MINUS_E
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MINUS_E
             if byte == (@uint8 'R') || byte == (@uint8 'r')
                 data.state = OP_MINUS_ER
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MINUS_ER
             if byte == (@uint8 'R') || byte == (@uint8 'r')
                 data.state = OP_MINUS_ERR
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MINUS_ERR
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 data.state = OP_MINUS_ERR_SPC
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MINUS_ERR_SPC
             if byte == @uint8 ' '
@@ -141,7 +143,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             elseif byte == @uint8 '\''
                 data.state = MINUS_ERR_ARG
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == MINUS_ERR_ARG
             if byte == (@uint8 '\'')
@@ -156,101 +158,120 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             if byte == (@uint8 'S') || byte == (@uint8 's')
                 data.state = OP_MS
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MS
             if byte == (@uint8 'G') || byte == (@uint8 'g')
                 data.state = OP_MSG
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MSG
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 data.state = OP_MSG_SPC
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_MSG_SPC
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 # Skip all spaces.
             else
-                next_arg(data)
-                write_arg(byte, data)
+                data.arg_begin = pos
+                data.argno += 1
+                if pos == len
+                    rest = readuntil(io, "\r\n")
+                    append!(buffer, rest, "\r\n")
+                    len += length(rest) + 2
+                end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
+            if pos == len && byte != (@uint8 '\n')
+                rest = readuntil(io, "\r\n")
+                len += length(rest) + 2
+                append!(buffer, rest, "\r\n")
+            end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
-                next_arg(data)
+                argrange = range(data.arg_begin, pos-1)
+                isempty(argrange) || (data.args[data.argno] = argrange)
+                data.arg_begin = pos+1
+                isempty(argrange)  || (data.argno += 1)
             elseif byte == (@uint8 '\r')
-                # Nothing.
+                data.args[data.argno] =  range(data.arg_begin, (pos-1))
             elseif byte == (@uint8 '\n')
-                data.subject = String(data.arg_buffers[1])
-                data.sid = String(data.arg_buffers[2])
-                if data.has_header
-                    if data.current_arg_buffer == 4
-                        data.replyto = nothing
-                        data.header_bytes = parse(Int64, String(data.arg_buffers[3]))
-                        data.total_bytes = parse(Int64, String(data.arg_buffers[4]))
-                    elseif data.current_arg_buffer == 5
-                        data.replyto = String(data.arg_buffers[3])
-                        data.header_bytes = parse(Int64, String(data.arg_buffers[4]))
-                        data.total_bytes = parse(Int64, String(data.arg_buffers[5]))
+                subject_range = data.args[1]
+                payload_start = pos+1
+                reply_to_range, header_range, payload_range = if data.has_header
+                    if data.argno == 4
+                        header_bytes = bytes_to_int64(buffer, data.args[3])
+                        total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.total_bytes = total_bytes
+                        1:0, range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
+                    elseif data.argno == 5
+                        header_bytes = bytes_to_int64(buffer, data.args[4])
+                        total_bytes = bytes_to_int64(buffer, data.args[5])
+                        data.total_bytes = total_bytes
+                        data.args[3], range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
                     else
-                        parse_error(data)
+                        parse_error(buffer, pos, data)
                     end
                 else
-                    if data.current_arg_buffer == 3
-                        data.replyto = nothing
-                        data.header_bytes = 0
-                        data.total_bytes = parse(Int64, String(data.arg_buffers[3]))
-                    elseif data.current_arg_buffer == 4
-                        data.replyto = String(data.arg_buffers[3])
-                        data.header_bytes = 0
-                        data.total_bytes = parse(Int64, String(data.arg_buffers[4]))
+                    if data.argno == 3
+                        total_bytes = bytes_to_int64(buffer, data.args[3])
+                        data.total_bytes = total_bytes
+                        1:0, 1:0, range(pos+1, pos + total_bytes)
+                    elseif data.argno == 4
+                        total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.total_bytes = total_bytes
+                        data.args[3], 1:0, range(pos+1, pos + total_bytes)
                     else
-                        parse_error(data)
+                        parse_error(buffer, pos, data)
                     end
                 end
-                data.current_arg_buffer = 0
                 ending = pos + data.total_bytes + 2
                 if ending > len
-                    append!(buffer, read(io, ending - len))
+                    rest = read(io, ending - len)
+                    len += length(rest)
+                    append!(buffer, rest)
                 end
-                data.payload = @view buffer[(pos + 1):(pos + data.total_bytes)]
-                pos = pos + data.total_bytes + 1
-                data.state = MSG_END
+                payload_range = range(pos+1, pos + data.total_bytes)
+                pos = pos + data.total_bytes + 2
+                msg = MsgRaw(data.sid, buffer, subject_range, reply_to_range, header_range, payload_range)
+                push!(data.results, msg)
+                data.argno = 0
+                data.sid = 0
+                data.state = OP_START
             else
-                write_arg(byte, data)
+                if data.argno == 2
+                    data.sid = data.sid * 10
+                    data.sid += byte - 0x30
+                end
             end
-        elseif data.state == MSG_END
-            msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
-            push!(data.results, msg)
-            data.state = OP_START
         elseif data.state == OP_P
             if byte == (@uint8 'I') || byte == (@uint8 'i')
                 data.state = OP_PI
             elseif byte == (@uint8 'O') || byte == (@uint8 'o')
                 data.state = OP_PO
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_H
             if byte == (@uint8 'M') || byte == (@uint8 'm') 
                 data.state = OP_M
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PI 
             if byte == (@uint8 'N') || byte == (@uint8 'n') 
                 data.state = OP_PIN
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PIN
             if byte == (@uint8 'G') || byte == (@uint8 'g') 
                 data.state = OP_PING
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PING
             if byte == (@uint8 '\r')
@@ -259,19 +280,19 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 push!(data.results, Ping())
                 data.state = OP_START
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PO
             if byte == (@uint8 'N') || byte == (@uint8 'n') 
                 data.state = OP_PON
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PON
             if byte == (@uint8 'G') || byte == (@uint8 'g') 
                 data.state = OP_PONG
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_PONG
             if byte == (@uint8 '\r')
@@ -280,31 +301,31 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 push!(data.results, Pong())
                 data.state = OP_START
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_I
             if byte == (@uint8 'N') || byte == (@uint8 'n') 
                 data.state = OP_IN
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_IN
             if byte == (@uint8 'F') || byte == (@uint8 'f') 
                 data.state = OP_INF
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_INF
             if byte == (@uint8 'O') || byte == (@uint8 'o') 
                 data.state = OP_INFO
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_INFO
             if byte == (@uint8 ' ') || byte == (@uint8 '\t') 
                 data.state = OP_INFO_SPC
             else
-                parse_error(data)
+                parse_error(buffer, pos, data)
             end
         elseif data.state == OP_INFO_SPC
             if byte == (@uint8 ' ') || byte == (@uint8 '\t') 

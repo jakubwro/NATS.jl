@@ -77,7 +77,7 @@ function unsubscribe(
 end
 
 function unsubscribe(
-    sid::String;
+    sid::Int64;
     max_msgs::Union{Int, Nothing} = nothing
 )
     unsubscribe(scoped_connection(), sid; max_msgs)

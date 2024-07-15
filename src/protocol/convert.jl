@@ -15,6 +15,16 @@
 #
 ### Code:
 
+function convert(::Type{Msg}, msgraw::NATS.MsgRaw)
+    buffer = msgraw.buffer
+    sid = msgraw.sid
+    subject = String(buffer[msgraw.subject_range])
+    reply_to = isempty(msgraw.reply_to_range) ? nothing : String(buffer[msgraw.reply_to_range])
+    headers_length = length(msgraw.headers_range)
+    payload = @view buffer[msgraw.payload_range]
+    Msg(subject, sid, reply_to, headers_length, payload)
+end
+
 function convert(::Type{String}, msg::NATS.Msg)
     # Default representation on msg content is payload string.
     # This allows to use handlers that take just a payload string and do not use other fields.

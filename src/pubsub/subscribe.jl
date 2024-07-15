@@ -125,6 +125,7 @@ function next(connection, sub; no_wait = false, no_throw = false)
         end
     dec_stats(:msgs_pending, 1, sub_data.stats, connection.stats, state.stats)
     inc_stats(:msgs_handled, 1, sub_data.stats, connection.stats, state.stats)
+    msg = convert(Msg, msg)
     no_throw || throw_on_error_status(msg)
     msg
 end
@@ -162,6 +163,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
                     msgs = take!(subscription_channel)
                     for msg in msgs
                         handler_task = Threads.@spawn :default disable_sigint() do
+                            msg = convert(Msg, msg)
                             try
                                 dec_stats(:msgs_pending, 1, sub_stats, conn_stats, state.stats)
                                 inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
@@ -188,6 +190,7 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
                 while true
                     msgs = take!(subscription_channel)
                     for msg in msgs
+                        msg = convert(Msg, msg)
                         try
                             dec_stats(:msgs_pending, 1, sub_stats, conn_stats, state.stats)
                             inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)

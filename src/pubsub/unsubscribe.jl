@@ -33,7 +33,7 @@ end
 
 function unsubscribe(
     connection::Connection,
-    sid::String;
+    sid::Int64;
     max_msgs::Union{Int, Nothing} = nothing
 )
     usnub = Unsub(sid, max_msgs)

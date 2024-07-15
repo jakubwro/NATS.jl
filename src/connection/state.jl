@@ -44,7 +44,7 @@ end
 # """
 # Cleanup subscription data when no more messages are expected.
 # """
-function _delete_sub_data(nc::Connection, sid::String)
+function _delete_sub_data(nc::Connection, sid::Int64)
     @lock nc.lock begin
         sub_data = get(nc.sub_data, sid, nothing)
         if isnothing(sub_data)
@@ -64,7 +64,7 @@ end
 # """
 # Update state on message received.
 # """
-function _update_unsub_counter(nc::Connection, sid::String, n::Int64)
+function _update_unsub_counter(nc::Connection, sid::Int64, n::Int64)
     lock(nc.lock) do
         count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)

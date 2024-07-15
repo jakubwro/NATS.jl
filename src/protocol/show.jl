@@ -111,7 +111,10 @@ function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
     if hbytes > 0
         write(io, " $hbytes")
     end
-    write(io, " $(nbytes)\r\n")
+    write(io, ' ')
+    show(io, nbytes)
+    # write(io, string(nbytes))
+    write(io, "\r\n")
     write(io, pub.payload)
     write(io, "\r\n")
 end
