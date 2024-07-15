@@ -26,6 +26,51 @@ include("util.jl")
     NATS.status()
 end
 
+@testset "Pub-sub latency" begin
+    nc = NATS.connect()
+    published_time = 0.0
+    received_time = 0.0
+    nsamples = 26
+    with_connection(nc) do
+        subscribe("latency") do msg
+            received_time = time()
+        end
+        
+        latencies = []
+        for i in 1:nsamples
+            published_time = time()
+            publish("latency", "This is payload!")
+            sleep(0.25)
+            diff = 1000 * (received_time - published_time)
+            i == 1 || push!(latencies, diff) # skip first - compilation included
+        end
+        @info "Latencies in ms $(round.(latencies, digits = 2))"
+        @info "min: $(minimum(latencies)), max: $(maximum(latencies)), avg: $(sum(latencies)/length(latencies))"
+    end
+    drain(nc)
+end
+
+@testset "Request-reply latency" begin
+    nc = NATS.connect()
+    published_time = 0.0
+    received_time = 0.0
+    nsamples = 26
+    with_connection(nc) do
+        reply("latency") do msg
+            return "This is a reply!"
+        end
+        
+        latencies = []
+        for i in 1:nsamples
+            @timed _, tm = @timed request("latency", "This is request!")
+            i == 1 || push!(latencies, 1000*tm)
+        end
+        @info "Latencies in ms $(round.(latencies, digits = 2))"
+        @info "min: $(minimum(latencies)), max: $(maximum(latencies)), avg: $(sum(latencies)/length(latencies))"
+    end
+    drain(nc)
+end
+
 function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, spawn = false)
     empty!(connection.fallback_handlers)
     c = Channel(100000000)
@@ -45,9 +90,9 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
             Threads.atomic_add!(msgs_after_timeout, 1)
         end
     end
-    pub = NATS.Pub(subject, nothing, 0, uint8_vec("Hi!"))
+    sleep(1)
     t = Threads.@spawn :default begin
-        @time while isopen(tm)
+        @time for i in 1:1
             if time_first_pub == 0.0
                 time_first_pub = time()
             end
@@ -117,6 +162,12 @@ end
     connection = NATS.connect()
     counter = 0
     tm = Timer(1.0)
+    response = try request(connection, "help.please") catch err; err end
+    if response isa NATSError && response.code == 503
+        @info "No external service working, skipping test"
+        return
+    end
+    
     while isopen(tm)
         res = request(connection, "help.please")
         counter = counter + 1
