@@ -44,7 +44,7 @@ end
             diff = 1000 * (received_time - published_time)
             i == 1 || push!(latencies, diff) # skip first - compilation included
         end
-        @info "Latencies in ms $(round.(latencies, digits = 2))"
+        @info "Latencies in ms: $(round.(latencies, digits = 2))"
         @info "min: $(minimum(latencies)), max: $(maximum(latencies)), avg: $(sum(latencies)/length(latencies))"
     end
     drain(nc)
@@ -65,7 +65,7 @@ end
             @timed _, tm = @timed request("latency", "This is request!")
             i == 1 || push!(latencies, 1000*tm)
         end
-        @info "Latencies in ms $(round.(latencies, digits = 2))"
+        @info "Latencies in ms: $(round.(latencies, digits = 2))"
         @info "min: $(minimum(latencies)), max: $(maximum(latencies)), avg: $(sum(latencies)/length(latencies))"
     end
     drain(nc)
