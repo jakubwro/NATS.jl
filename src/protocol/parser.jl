@@ -36,8 +36,6 @@ end
 
 function parse_error(buffer, pos, data::ParserData)
     buf = String(buffer[max(begin, pos-100):min(end,pos+100)])
-    # @error data
-    @info String(copy(buffer))
     error("Parser error on position $pos: $buf\nBuffer length: $(length(buffer))")
 end
 
@@ -54,7 +52,6 @@ function parser_loop(f, io::IO)
         handler_call_time = time()
         # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
         empty!(data.results)
-        # sleep(0.001)
     end
 end
 
@@ -190,10 +187,8 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             end
         elseif data.state == MSG_ARG
             if pos == len && byte != (@uint8 '\n')
-                # rest = read(io, 1)
                 rest = readuntil(io, "\r\n")
                 len += length(rest) + 2
-                # @info "new len" len
                 append!(buffer, rest, "\r\n")
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
@@ -204,9 +199,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             elseif byte == (@uint8 '\r')
                 data.args[data.argno] =  range(data.arg_begin, (pos-1))
             elseif byte == (@uint8 '\n')
-                # args = map(a -> String(buffer[a]), data.args) 
                 subject_range = data.args[1]
-                # sid = bytes_to_int64(buffer, data.args[2])
                 payload_start = pos+1
                 reply_to_range, header_range, payload_range = if data.has_header
                     if data.argno == 4
@@ -232,31 +225,24 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                         data.total_bytes = total_bytes
                         data.args[3], 1:0, range(pos+1, pos + total_bytes)
                     else
-                        # @info map(a -> String(buffer[a]), data.args)
                         parse_error(buffer, pos, data)
                     end
                 end
                 ending = pos + data.total_bytes + 2
                 if ending > len
-                    # @error "expand"
                     rest = read(io, ending - len)
-                    # @warn "pl" String(buffer[end-25:end]) length(rest) String(copy(rest))
                     len += length(rest)
                     append!(buffer, rest)
                 end
-                # data.payload = @view buffer[(pos + 1):(pos + data.total_bytes)]
                 payload_range = range(pos+1, pos + data.total_bytes)
                 pos = pos + data.total_bytes + 2
-                # msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
                 msg = MsgRaw(data.sid, buffer, subject_range, reply_to_range, header_range, payload_range)
                 push!(data.results, msg)
                 data.argno = 0
-                # @info sid
                 data.sid = 0
                 data.state = OP_START
             else
                 if data.argno == 2
-                    # @show convert(Char, byte)
                     data.sid = data.sid * 10
                     data.sid += byte - 0x30
                 end

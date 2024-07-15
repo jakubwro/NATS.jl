@@ -159,9 +159,7 @@ struct Unsub <: ProtocolMessage
     max_msgs::Union{Int, Nothing}
 end
 
-"""
-Representation of MSG returned by parser, it will be converted to `Msg` struct in subscription handler task.
-"""
+# Representation of MSG returned by parser, it will be converted to `Msg` struct in subscription handler task.
 struct MsgRaw <: ProtocolMessage
     sid::Int64
     buffer::Vector{UInt8}
