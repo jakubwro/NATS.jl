@@ -38,12 +38,12 @@ function process(nc::Connection, ::Pong)
 end
 
 function process(nc::Connection, batch::Vector{ProtocolMessage})
-    groups = Dict{Int64, Vector{Msg}}()
+    groups = Dict{Int64, Vector{MsgRaw}}()
     for msg in batch
-        if msg isa Msg
+        if msg isa MsgRaw
             arr = get(groups, msg.sid, nothing)
             if isnothing(arr)
-                arr = Msg[]
+                arr = MsgRaw[]
                 groups[msg.sid] = arr
             end
             push!(arr, msg)

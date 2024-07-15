@@ -27,7 +27,8 @@
     header_bytes::Int64 = 0
     total_bytes::Int64 = 0
     payload::AbstractVector{UInt8} = UInt8[]
-    args::Vector{UnitRange{Int64}} = UnitRange{Int64}[]
+    args::Vector{UnitRange{Int64}} = UnitRange{Int64}[0:0, 0:0, 0:0, 0:0, 0:0]
+    argno::Int64 = 0
     arg_begin::Int64 = -1
     payload_buffer::Vector{UInt8} = UInt8[]
     results::Vector{ProtocolMessage} = ProtocolMessage[]
@@ -36,6 +37,7 @@ end
 function parse_error(buffer, pos, data::ParserData)
     buf = String(buffer[max(begin, pos-100):min(end,pos+100)])
     # @error data
+    @info String(copy(buffer))
     error("Parser error on position $pos: $buf\nBuffer length: $(length(buffer))")
 end
 
@@ -50,9 +52,9 @@ function parser_loop(f, io::IO)
         batch_ready_time = time()
         f(data.results)
         handler_call_time = time()
-        @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
-        data.results = ProtocolMessage[]
-        sleep(0.001)
+        # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
+        empty!(data.results)
+        # sleep(0.001)
     end
 end
 
@@ -63,10 +65,9 @@ end
 
 @inline function bytes_to_int64(buffer, range)::Int64
     ret = Int64(0)
-    m = Int64(1)
     for i in range
-        ret = m * ret + Int64(buffer[i] - (@uint8 '0'))
-        m = m * 10
+        ret = (ret << 3) + (ret << 1)
+        ret += buffer[i] - 0x30
     end
     ret
 end
@@ -179,6 +180,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 # Skip all spaces.
             else
                 data.arg_begin = pos
+                data.argno += 1
                 if pos == len
                     rest = readuntil(io, "\r\n")
                     append!(buffer, rest, "\r\n")
@@ -190,48 +192,45 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             if pos == len && byte != (@uint8 '\n')
                 # rest = read(io, 1)
                 rest = readuntil(io, "\r\n")
-                 
-                # @info data.args
-                # @info map(a -> String(buffer[a]), data.args)
-                # @info rest 
-                # @warn "loading args" rest pos len length(buffer) byte
-                # @warn "buffer" buffer[pos:end]
-                # @info "old len" len length(buffer)
                 len += length(rest) + 2
                 # @info "new len" len
                 append!(buffer, rest, "\r\n")
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
-                isempty(argrange) || push!(data.args, argrange)
+                isempty(argrange) || (data.args[data.argno] = argrange)
                 data.arg_begin = pos+1
+                isempty(argrange)  || (data.argno += 1)
             elseif byte == (@uint8 '\r')
-                push!(data.args, range(data.arg_begin,(pos-1)))
+                data.args[data.argno] =  range(data.arg_begin, (pos-1))
             elseif byte == (@uint8 '\n')
                 # args = map(a -> String(buffer[a]), data.args) 
-                data.subject = String(buffer[data.args[1]])
-                data.sid = bytes_to_int64(buffer, data.args[2])
-                if data.has_header
-                    if length(data.args) == 4
-                        data.replyto = nothing
-                        data.header_bytes = bytes_to_int64(buffer, data.args[3])
-                        data.total_bytes = bytes_to_int64(buffer, data.args[4])
-                    elseif length(data.args) == 5
-                        data.replyto = String(buffer[data.args[3]])
-                        data.header_bytes = bytes_to_int64(buffer, data.args[4])
-                        data.total_bytes = bytes_to_int64(buffer, data.args[5])
+                subject_range = data.args[1]
+                # sid = bytes_to_int64(buffer, data.args[2])
+                payload_start = pos+1
+                reply_to_range, header_range, payload_range = if data.has_header
+                    if data.argno == 4
+                        header_bytes = bytes_to_int64(buffer, data.args[3])
+                        total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.total_bytes = total_bytes
+                        1:0, range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
+                    elseif data.argno == 5
+                        header_bytes = bytes_to_int64(buffer, data.args[4])
+                        total_bytes = bytes_to_int64(buffer, data.args[5])
+                        data.total_bytes = total_bytes
+                        data.args[3], range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
                     else
                         parse_error(buffer, pos, data)
                     end
                 else
-                    if length(data.args) == 3
-                        data.replyto = nothing
-                        data.header_bytes = 0
-                        data.total_bytes = bytes_to_int64(buffer, data.args[3])
-                    elseif length(data.args) == 4
-                        data.replyto = String(buffer[data.args[3]])
-                        data.header_bytes = 0
-                        data.total_bytes = bytes_to_int64(buffer, data.args[4])
+                    if data.argno == 3
+                        total_bytes = bytes_to_int64(buffer, data.args[3])
+                        data.total_bytes = total_bytes
+                        1:0, 1:0, range(pos+1, pos + total_bytes)
+                    elseif data.argno == 4
+                        total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.total_bytes = total_bytes
+                        data.args[3], 1:0, range(pos+1, pos + total_bytes)
                     else
                         # @info map(a -> String(buffer[a]), data.args)
                         parse_error(buffer, pos, data)
@@ -245,12 +244,22 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                     len += length(rest)
                     append!(buffer, rest)
                 end
-                data.payload = @view buffer[(pos + 1):(pos + data.total_bytes)]
+                # data.payload = @view buffer[(pos + 1):(pos + data.total_bytes)]
+                payload_range = range(pos+1, pos + data.total_bytes)
                 pos = pos + data.total_bytes + 2
-                msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
+                # msg = Msg(data.subject, data.sid, data.replyto, data.header_bytes, data.payload)
+                msg = MsgRaw(data.sid, buffer, subject_range, reply_to_range, header_range, payload_range)
                 push!(data.results, msg)
-                empty!(data.args)
+                data.argno = 0
+                # @info sid
+                data.sid = 0
                 data.state = OP_START
+            else
+                if data.argno == 2
+                    # @show convert(Char, byte)
+                    data.sid = data.sid * 10
+                    data.sid += byte - 0x30
+                end
             end
         elseif data.state == OP_P
             if byte == (@uint8 'I') || byte == (@uint8 'i')

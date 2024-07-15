@@ -1,5 +1,7 @@
 @testset "Parsing server operations." begin
 
+    unpack(msgs) = map(msgs) do msg; msg isa NATS.MsgRaw ? convert(NATS.Msg, msg) : msg end
+
     expected = [
         NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
         NATS.Msg("FOO.BAR", 9, nothing, 0, uint8_vec("Hello World")),
@@ -30,7 +32,7 @@
     io = IOBuffer(data_to_parse)
     result = NATS.ProtocolMessage[]
     NATS.parser_loop(io) do msgs
-        append!(result, msgs)
+        append!(result, unpack(msgs))
     end
     @test result == expected
 
@@ -50,7 +52,7 @@
     io = IOBuffer(data_to_parse)
     result = NATS.ProtocolMessage[]
     NATS.parser_loop(io) do msgs
-        append!(result, msgs)
+        append!(result, unpack(msgs))
     end
     @test result == expected
 
@@ -70,7 +72,7 @@
     io = IOBuffer(data_to_parse)
     result = NATS.ProtocolMessage[]
     NATS.parser_loop(io) do msgs
-        append!(result, msgs)
+        append!(result, unpack(msgs))
     end
     @test result == expected
 

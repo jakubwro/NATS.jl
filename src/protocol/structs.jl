@@ -160,6 +160,18 @@ struct Unsub <: ProtocolMessage
 end
 
 """
+Representation of MSG returned by parser, it will be converted to `Msg` struct in subscription handler task.
+"""
+struct MsgRaw <: ProtocolMessage
+    sid::Int64
+    buffer::Vector{UInt8}
+    subject_range::UnitRange{Int64}
+    reply_to_range::UnitRange{Int64}
+    headers_range::UnitRange{Int64}
+    payload_range::UnitRange{Int64}
+end
+
+"""
 The `MSG` protocol message is used to deliver an application message to the client.
 
 The HMSG message is the same as MSG, but extends the message payload with headers. See also [ADR-4 NATS Message Headers](https://github.com/nats-io/nats-architecture-and-design/blob/main/adr/ADR-4.md).
