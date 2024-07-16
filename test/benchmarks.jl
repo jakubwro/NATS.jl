@@ -92,7 +92,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     end
     sleep(1)
     t = Threads.@spawn :default begin
-        @time for i in 1:1
+        @time while isopen(tm)
             if time_first_pub == 0.0
                 time_first_pub = time()
             end
