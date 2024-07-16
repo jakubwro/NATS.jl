@@ -165,7 +165,7 @@ struct MsgRaw <: ProtocolMessage
     buffer::Vector{UInt8}
     subject_range::UnitRange{Int64}
     reply_to_range::UnitRange{Int64}
-    headers_range::UnitRange{Int64}
+    header_bytes::Int64
     payload_range::UnitRange{Int64}
 end
 
