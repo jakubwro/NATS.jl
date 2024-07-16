@@ -21,15 +21,15 @@
 @kwdef mutable struct ParserData
     state::ParserState = OP_START
     has_header::Bool = false
-    subject::String = ""
+    subject_range::UnitRange{Int64} = 1:0
     sid::Int64 = 0
-    replyto::Union{String, Nothing} = nothing
+    reply_to_range::UnitRange{Int64} = 1:0
+    payload_start = 0
     header_bytes::Int64 = 0
     total_bytes::Int64 = 0
-    payload::AbstractVector{UInt8} = UInt8[]
-    args::Vector{UnitRange{Int64}} = UnitRange{Int64}[0:0, 0:0, 0:0, 0:0, 0:0]
-    argno::Int64 = 0
     arg_begin::Int64 = -1
+    arg_no::Int64 = 0
+    args::Vector{UnitRange{Int64}} = UnitRange{Int64}[0:0, 0:0, 0:0, 0:0, 0:0]
     payload_buffer::Vector{UInt8} = UInt8[]
     results::Vector{ProtocolMessage} = ProtocolMessage[]
 end
@@ -177,7 +177,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 # Skip all spaces.
             else
                 data.arg_begin = pos
-                data.argno += 1
+                data.arg_no += 1
                 if pos == len
                     rest = readuntil(io, "\r\n")
                     append!(buffer, rest, "\r\n")
@@ -193,37 +193,34 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
-                isempty(argrange) || (data.args[data.argno] = argrange)
+                isempty(argrange) || (data.args[data.arg_no] = argrange)
                 data.arg_begin = pos+1
-                isempty(argrange)  || (data.argno += 1)
+                isempty(argrange)  || (data.arg_no += 1)
             elseif byte == (@uint8 '\r')
-                data.args[data.argno] =  range(data.arg_begin, (pos-1))
+                data.args[data.arg_no] =  range(data.arg_begin, (pos-1))
             elseif byte == (@uint8 '\n')
                 subject_range = data.args[1]
-                payload_start = pos+1
-                reply_to_range, header_range, payload_range = if data.has_header
-                    if data.argno == 4
-                        header_bytes = bytes_to_int64(buffer, data.args[3])
-                        total_bytes = bytes_to_int64(buffer, data.args[4])
-                        data.total_bytes = total_bytes
-                        1:0, range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
-                    elseif data.argno == 5
-                        header_bytes = bytes_to_int64(buffer, data.args[4])
-                        total_bytes = bytes_to_int64(buffer, data.args[5])
-                        data.total_bytes = total_bytes
-                        data.args[3], range(payload_start, payload_start + header_bytes - 1), range(payload_start + header_bytes + 1, payload_start + total_bytes)
+                if data.has_header
+                    if data.arg_no == 4
+                        data.header_bytes = bytes_to_int64(buffer, data.args[3])
+                        data.total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.reply_to_range = 1:0
+                    elseif data.arg_no == 5
+                        data.header_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.total_bytes = bytes_to_int64(buffer, data.args[5])
+                        data.reply_to_range = data.args[3]
                     else
                         parse_error(buffer, pos, data)
                     end
                 else
-                    if data.argno == 3
-                        total_bytes = bytes_to_int64(buffer, data.args[3])
-                        data.total_bytes = total_bytes
-                        1:0, 1:0, range(pos+1, pos + total_bytes)
-                    elseif data.argno == 4
-                        total_bytes = bytes_to_int64(buffer, data.args[4])
-                        data.total_bytes = total_bytes
-                        data.args[3], 1:0, range(pos+1, pos + total_bytes)
+                    if data.arg_no == 3
+                        data.header_bytes = 0
+                        data.total_bytes = bytes_to_int64(buffer, data.args[3])
+                        data.reply_to_range = 1:0
+                    elseif data.arg_no == 4
+                        data.total_bytes = bytes_to_int64(buffer, data.args[4])
+                        data.header_bytes = 0
+                        data.reply_to_range = data.args[3]
                     else
                         parse_error(buffer, pos, data)
                     end
@@ -236,13 +233,13 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 end
                 payload_range = range(pos+1, pos + data.total_bytes)
                 pos = pos + data.total_bytes + 2
-                msg = MsgRaw(data.sid, buffer, subject_range, reply_to_range, header_range, payload_range)
+                msg = MsgRaw(data.sid, buffer, subject_range, data.reply_to_range, data.header_bytes, payload_range)
                 push!(data.results, msg)
-                data.argno = 0
+                data.arg_no = 0
                 data.sid = 0
                 data.state = OP_START
             else
-                if data.argno == 2
+                if data.arg_no == 2
                     data.sid = data.sid * 10
                     data.sid += byte - 0x30
                 end

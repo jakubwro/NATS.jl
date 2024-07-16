@@ -20,7 +20,7 @@ function convert(::Type{Msg}, msgraw::NATS.MsgRaw)
     sid = msgraw.sid
     subject = String(buffer[msgraw.subject_range])
     reply_to = isempty(msgraw.reply_to_range) ? nothing : String(buffer[msgraw.reply_to_range])
-    headers_length = length(msgraw.headers_range)
+    headers_length = msgraw.header_bytes
     payload = @view buffer[msgraw.payload_range]
     Msg(subject, sid, reply_to, headers_length, payload)
 end
