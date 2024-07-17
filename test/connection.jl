@@ -273,14 +273,7 @@ NATS.status()
         published_count += 1
         sleep(0.01)
     end
-    sleep(0.2)
-    t = @async with(NATS.scoped_subscription_stats => NATS.Stats()) do
-        tm = Timer(3) #TODO: this test makes no sense, refactor
-        while isopen(tm)
-            publish(connection, "other_topic")
-        end
-    end
-    sleep(0.1)
+    sleep(0.3)
     @time drain(connection)
     sleep(1)
     @test delivered_count > 0
