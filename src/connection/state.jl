@@ -26,7 +26,7 @@ const state = State()
 # Allow other packages to handle unexpected messages.
 # JetStream might want to `nak` messages that need acknowledgement.
 function install_fallback_handler(f, nc::Connection)
-    @lock state.lock begin
+    @lock nc.lock begin
         if !(f in nc.fallback_handlers)
             push!(nc.fallback_handlers, f)
         end

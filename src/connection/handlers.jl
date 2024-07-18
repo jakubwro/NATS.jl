@@ -82,7 +82,7 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
             end
         else
             if isnothing(fallbacks)
-                fallbacks = lock(state.lock) do
+                fallbacks = lock(nc.lock) do
                     collect(nc.fallback_handlers)
                 end
             end
