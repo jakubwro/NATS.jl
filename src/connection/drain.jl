@@ -18,8 +18,8 @@
 
 # Actual drain logic, for thread safety executed in connection controller task.
 function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeout))
-    all_subs = @lock nc.lock copy(nc.sub_data)
-    for (sid, _) in all_subs
+    sids = @lock nc.lock copy(keys(nc.sub_data))
+    for sid in sids
         send(nc, Unsub(sid, 0))
     end
     sleep(nc.drain_poll)
@@ -32,7 +32,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeou
         end
         sleep(nc.drain_poll)
     end
-    for (sid, _) in all_subs
+    for sid in sids
         _delete_sub_data(nc, sid)
     end
     # At this point no more publications can be done. Wait for `send_buffer` flush.
