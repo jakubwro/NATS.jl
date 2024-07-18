@@ -44,6 +44,6 @@ function drain(connection::Connection, sub::Sub; timer::Timer = Timer(connection
         end
         sleep(connection.drain_poll)
     end
-    _delete_sub_data(connection, sub.sid)
+    cleanup_sub_resources(connection, sub.sid)
     nothing
 end

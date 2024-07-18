@@ -44,7 +44,7 @@ end
 # """
 # Cleanup subscription data when no more messages are expected.
 # """
-function _delete_sub_data(nc::Connection, sid::Int64)
+function cleanup_sub_resources(nc::Connection, sid::Int64)
     @lock nc.lock begin
         sub_data = get(nc.sub_data, sid, nothing)
         if isnothing(sub_data)
@@ -62,15 +62,16 @@ function _delete_sub_data(nc::Connection, sid::Int64)
 end
 
 # """
-# Update state on message received.
+# Update state on message received and conditionaly do cleanup.
+# Check if previously unsubscribed sub needs cleanup when no more messages are expected.
 # """
-function _update_unsub_counter(nc::Connection, sid::Int64, n::Int64)
+function cleanup_sub_resources_if_all_msgs_received(nc::Connection, sid::Int64, n::Int64)
     lock(nc.lock) do
         count = get(nc.unsubs, sid, nothing)
         if !isnothing(count)
             count -= n
             if count <= 0
-                _delete_sub_data(nc, sid)
+                cleanup_sub_resources(nc, sid)
             else
                 nc.unsubs[sid] = count
             end

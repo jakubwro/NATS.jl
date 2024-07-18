@@ -54,12 +54,13 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
 
     fallbacks = nothing
     for (sid, msgs) in groups
-        n = length(msgs)
+        n_received = length(msgs)
+        n = n_received
         sub_data = @lock nc.lock get(nc.sub_data, sid, nothing)
         if !isnothing(sub_data)
             sub_stats = sub_data.stats
             max_msgs = sub_data.channel.sz_max 
-            n_dropped = sub_stats.msgs_pending + n - max_msgs
+            n_dropped = max(0, sub_stats.msgs_pending + n_received - max_msgs)
             if n_dropped > 0
                 inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
                 n -= n_dropped
@@ -77,9 +78,8 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
                     dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
                     inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
                 end
-                # TODO: here should be n + n_dropped
-                _update_unsub_counter(nc, sid, n)
             end
+            cleanup_sub_resources_if_all_msgs_received(nc, sid, n_received)
         else
             if isnothing(fallbacks)
                 fallbacks = lock(nc.lock) do

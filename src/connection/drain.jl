@@ -33,7 +33,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeou
         sleep(nc.drain_poll)
     end
     for sid in sids
-        _delete_sub_data(nc, sid)
+        cleanup_sub_resources(nc, sid)
     end
     # At this point no more publications can be done. Wait for `send_buffer` flush.
     while !is_send_buffer_flushed(nc)
