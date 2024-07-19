@@ -15,7 +15,7 @@ jobs:
 
     services:
       nats-unused:
-        image: nats:2.10.7
+        image: nats:2.10.18
         
     steps:
       - name: "Start nats with jetstream"
