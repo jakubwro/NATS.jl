@@ -113,19 +113,19 @@ end
             publish(sub_nc, subject_ack, "ack")
         end
     end
-    sleep(0.2)
+    sleep(1)
 
     pub_nc = NATS.connect()
     ack_count = Threads.Atomic{Int64}(0)
     subscribe(pub_nc, subject_ack) do msg
         Threads.atomic_add!(ack_count, 1)
     end
-    sleep(0.2)
+    sleep(1)
 
     for i in 1:n_pubs
         publish(pub_nc, subject, "Test 10k subs: msg $i.")
     end
-    sleep(2)
+    sleep(3)
     drain(sub_nc)
     drain(pub_nc)
     sub_stats = NATS.stats(sub_nc)
