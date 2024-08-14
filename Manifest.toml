@@ -146,9 +146,9 @@ version = "2023.1.10"
 
 [[deps.NanoDates]]
 deps = ["Dates", "Parsers"]
-git-tree-sha1 = "382971d0eaee7e6d8f86a8c418fff149d66e7fdb"
+git-tree-sha1 = "22a4727a7e24fa9024dc8331b40ccf8a70f922c3"
 uuid = "46f1a544-deae-4307-8689-c12aa3c955c6"
-version = "0.3.3"
+version = "1.0.2"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"

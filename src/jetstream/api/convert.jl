@@ -16,9 +16,7 @@ end
 
 function convert(::Type{Union{T, ApiError}}, msg::NATS.Msg) where { T <: ApiResponse }
     # TODO: check headers
-    pl = NATS.payload(msg)
-    pl = replace(pl, "0001-01-01T00:00:00Z" => "0001-01-01T00:00:00.000Z")
-    response  = JSON3.read(pl)
+    response  = JSON3.read(@view msg.payload[begin+msg.headers_length:end])
     if haskey(response, :error)
         StructTypes.constructfrom(ApiError, response.error)
     else

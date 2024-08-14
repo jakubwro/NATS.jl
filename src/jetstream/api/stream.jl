@@ -126,13 +126,11 @@ end
     "Sequence number of the first message in the Stream"
     first_seq::UInt64
     "The timestamp of the first message in the Stream"
-    # first_ts::Union{NanoDate, Nothing} = nothing
-    first_ts::Union{String, Nothing} = nothing
+    first_ts::Union{NanoDate, Nothing} = nothing
     "Sequence number of the last message in the Stream"
     last_seq::UInt64
     "The timestamp of the last message in the Stream"
-    # last_ts::Union{NanoDate, Nothing} = nothing
-    last_ts::Union{String, Nothing} = nothing
+    last_ts::Union{NanoDate, Nothing} = nothing
     "IDs of messages that were deleted using the Message Delete API or Interest based streams removing messages out of order"
     deleted::Union{Vector{UInt64}, Nothing} = nothing
     # "Subjects and their message counts when a subjects_filter was set"
