@@ -58,6 +58,7 @@ Subscribe to a subject in synchronous mode. Client is supposed to call `next` ma
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
 - `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
+- `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds, can be configured globally with `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` env variable
 """
 function subscribe(
     connection::Connection,
@@ -91,6 +92,8 @@ function subscribe(
 end
 
 """
+$(SIGNATURES)
+
 Obtains next message for synchronous subscription.
 
 Optional keyword arguments:
@@ -144,12 +147,30 @@ function next(connection::Connection, sub::Sub; no_wait = false, no_throw = fals
     msg
 end
 
+"""
+$(SIGNATURES)
+
+Obtains next message for synchronous subscription converting it to requested `T` type.
+
+Optional keyword arguments:
+- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
+- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+"""
 function next(T::Type, connection::Connection, sub::Sub; no_wait = false, no_throw = false)::Union{T, Nothing}
     find_msg_conversion_or_throw(T)
     msg = next(connection, sub; no_wait, no_throw)
     isnothing(msg) ? nothing : convert(T, msg) #TODO: invokelatest
 end
 
+"""
+$(SIGNATURES)
+
+Obtains batch of messages for synchronous subscription.
+
+Optional keyword arguments:
+- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
+- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+"""
 function next(connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
     msgs = []
     for i in 1:batch
@@ -160,6 +181,15 @@ function next(connection::Connection, sub::Sub, batch::Integer; no_wait = false,
     msgs
 end
 
+"""
+$(SIGNATURES)
+
+Obtains batch of messages for synchronous subscription converting them to reqested `T` type.
+
+Optional keyword arguments:
+- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
+- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+"""
 function next(T::Type, connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{T}
     find_msg_conversion_or_throw(T)
     convert.(T, next(connection, sub, batch; no_wait, no_throw)) #TODO: invokelatest
