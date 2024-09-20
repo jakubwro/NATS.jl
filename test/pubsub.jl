@@ -2,6 +2,7 @@
 using Test
 using NATS
 using Random
+using JSON3
 
 @testset "Publish subscribe" begin
     c = Channel()
@@ -98,6 +99,58 @@ NATS.status()
     @test_throws ErrorException subscribe(nc, subject) do x, y, z
         "nothing to do"
     end
+end
+
+@testset "Synchronous subscriptions" begin
+    subject = randstring(8)
+    sub = subscribe(nc, subject)
+    
+    msg = next(nc, sub; no_wait = true)
+    @test isnothing(msg)
+
+    @async begin
+        for i in 1:100
+            sleep(0.01)
+            publish(nc, subject, """{"x": 1}""")
+        end
+        sleep(0.2)
+        unsubscribe(nc, sub)
+    end
+
+    msg = next(nc, sub)
+    @test msg isa NATS.Msg
+
+    json = next(JSON3.Object, nc, sub)
+    @test json.x == 1
+
+    msgs = next(nc, sub, 10)
+    @test msgs isa Vector{NATS.Msg}
+    @test length(msgs) == 10
+
+    jsons = next(JSON3.Object, nc, sub, 10)
+    @test length(jsons) == 10
+
+    sleep(2)
+
+    msgs = next(nc, sub, 78)
+    @test msgs isa Vector{NATS.Msg}
+    @test length(msgs) == 78
+
+    msgs = next(nc, sub, 100; no_wait = true, no_throw = true)
+    @test msgs isa Vector{NATS.Msg}
+    @test length(msgs) == 0
+
+    jsons = next(JSON3.Object, nc, sub, 100; no_throw = true, no_wait = true)
+    @test msgs isa Vector{NATS.Msg}
+    @test length(jsons) == 0
+
+    @test_throws "Client unsubscribed" next(nc, sub)
+    @test_throws "Client unsubscribed" next(JSON3.Object, nc, sub)
+    @test_throws "Client unsubscribed" next(nc, sub; no_wait = true)
+    @test_throws "Client unsubscribed" next(JSON3.Object, nc, sub)
+    @test_throws "Client unsubscribed" next(nc, sub, 2)
+    @test_throws "Client unsubscribed" next(JSON3.Object, nc, sub, 2)
+    @test isnothing(next(nc, sub; no_throw = true, no_wait = true))
 end
 
 @testset "10k subscriptions" begin

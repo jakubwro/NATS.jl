@@ -129,3 +129,19 @@ function request(
 )
     request(T, scoped_connection(), subject, data; timer)
 end
+
+function next(sub::Sub; no_wait = false, no_throw = false)::Union{Msg, Nothing}
+    next(scoped_connection(), sub::Subscription; no_wait = false, no_throw = false)
+end
+
+function next(T::Type, sub::Sub; no_wait = false, no_throw = false)::Union{T, Nothing}
+    next(T, scoped_connection(), sub::Subscription; no_wait = false, no_throw = false)
+end
+
+function next(sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
+    next(scoped_connection(), sub::Subscription; no_wait = false, no_throw = false)
+end
+
+function next(T::Type, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Type}
+    next(T, scoped_connection(), sub::Subscription; no_wait = false, no_throw = false)
+end

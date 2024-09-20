@@ -1,4 +1,5 @@
 using NATS, Test
+using JSON3
 
 @testset "Scoped connections" begin
     @test_throws ErrorException publish("some.random.subject")
@@ -44,4 +45,32 @@ using NATS, Test
         unsubscribe(sub2.sid)
     end
     drain(sc)
+end
+
+@testset "Scoped connections sync subscriptions" begin
+    sc = NATS.connect()
+
+    with_connection(sc) do 
+        sub = subscribe("subject_1")
+
+        publish("subject_1", "test")
+        msg = next(sub)
+        @test msg isa NATS.Msg
+        
+        publish("subject_1", "{}")
+        msg = next(JSON3.Object, sub)
+        @test msg isa JSON3.Object
+
+        publish("subject_1", "test")
+        msgs = next(sub, 1)
+        @test msgs isa Vector{NATS.Msg}
+        @test length(msgs) == 1
+
+        publish("subject_1", "{}")
+        jsons = next(JSON3.Object, sub, 1)
+        @test jsons isa Vector{JSON3.Object}
+        @test length(jsons) == 1
+
+        drain(sub)
+    end
 end

@@ -64,6 +64,7 @@ function subscribe(
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
     channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
+    monitoring_throttle_seconds::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
@@ -73,6 +74,19 @@ function subscribe(
         connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
     end
     send(connection, sub)
+    subscription_monitoring_task = Threads.@spawn :interactive disable_sigint() do
+        while isopen(subscription_channel) || Base.n_avail(subscription_channel) > 0
+            sleep(monitoring_throttle_seconds)
+            # Warn if subscription channel is too small.
+            level = Base.n_avail(subscription_channel) / subscription_channel.sz_max
+            if level > 0.8 # TODO: add to config.
+                stats = NATS.stats(connection, sub)
+                @warn "Subscription on $subject channel is full in $(100 * level) %, dropped messages: $(stats.msgs_dropped)"
+            end
+        end
+        # @debug "Subscription monitoring task finished" subject
+    end
+    errormonitor(subscription_monitoring_task)
     sub
 end
 
@@ -83,7 +97,7 @@ Optional keyword arguments:
 - `no_wait`: do not wait for next message, return `nothing` if buffer is empty
 - `no_throw`: do not throw exception, returns `nothing` if cannot get next message
 """
-function next(connection, sub; no_wait = false, no_throw = false)
+function next(connection::Connection, sub::Sub; no_wait = false, no_throw = false)::Union{Msg, Nothing}
     sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
     if isnothing(sub_data)
         no_throw && return nothing
@@ -128,6 +142,27 @@ function next(connection, sub; no_wait = false, no_throw = false)
     msg = convert(Msg, msg)
     no_throw || throw_on_error_status(msg)
     msg
+end
+
+function next(T::Type, connection::Connection, sub::Sub; no_wait = false, no_throw = false)::Union{T, Nothing}
+    find_msg_conversion_or_throw(T)
+    msg = next(connection, sub; no_wait, no_throw)
+    isnothing(msg) ? nothing : convert(T, msg) #TODO: invokelatest
+end
+
+function next(connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
+    msgs = []
+    for i in 1:batch
+        msg = next(connection, sub; no_wait, no_throw)
+        isnothing(msg) && break
+        push!(msgs, msg)
+    end
+    msgs
+end
+
+function next(T::Type, connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{T}
+    find_msg_conversion_or_throw(T)
+    convert.(T, next(connection, sub, batch; no_wait, no_throw)) #TODO: invokelatest
 end
 
 @kwdef mutable struct SubscriptionMonitoringData
