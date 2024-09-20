@@ -59,6 +59,15 @@ function with_connection(f, nc::Connection)
 end
 
 function subscribe(
+    subject::String;
+    queue_group::Union{String, Nothing} = nothing,
+    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
+    monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
+)
+    subscribe(scoped_connection(), subject; queue_group, channel_size, monitoring_throttle_seconds)
+end
+
+function subscribe(
     f,
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
@@ -128,4 +137,20 @@ function request(
     timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
 )
     request(T, scoped_connection(), subject, data; timer)
+end
+
+function next(sub::Sub; no_wait = false, no_throw = false)::Union{Msg, Nothing}
+    next(scoped_connection(), sub::Sub; no_wait = false, no_throw = false)
+end
+
+function next(T::Type, sub::Sub; no_wait = false, no_throw = false)::Union{T, Nothing}
+    next(T, scoped_connection(), sub::Sub; no_wait = false, no_throw = false)
+end
+
+function next(sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
+    next(scoped_connection(), sub, batch; no_wait = false, no_throw = false)
+end
+
+function next(T::Type, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{T}
+    next(T, scoped_connection(), sub, batch; no_wait = false, no_throw = false)
 end
