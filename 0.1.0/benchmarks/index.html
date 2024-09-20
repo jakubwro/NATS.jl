@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Benchmarks · NATS</title><meta name="title" content="Benchmarks · NATS"/><meta property="og:title" content="Benchmarks · NATS"/><meta property="twitter:title" content="Benchmarks · NATS"/><meta name="description" content="Documentation for NATS."/><meta property="og:description" content="Documentation for NATS."/><meta property="twitter:description" content="Documentation for NATS."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">NATS</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">NATS.jl - NATS client for Julia.</a></li><li><span class="tocitem">Core NATS</span><ul><li><a class="tocitem" href="../examples/">Quick start</a></li><li><a class="tocitem" href="../connect/">Connection</a></li><li><a class="tocitem" href="../pubsub/">Publish - Subscribe</a></li><li><a class="tocitem" href="../reqreply/">Request - Reply</a></li><li><a class="tocitem" href="../custom-data/">Transport data structures</a></li><li><a class="tocitem" href="../scoped_connection/">Scoped connection</a></li><li><a class="tocitem" href="../debugging/">Debugging</a></li></ul></li><li><span class="tocitem">JetStream</span><ul><li><a class="tocitem" href="../jetstream/stream/">Streams</a></li><li><a class="tocitem" href="../jetstream/consumer/">Consumer</a></li><li><a class="tocitem" href="../jetstream/keyvalue/">Key Value streams</a></li><li><a class="tocitem" href="../jetstream/jetdict/">JetDict</a></li><li><a class="tocitem" href="../jetstream/jetchannel/">JetChannel</a></li></ul></li><li><span class="tocitem">Internals</span><ul><li><a class="tocitem" href="../protocol/">Protocol messages</a></li><li><a class="tocitem" href="../interrupt_handling/">Handling SIGINT</a></li><li class="is-active"><a class="tocitem" href>Benchmarks</a><ul class="internal"><li><a class="tocitem" href="#Request-Reply-latency"><span>Request-Reply latency</span></a></li><li><a class="tocitem" href="#Publish-Subscribe-benchmarks"><span>Publish-Subscribe benchmarks</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Internals</a></li><li class="is-active"><a href>Benchmarks</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Benchmarks</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/jakubwro/NATS.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/jakubwro/NATS.jl/blob/main/docs/src/benchmarks.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Benchmarks"><a class="docs-heading-anchor" href="#Benchmarks">Benchmarks</a><a id="Benchmarks-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmarks" title="Permalink"></a></h1><p>Procedures to compare NATS.jl performance with <code>go</code> implementation.</p><p>Prerequisites:</p><ul><li>start nats-server</li></ul><pre><code class="nohighlight hljs">docker run -p 4222:4222 nats:latest</code></pre><ul><li>enusre <code>nats</code> CLI tool is installed</li></ul><h2 id="Request-Reply-latency"><a class="docs-heading-anchor" href="#Request-Reply-latency">Request-Reply latency</a><a id="Request-Reply-latency-1"></a><a class="docs-heading-anchor-permalink" href="#Request-Reply-latency" title="Permalink"></a></h2><h3 id="Native-go-latency"><a class="docs-heading-anchor" href="#Native-go-latency">Native <code>go</code> latency</a><a id="Native-go-latency-1"></a><a class="docs-heading-anchor-permalink" href="#Native-go-latency" title="Permalink"></a></h3><p>Start reply service</p><pre><code class="nohighlight hljs">&gt; nats reply foo &quot;This is a reply&quot; 2&gt; /dev/null &gt; /dev/null</code></pre><p>Run benchmark with 1 publisher</p><pre><code class="nohighlight hljs">&gt; nats bench foo --pub 1 --request --msgs 1000
+13:25:53 Benchmark in request-reply mode
+13:25:53 Starting request-reply benchmark [subject=foo, multisubject=false, multisubjectmax=0, request=true, reply=false, msgs=1,000, msgsize=128 B, pubs=1, subs=0, pubsleep=0s, subsleep=0s]
+13:25:53 Starting publisher, publishing 1,000 messages
+Finished      0s [================] 100%
+
+Pub stats: 1,676 msgs/sec ~ 209.57 KB/sec</code></pre><p>Run benchmark with 10 publishers</p><pre><code class="nohighlight hljs">&gt; nats bench foo --pub 10 --request --msgs 10000
+13:30:52 Benchmark in request-reply mode
+13:30:52 Starting request-reply benchmark [subject=foo, multisubject=false, multisubjectmax=0, request=true, reply=false, msgs=10,000, msgsize=128 B, pubs=10, subs=0, pubsleep=0s, subsleep=0s]
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+13:30:52 Starting publisher, publishing 1,000 messages
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+
+Pub stats: 11,522 msgs/sec ~ 1.41 MB/sec
+ [1] 1,158 msgs/sec ~ 144.85 KB/sec (1000 msgs)
+ [2] 1,158 msgs/sec ~ 144.84 KB/sec (1000 msgs)
+ [3] 1,158 msgs/sec ~ 144.79 KB/sec (1000 msgs)
+ [4] 1,157 msgs/sec ~ 144.73 KB/sec (1000 msgs)
+ [5] 1,157 msgs/sec ~ 144.68 KB/sec (1000 msgs)
+ [6] 1,156 msgs/sec ~ 144.62 KB/sec (1000 msgs)
+ [7] 1,154 msgs/sec ~ 144.36 KB/sec (1000 msgs)
+ [8] 1,153 msgs/sec ~ 144.22 KB/sec (1000 msgs)
+ [9] 1,153 msgs/sec ~ 144.13 KB/sec (1000 msgs)
+ [10] 1,152 msgs/sec ~ 144.03 KB/sec (1000 msgs)
+ min 1,152 | avg 1,155 | max 1,158 | stddev 2 msgs</code></pre><h3 id="NATS.jl-latency"><a class="docs-heading-anchor" href="#NATS.jl-latency">NATS.jl latency</a><a id="NATS.jl-latency-1"></a><a class="docs-heading-anchor-permalink" href="#NATS.jl-latency" title="Permalink"></a></h3><p>Start reply service</p><pre><code class="nohighlight hljs">julia&gt; using NATS
+julia&gt; nc = NATS.connect();
+julia&gt; reply(nc, &quot;foo&quot;) do
+           &quot;This is a reply.&quot;
+       end
+NATS.Sub(&quot;foo&quot;, nothing, &quot;PDrH5FOxIgBpcnLO4xHD&quot;)</code></pre><p>Run benchmark with 1 publisher:</p><pre><code class="nohighlight hljs">&gt; nats bench foo --pub 1 --request --msgs 1000
+13:28:56 Benchmark in request-reply mode
+13:28:56 Starting request-reply benchmark [subject=foo, multisubject=false, multisubjectmax=0, request=true, reply=false, msgs=1,000, msgsize=128 B, pubs=1, subs=0, pubsleep=0s, subsleep=0s]
+13:28:56 Starting publisher, publishing 1,000 messages
+Finished      0s [================] 100%
+
+Pub stats: 1,565 msgs/sec ~ 195.64 KB/sec</code></pre><p>Run benchmark with 10 publishers:</p><pre><code class="nohighlight hljs">nats bench foo --pub 10 --request --msgs 10000
+13:29:51 Benchmark in request-reply mode
+13:29:51 Starting request-reply benchmark [subject=foo, multisubject=false, multisubjectmax=0, request=true, reply=false, msgs=10,000, msgsize=128 B, pubs=10, subs=0, pubsleep=0s, subsleep=0s]
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+13:29:51 Starting publisher, publishing 1,000 messages
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+
+Pub stats: 11,880 msgs/sec ~ 1.45 MB/sec
+ [1] 1,204 msgs/sec ~ 150.62 KB/sec (1000 msgs)
+ [2] 1,198 msgs/sec ~ 149.85 KB/sec (1000 msgs)
+ [3] 1,197 msgs/sec ~ 149.70 KB/sec (1000 msgs)
+ [4] 1,194 msgs/sec ~ 149.31 KB/sec (1000 msgs)
+ [5] 1,193 msgs/sec ~ 149.20 KB/sec (1000 msgs)
+ [6] 1,192 msgs/sec ~ 149.09 KB/sec (1000 msgs)
+ [7] 1,192 msgs/sec ~ 149.06 KB/sec (1000 msgs)
+ [8] 1,191 msgs/sec ~ 148.91 KB/sec (1000 msgs)
+ [9] 1,191 msgs/sec ~ 148.88 KB/sec (1000 msgs)
+ [10] 1,188 msgs/sec ~ 148.50 KB/sec (1000 msgs)
+ min 1,188 | avg 1,194 | max 1,204 | stddev 4 msgs</code></pre><p>Results show 1,155 msgs/s for native go library and 1,194 msgs/s NATS.jl, we are good here.</p><h2 id="Publish-Subscribe-benchmarks"><a class="docs-heading-anchor" href="#Publish-Subscribe-benchmarks">Publish-Subscribe benchmarks</a><a id="Publish-Subscribe-benchmarks-1"></a><a class="docs-heading-anchor-permalink" href="#Publish-Subscribe-benchmarks" title="Permalink"></a></h2><h3 id="Run-nats-CLI-benchmarks"><a class="docs-heading-anchor" href="#Run-nats-CLI-benchmarks">Run nats CLI benchmarks</a><a id="Run-nats-CLI-benchmarks-1"></a><a class="docs-heading-anchor-permalink" href="#Run-nats-CLI-benchmarks" title="Permalink"></a></h3><pre><code class="nohighlight hljs">&gt; nats bench foo --pub 1 --sub 1 --size 16
+13:43:05 Starting Core NATS pub/sub benchmark [subject=foo, multisubject=false, multisubjectmax=0, msgs=100,000, msgsize=16 B, pubs=1, subs=1, pubsleep=0s, subsleep=0s]
+13:43:05 Starting subscriber, expecting 100,000 messages
+13:43:05 Starting publisher, publishing 100,000 messages
+Finished      0s [================] 100%
+Finished      0s [================] 100%
+
+NATS Pub/Sub stats: 2,251,521 msgs/sec ~ 34.36 MB/sec
+ Pub stats: 1,215,686 msgs/sec ~ 18.55 MB/sec
+ Sub stats: 1,154,802 msgs/sec ~ 17.62 MB/sec
+</code></pre><h3 id="Benchmark-NATS.jl-publish"><a class="docs-heading-anchor" href="#Benchmark-NATS.jl-publish">Benchmark NATS.jl publish</a><a id="Benchmark-NATS.jl-publish-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark-NATS.jl-publish" title="Permalink"></a></h3><pre><code class="nohighlight hljs">julia&gt; using NATS
+
+julia&gt; nc = NATS.connect();
+Threads.threadid() = 
+julia&gt; 
+julia&gt; Threads.threadid() = 1
+Threads.threadid() = 1
+julia&gt; 
+
+julia&gt; while true
+           for i in 1:100000
+            publish(nc, &quot;foo&quot;, &quot;This is a payload&quot;)
+           end
+           sleep(0.001)
+       end</code></pre><pre><code class="nohighlight hljs">&gt; &gt; nats bench foo --sub 1 --size 16
+13:46:23 Starting Core NATS pub/sub benchmark [subject=foo, multisubject=false, multisubjectmax=0, msgs=100,000, msgsize=16 B, pubs=0, subs=1, pubsleep=0s, subsleep=0s]
+13:46:23 Starting subscriber, expecting 100,000 messages
+Finished      0s [================] 100%
+
+Sub stats: 904,350 msgs/sec ~ 13.80 MB/sec</code></pre><p>0.9M msgs vs 1.2M messages, I think all good here, received messages are buffered and async processed in separate task.</p><h3 id="Benchmark-NATS.jl-subscribe"><a class="docs-heading-anchor" href="#Benchmark-NATS.jl-subscribe">Benchmark NATS.jl subscribe</a><a id="Benchmark-NATS.jl-subscribe-1"></a><a class="docs-heading-anchor-permalink" href="#Benchmark-NATS.jl-subscribe" title="Permalink"></a></h3><p>Supress warnings</p><pre><code class="language-julia hljs">julia&gt; using Logging
+
+julia&gt; Logging.LogLevel(Error)
+Error</code></pre><pre><code class="language-julia hljs">using NATS
+nc = NATS.connect(send_buffer_limit = 1000000000)
+function subscribe_until_timeout(nc::NATS.Connection, timeout = 1.0)
+    tm = Timer(timeout)
+    counter = 0
+    start = nothing
+    sub = subscribe(nc, &quot;foo&quot;) do
+        if isnothing(start)
+            start = time()
+        end
+        counter += 1
+    end
+    wait(tm)
+    unsubscribe(nc, sub)
+    if counter == 0
+        @info &quot;No messages&quot;
+    else
+        @info &quot;Processed $counter messages in $(time() - start) s. $(counter / (time() - start)) msgs/sec)&quot;
+    end
+    counter
+end
+
+bench_task = @async begin
+    sub_task = Threads.@spawn :default subscribe_until_timeout(nc, 10.0)
+    Threads.@spawn :default while !istaskdone(sub_task)
+        publish(nc, &quot;foo&quot;, &quot;This is payload!&quot;)
+    end
+    wait(sub_task)
+    sub_task.result
+end
+_, tm = @timed wait(bench_task);
+received_messages = bench_task.result
+@info &quot;$(received_messages / tm) msgs / sec&quot;
+
+</code></pre><pre><code class="nohighlight hljs"></code></pre><p>Start publisher:</p><pre><code class="nohighlight hljs">&gt; nats bench foo --pub 1 --size 16 --msgs 20000000
+13:50:56 Starting Core NATS pub/sub benchmark [subject=foo, multisubject=false, multisubjectmax=0, msgs=20,000,000, msgsize=16 B, pubs=1, subs=0, pubsleep=0s, subsleep=0s]
+13:50:56 Starting publisher, publishing 20,000,000 messages
+Publishing    3s [==========&gt;-----]  68%</code></pre><pre><code class="language-julia hljs">julia&gt; subscribe_for_one_second()
+[ Info: Processed 1680882 messages in 0.9680750370025635 s.</code></pre><p>1,68M messages in NATS.jl vs 1.7M messages by go client.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../interrupt_handling/">« Handling SIGINT</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Friday 20 September 2024 23:02">Friday 20 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
