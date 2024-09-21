@@ -168,8 +168,8 @@ $(SIGNATURES)
 Obtains batch of messages for synchronous subscription.
 
 Optional keyword arguments:
-- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
-- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+- `no_wait`: do not wait for next message, return empty vector if buffer is empty
+- `no_throw`: do not throw exception, stops collecting messages on error
 """
 function next(connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
     msgs = []
@@ -187,8 +187,8 @@ $(SIGNATURES)
 Obtains batch of messages for synchronous subscription converting them to reqested `T` type.
 
 Optional keyword arguments:
-- `no_wait`: do not wait for next message, return `nothing` if buffer is empty
-- `no_throw`: do not throw exception, returns `nothing` if cannot get next message
+- `no_wait`: do not wait for next message, return empty vector if buffer is empty
+- `no_throw`: do not throw exception, stops collecting messages on error
 """
 function next(T::Type, connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{T}
     find_msg_conversion_or_throw(T)
