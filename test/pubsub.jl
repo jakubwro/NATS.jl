@@ -95,10 +95,23 @@ NATS.status()
 
 @testset "Subscription with multiple arguments" begin
     subject = randstring(8)
-    # TODO: test if error message is clear.
-    @test_throws ErrorException subscribe(nc, subject) do x, y, z
+
+    @test_throws "Conversion of NATS message into type Tuple{Any, Any, Any} is not defined" subscribe(nc, subject) do x, y, z
         "nothing to do"
     end
+
+    received_payload = nothing
+    received_headers = nothing
+    sub = subscribe(nc, subject) do msg::String, hdr::NATS.Headers
+        received_payload = msg
+        received_headers = hdr
+    end
+    publish(nc, subject, ("data", ["x" => "y"]))
+    sleep(0.2)
+    @test received_payload == "data"
+    @test received_headers isa NATS.Headers
+    @test received_headers[1] == Pair("x", "y")
+    drain(nc, sub)
 end
 
 @testset "Synchronous subscriptions" begin
