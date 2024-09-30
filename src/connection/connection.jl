@@ -44,7 +44,8 @@ end
     send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
-    pong_received_cond::Threads.Condition = Threads.Condition()
+    @atomic pong_count::Int64
+    @atomic pong_received_at::Float64
     status_change_cond::Threads.Condition = Threads.Condition()
     @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
     @atomic reconnect_count::Int64
@@ -113,23 +114,19 @@ end
 show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.sub_data)," subs, ", length(nc.unsubs)," unsubs)")
 
-function ping(nc; timer = Timer(1.0))
-    pong_ch = Channel{Pong}(1)
-    ping_task = @async begin
-        @async send(nc, Ping())
-        @lock nc.pong_received_cond wait(nc.pong_received_cond)
-        put!(pong_ch, Pong())
+function ping(nc; timeout::Union{Real, Period} = 1.0, measure = true)
+    last_pong_count = @atomic nc.pong_count
+    start_time = time()
+    send(nc, Ping())
+    result = timedwait(timeout; pollint = 0.001) do
+        (@atomic nc.pong_count) != last_pong_count
     end
-
-    @async begin
-        try wait(timer) catch end
-        close(pong_ch)
+    result == :timed_out && error("No PONG received in specified timeout ($timeout seconds).")
+    result == :ok || error("Unexpected status symbol: :$result")
+    if measure && (@atomic nc.pong_received_at) > 0.0
+        @info "Measured ping time is $(1000 * ((@atomic nc.pong_received_at) - start_time)) milliseconds"
     end
-    try
-        take!(pong_ch)
-    catch
-        error("No PONG received.")
-    end
+    Pong()
 end
 
 function stats(connection::Connection)

@@ -34,7 +34,8 @@ end
 
 function process(nc::Connection, ::Pong)
     @debug "Received pong."
-    @lock nc.pong_received_cond notify(nc.pong_received_cond)
+    @atomic nc.pong_received_at = time()
+    @atomic nc.pong_count += 1
 end
 
 function process(nc::Connection, batch::Vector{ProtocolMessage})

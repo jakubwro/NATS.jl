@@ -69,7 +69,7 @@ function getindex(jetdict::JetDict, key::String)
         seq = NATS.header(msg, "Nats-Sequence")
         revisions.value[key] = parse(UInt64, seq)
     end
-    convert(jetdict.T, msg)
+    convert(jetdict.T, msg) # invoke latest?
 end
 
 function delete!(jetdict::JetDict, key::String)

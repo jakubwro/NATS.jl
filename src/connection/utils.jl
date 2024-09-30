@@ -20,7 +20,7 @@ function argtype(handler)
     if length(handler_methods) > 1
         error("Multimethod functions not suported as subscription handler.")
     end
-    signature = first(methods(handler)).sig # TODO: handle multi methods.
+    signature = first(methods(handler)).sig
     if length(signature.parameters) == 1
         Nothing
     elseif length(signature.parameters) == 2
@@ -80,7 +80,7 @@ end
 # Return lambda that avoids type conversions for certain types.
 # Also allows for use of parameterless handlers for subs that do not need look into msg payload. 
 # """
-function _fast_call(f::Function)
+function wrap_handler(f::Function)
     arg_t = argtype(f)
     if arg_t === Any || arg_t == NATS.Msg
         f
@@ -88,6 +88,10 @@ function _fast_call(f::Function)
         _ -> f()
     else
         find_msg_conversion_or_throw(arg_t)
-        msg -> f(convert(arg_t, msg))
+        if arg_t <: Tuple
+            msg -> f(invokelatest(convert, arg_t, msg)...)
+        else
+            msg -> f(invokelatest(convert, arg_t, msg))
+        end
     end
 end

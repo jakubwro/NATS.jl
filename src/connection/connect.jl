@@ -187,7 +187,7 @@ function receiver(nc::Connection, io::IO)
     end
 end
 
-function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
+function ping_loop(nc::Connection, ping_interval::Union{Real, Period}, max_pings_out::Int64)
     pings_out = 0
     reconnects = (@atomic nc.reconnect_count)
     while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
@@ -198,7 +198,7 @@ function ping_loop(nc::Connection, ping_interval::Float64, max_pings_out::Int64)
             break
         end
         try
-            _, tm = @timed ping(nc)
+            _, tm = @timed ping(nc; measure = false)
             pings_out = 0
             @debug "PONG received after $tm seconds"
         catch
@@ -256,6 +256,8 @@ function connect(
     nc = Connection(;
         url,
         info = nothing,
+        pong_count = 0,
+        pong_received_at = 0.0,
         reconnect_count = 0,
         connect_init_count = 0,
         send_buffer_flushed = true,
