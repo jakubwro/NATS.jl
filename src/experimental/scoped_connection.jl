@@ -116,7 +116,7 @@ end
 function request(
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     request(scoped_connection(), subject, data; timeout)
 end
@@ -125,7 +125,7 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     request(scoped_connection(), nreplies, subject, data; timeout)
 end
@@ -134,7 +134,7 @@ function request(
     T::Type,
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     request(T, scoped_connection(), subject, data; timeout)
 end

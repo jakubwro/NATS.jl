@@ -42,7 +42,7 @@ function stream_infos(connection::NATS.Connection, subject = nothing)
     result
 end
 
-function stream_names(connection::NATS.Connection, subject = nothing; timeout = 5.0)
+function stream_names(connection::NATS.Connection, subject::String = nothing; timeout::Union{Real, Period} = 5.0)
     result = String[]
     offset = 0
     req = Dict()

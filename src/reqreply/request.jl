@@ -38,7 +38,7 @@ function request(
     connection::Connection,
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     replies = request(connection, 1, subject, data; timeout)
     if isempty(replies)
@@ -72,7 +72,7 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     find_data_conversion_or_throw(typeof(data))
     if NATS.status(connection) in [NATS.DRAINED, NATS.DRAINING]
@@ -107,7 +107,7 @@ function request(
     connection::Connection,
     subject::String,
     data = nothing;
-    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
     find_msg_conversion_or_throw(T)
     result = request(connection, subject, data; timeout)
