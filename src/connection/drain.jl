@@ -17,8 +17,8 @@
 ### Code:
 
 # Actual drain logic, for thread safety executed in connection controller task.
-function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, TimePeriod} = nc.drain_timeout)
-    timer = Timer(Second(timeout))
+function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, Period} = nc.drain_timeout)
+    timer = Timer(timeout)
     sids = @lock nc.lock copy(keys(nc.sub_data))
     for sid in sids
         send(nc, Unsub(sid, 0))

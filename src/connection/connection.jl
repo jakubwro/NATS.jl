@@ -118,13 +118,13 @@ function ping(nc; timeout::Union{Real, Period} = 1.0, measure = true)
     last_pong_count = @atomic nc.pong_count
     start_time = time()
     send(nc, Ping())
-    result = timedwait(Second(timeout); pollint = Millisecond(1)) do
+    result = timedwait(timeout; pollint = 0.001) do
         (@atomic nc.pong_count) != last_pong_count
     end
     result == :timed_out && error("No PONG received in specified timeout ($timeout seconds).")
     result == :ok || error("Unexpected status symbol: :$result")
     if measure && (@atomic nc.pong_received_at) > 0.0
-        @info "Measured ping time is $(1000 * (nc.pong_received_at - start_time)) milliseconds"
+        @info "Measured ping time is $(1000 * ((@atomic nc.pong_received_at) - start_time)) milliseconds"
     end
     Pong()
 end

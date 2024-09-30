@@ -83,9 +83,10 @@ function request(
     sub = subscribe(connection, reply_to)
     unsubscribe(connection, sub; max_msgs = nreplies)
     publish(connection, subject, data; reply_to)
-    timer = Timer(Second(timeout).value) do _ # TODO: get rid of .value in 1.11
-        drain(connection, sub)
+    if timeout isa Period # TODO: get rid of if in 1.11
+        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
     end
+    timer = Timer(timeout) do _; drain(connection, sub) end
     result = Msg[]
     for _ in 1:nreplies
         msg = next(connection, sub; no_throw = true)
