@@ -28,21 +28,21 @@ variable. If not set explicitly default polling interval is
 `$DEFAULT_DRAIN_POLL_INTERVAL_SECONDS` seconds. 
 
 Optional keyword arguments:
-- `timer`: error will be thrown if drain not finished until `timer` expires. Default value is configurable per connection on `connect` with `drain_timeout`. Can be also set globally with `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
+- `timeout`: error will be thrown if drain not finished until `timeout` expires. Default value is configurable per connection on `connect` with `drain_timeout`. Can be also set globally with `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
 """
-function drain(connection::Connection, sub::Sub; timer::Timer = Timer(connection.drain_timeout))
+function drain(connection::Connection, sub::Sub; timeout::Union{Real, Period} = connection.drain_timeout)
+    timer = Timer(Second(timeout))
     sub_stats = stats(connection, sub)
     if isnothing(sub_stats)
         return # Already drained.
     end
     send(connection, Unsub(sub.sid, 0))
     sleep(connection.drain_poll)
-    while !is_every_message_handled(sub_stats)
-        if !isopen(timer)
-            @error "Timeout for drain exceeded, not all msgs might be processed." sub
-            break
-        end
-        sleep(connection.drain_poll)
+    isok = :ok == timedwait(timeout; pollint = connection.drain_poll) do
+        is_every_message_handled(sub_stats)
+    end
+    if !isok
+        @error "Timeout for drain exceeded, not all msgs might be processed." sub
     end
     cleanup_sub_resources(connection, sub.sid)
     nothing

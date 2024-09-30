@@ -17,10 +17,10 @@ function stream_subscribe(f, connection::NATS.Connection, subject::String)
     idle_heartbeat = 1000 * 1000 * 1000 * 3 # 300 ms
     consumer_config = ConsumerConfiguration(;name, deliver_subject) # TODO: filter subject
     consumer = consumer_create(connection, consumer_config, stream)
-    f_typed = NATS._fast_call(f)
+    f_typed = NATS.wrap_handler(f)
     sub = NATS.subscribe(connection, deliver_subject) do msg
         if NATS.statuscode(msg) == 100
-            @info "heartbeat"
+            @info "heartbeat" # TODO: remove this
         else
             f_typed(msg)
         end

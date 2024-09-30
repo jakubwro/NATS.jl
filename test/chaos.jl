@@ -102,10 +102,10 @@ end
         sleep(1)
         restart_nats_server()
     end
-    rep = request(nc, subject; timer = Timer(20))
+    rep = request(nc, subject; timeout = 20)
     @test payload(rep) == "This is a reply."
     @test nc.status == NATS.CONNECTED
-    rep = request(nc, subject; timer = Timer(20))
+    rep = request(nc, subject; timeout = 20)
     @test payload(rep) == "This is a reply."
     @test t.result == 0
 end
@@ -128,7 +128,7 @@ end
     cond = Channel()
     for _ in 1:n
         t = Threads.@spawn :default begin
-            msg = request(nc, subject; timer=Timer(20))
+            msg = request(nc, subject; timeout=20)
             put!(results, msg)
             if Base.n_avail(results) == n
                 close(cond)
@@ -173,7 +173,7 @@ end
     for _ in 1:n
         t = Threads.@spawn :default begin
                 delays = rand(3.0:0.1:5.0, 15)
-                msg = retry(request; delays)(nc, subject; timer=Timer(5))
+                msg = retry(request; delays)(nc, subject; timeout=5)
                 put!(results, msg)
                 if Base.n_avail(results) == n
                     close(cond)
@@ -210,7 +210,7 @@ end
 
     pub_task = Threads.@spawn begin
         for i in 1:10000
-            timer = Timer(0.001)
+            timeout = Timer(0.001)
             for _ in 1:10
                 publish(nc, subject, "Hi!")
             end

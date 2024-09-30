@@ -50,7 +50,7 @@ NATS.status()
     for _ in 1:n
         t = Threads.@spawn :default begin
             msg =   if haskey(ENV, "CI")
-                        request(nc, subject; timer=Timer(20))
+                        request(nc, subject; timeout=20)
                     else
                         request(nc, subject)
                     end

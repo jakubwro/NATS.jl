@@ -116,27 +116,27 @@ end
 function request(
     subject::String,
     data = nothing;
-    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
+    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
-    request(scoped_connection(), subject, data; timer)
+    request(scoped_connection(), subject, data; timeout)
 end
 
 function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
+    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
-    request(scoped_connection(), nreplies, subject, data; timer)
+    request(scoped_connection(), nreplies, subject, data; timeout)
 end
 
 function request(
     T::Type,
     subject::String,
     data = nothing;
-    timer::Timer = Timer(parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))))
+    timeout = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
 )
-    request(T, scoped_connection(), subject, data; timer)
+    request(T, scoped_connection(), subject, data; timeout)
 end
 
 function next(sub::Sub; no_wait = false, no_throw = false)::Union{Msg, Nothing}

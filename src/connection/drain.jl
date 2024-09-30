@@ -17,7 +17,8 @@
 ### Code:
 
 # Actual drain logic, for thread safety executed in connection controller task.
-function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeout))
+function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, TimePeriod} = nc.drain_timeout)
+    timer = Timer(Second(timeout))
     sids = @lock nc.lock copy(keys(nc.sub_data))
     for sid in sids
         send(nc, Unsub(sid, 0))
@@ -25,7 +26,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeou
     sleep(nc.drain_poll)
     conn_stats = stats(nc)
     while !is_every_message_handled(conn_stats)
-        if !isopen(timeout)
+        if !isopen(timer)
             @error "Timeout for drain exceeded, not all subs might be drained."
             # TODO: add log about count of messages not handled.
             break
@@ -37,7 +38,7 @@ function _do_drain(nc::Connection, is_connected; timeout = Timer(nc.drain_timeou
     end
     # At this point no more publications can be done. Wait for `send_buffer` flush.
     while !is_send_buffer_flushed(nc)
-        if !isopen(timeout)
+        if !isopen(timer)
             @error "Timeout for drain exceeded, some publications might be lost."
             # TODO: add log about count of messages undelivered.
             break

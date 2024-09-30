@@ -96,7 +96,7 @@ NATS.status()
 @testset "Subscription with multiple arguments" begin
     subject = randstring(8)
     # TODO: test if error message is clear.
-    @test_throws ErrorException subscribe(nc, subject) do x, y, z
+    @test_throws ErrorException subscribe(nc, subject) do x::String, y::NATS.Headers
         "nothing to do"
     end
 end
@@ -166,19 +166,19 @@ end
             publish(sub_nc, subject_ack, "ack")
         end
     end
-    sleep(1)
+    sleep(5)
 
     pub_nc = NATS.connect()
     ack_count = Threads.Atomic{Int64}(0)
     subscribe(pub_nc, subject_ack) do msg
         Threads.atomic_add!(ack_count, 1)
     end
-    sleep(1)
+    sleep(5)
 
     for i in 1:n_pubs
         publish(pub_nc, subject, "Test 10k subs: msg $i.")
     end
-    sleep(3)
+    sleep(10)
     drain(sub_nc)
     drain(pub_nc)
     sub_stats = NATS.stats(sub_nc)

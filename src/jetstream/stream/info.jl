@@ -42,7 +42,7 @@ function stream_infos(connection::NATS.Connection, subject = nothing)
     result
 end
 
-function stream_names(connection::NATS.Connection, subject = nothing; timer = Timer(5))
+function stream_names(connection::NATS.Connection, subject = nothing; timeout = 5.0)
     result = String[]
     offset = 0
     req = Dict()
@@ -51,7 +51,7 @@ function stream_names(connection::NATS.Connection, subject = nothing; timer = Ti
     end
     iterable_request() do offset
         req[:offset] = offset
-        json = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", JSON3.write(req); timer)
+        json = NATS.request(JSON3.Object, connection, "\$JS.API.STREAM.NAMES", JSON3.write(req); timeout)
         throw_on_api_error(json)
         if !isnothing(json.streams)
             append!(result, json.streams)

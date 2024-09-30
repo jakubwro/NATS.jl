@@ -35,3 +35,8 @@ function convert(::Type{JSON3.Object}, msg::NATS.Msg)
     # TODO: some validation if header has error headers
     JSON3.read(@view msg.payload[(begin + msg.headers_length):end])
 end
+
+function convert(::Type{Tuple{String, NATS.Headers}}, msg::NATS.Msg)
+    # TODO: some validation if header has error headers
+    payload(msg), headers(msg)
+end

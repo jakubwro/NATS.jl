@@ -46,7 +46,7 @@ function reply(
     queue_group::Union{Nothing, String} = nothing,
     spawn::Bool = false
 )
-    fast_f = _fast_call(f)
+    fast_f = wrap_handler(f)
     subscribe(connection, subject; queue_group, spawn) do msg
         data = fast_f(msg)
         publish(connection, msg.reply_to, data)
