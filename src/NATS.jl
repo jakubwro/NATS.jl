@@ -80,4 +80,7 @@ include("reqreply/reqreply.jl")
 include("experimental/experimental.jl")
 include("jetstream/JetStream.jl")
 
+precompile(Tuple{typeof(NATS.init_protocol), NATS.Connection, String, typeof(default_connect_options())})
+precompile(Tuple{typeof(NATS.connect)})
+
 end
