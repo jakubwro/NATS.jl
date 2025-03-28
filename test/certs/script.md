@@ -1,9 +1,9 @@
 ```
-openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out nats.crt -keyout nats.key -addext "subjectAltName = DNS:localhost, DNS:nats"
+openssl req -new -newkey rsa:4096 -x509 -sha256 -days 9999 -nodes -out nats.crt -keyout nats.key -addext "subjectAltName = DNS:localhost, DNS:nats"
 ```
 
 ```
-openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -CA nats.crt -CAkey nats.key -nodes -out client.crt -keyout client.key  -addext "subjectAltName = DNS:localhost, email:jakub@localhost"
+openssl req -new -newkey rsa:4096 -x509 -sha256 -days 9999 -CA nats.crt -CAkey nats.key -nodes -out client.crt -keyout client.key  -addext "subjectAltName = DNS:localhost, email:jakub@localhost"
 ```
 
 ```
