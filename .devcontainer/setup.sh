@@ -3,13 +3,13 @@
 pushd $(mktemp -d) > /dev/null
 build_directory=$(pwd)
 
-# install julia
-if command -v julia >/dev/null 2>&1; then
-  echo "julia is already installed, updating..."
-  juliaup update
-else
-  curl -fsSL https://install.julialang.org | sh -s -- -y
-fi
+# julia installed with devcontainer feature
+# if command -v julia >/dev/null 2>&1; then
+#   echo "julia is already installed, updating..."
+#   juliaup update
+# else
+#   curl -fsSL https://install.julialang.org | sh -s -- -y
+# fi
 
 if command -v nats-server >/dev/null 2>&1; then
   echo "nats-server is already installed"
