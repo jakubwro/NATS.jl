@@ -4,7 +4,7 @@ pushd $(mktemp -d) > /dev/null
 build_directory=$(pwd)
 
 # install julia
-if command -v nats-server >/dev/null 2>&1; then
+if command -v julia >/dev/null 2>&1; then
   echo "julia is already installed, updating..."
   juliaup update
 else
@@ -14,7 +14,7 @@ fi
 if command -v nats-server >/dev/null 2>&1; then
   echo "nats-server is already installed"
 else
-  curl -sf https://binaries.nats.dev/nats-io/nats-server/v2@v2.10.20 | PREFIX=/home/codespace/.local/bin sh
+  curl -sf https://binaries.nats.dev/nats-io/nats-server/v2@v2.10.20 | PREFIX=/usr/bin sh
 fi
 
 if command -v s6-svscan >/dev/null 2>&1; then
