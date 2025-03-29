@@ -5,7 +5,8 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"image": "mcr.microsoft.com/devcontainers/base:jammy",
     "mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+		"target=/mnt/ramdisk,type=tmpfs,tmpfs-size=20971520"
 	],
 	"features": {
 		"ghcr.io/devcontainers-extra/features/curl-apt-get:1": {},
@@ -20,8 +21,9 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "./.devcontainer/setup.sh"
-    
+    "postCreateCommand": "./.devcontainer/setup.sh",
+	"postStartCommand": "nohup nats-server 2>&1 &"
+
 	// Configure tool-specific properties.
 	// "customizations": {},
 
