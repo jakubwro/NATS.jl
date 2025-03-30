@@ -1,0 +1,24 @@
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/base:jammy
+    volumes:
+      - ..:/workspace
+      - ${HOME}/.ssh:/home/vscode/.ssh:cached
+      - type: tmpfs
+        target: /mnt/ramdisk
+        tmpfs:
+          size: 20971520
+    command: sleep 10000
+  nats-server:
+    image: nats:latest
+  nats-cluster-node-a:
+    image: nats
+    command: "--client_advertise 'nats-cluster-node-a' --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 "
+  nats-cluster-node-b:
+    image: nats
+    command: "--client_advertise 'nats-cluster-node-b' --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-cluster-node-a:6222"
+    depends_on: ["nats-cluster-node-a"]
+  nats-cluster-node-c:
+    image: nats
+    command: "--client_advertise 'nats-cluster-node-c' --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-cluster-node-a:6222"
+    depends_on: ["nats-cluster-node-a"]

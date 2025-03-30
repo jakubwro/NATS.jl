@@ -2,25 +2,31 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
 	"name": "Ubuntu",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:jammy",
-    "mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-	],
+	//"image": "mcr.microsoft.com/devcontainers/base:jammy",
+    // "build": {
+    //     // Path is relative to the devcontainer.json file.
+    //     "dockerfile": "Dockerfile"
+    // },
+    // "overrideCommand": false,
+    "dockerComposeFile": ["compose.yaml"],
+    "service": "devcontainer",
+    "workspaceFolder": "/workspace",
+
+    // "mounts": [
+	// 	"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
+	// 	"target=/mnt/ramdisk,type=tmpfs,tmpfs-size=20971520"
+	// ],
 	"features": {
 		"ghcr.io/devcontainers-extra/features/curl-apt-get:1": {},
 		"ghcr.io/devcontainers-extra/features/wget-apt-get:1": {},
         "ghcr.io/julialang/devcontainer-features/julia:1": {}
-	},
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	}
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "./.devcontainer/setup.sh"
+    //"postCreateCommand": "./.devcontainer/setup.sh"
     
 	// Configure tool-specific properties.
 	// "customizations": {},
