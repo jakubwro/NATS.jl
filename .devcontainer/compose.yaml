@@ -39,3 +39,6 @@ services:
     image: nats
     command: "--client_advertise nats-cluster-node-c --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-cluster-node-a:6222"
     depends_on: ["nats-cluster-node-a"]
+
+volumes:
+  shared-data:
