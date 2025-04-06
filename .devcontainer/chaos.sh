@@ -60,9 +60,6 @@ while true; do
             echo "Unexpected branch: $BRANCH"
             ;;
     esac
-    # do something random
-    # Restart app and db containers every 10 minutes (example)
-    #docker ps
-    # docker restart nats_devcontainer-nats-cluster-node-a-1
+
     sleep 40
 done
