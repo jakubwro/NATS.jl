@@ -17,11 +17,6 @@ if [ "$NCONTAINERS" -eq 0 ]; then
     exit 1
 fi
 
-for container in $CONTAINERS; do
-    echo "Setting delay 50ms loss 10% for $container"
-    docker exec $container tc qdisc add dev eth0 root netem delay 50ms loss 10%
-done
-
 NBRANCHES=5
 while true; do
     RANDOM_NUMBER=$RANDOM
@@ -42,7 +37,6 @@ while true; do
             sleep 2
             sleep $((RANDOM_NUMBER % 20))
             docker start "$SELECTED_CONTAINER"
-            docker exec $SELECTED_CONTAINER tc qdisc add dev eth0 root netem delay 50ms loss 10%
             ;;
         2)
             docker kill "$SELECTED_CONTAINER"
@@ -50,7 +44,6 @@ while true; do
             sleep $((RANDOM_NUMBER % 20))
             docker start "$SELECTED_CONTAINER"
             # sleep 2
-            docker exec $SELECTED_CONTAINER tc qdisc add dev eth0 root netem delay 50ms loss 10%
             ;;
         3)
             docker exec $SELECTED_CONTAINER tc qdisc del dev eth0 root
@@ -58,7 +51,6 @@ while true; do
             sleep 2
             sleep $((RANDOM_NUMBER % 20))
             docker exec $SELECTED_CONTAINER tc qdisc del dev eth0 root
-            echo $SELECTED_CONTAINER
             docker exec $SELECTED_CONTAINER tc qdisc add dev eth0 root netem delay 50ms loss 10%
             ;;
         4)
@@ -72,5 +64,5 @@ while true; do
     # Restart app and db containers every 10 minutes (example)
     #docker ps
     # docker restart nats_devcontainer-nats-cluster-node-a-1
-    sleep 240
+    sleep 40
 done
