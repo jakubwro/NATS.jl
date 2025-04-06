@@ -68,7 +68,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.chaos-nats
-    entrypoint: [ "sh", "-c", "tc qdisc add dev eth0 root netem delay 50ms loss 10% && nats-server && nats-server --client_advertise nats-chaos-node-c --cluster_name CHAOS_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-chaos-node-a:6222"]
+    entrypoint: [ "sh", "-c", "tc qdisc add dev eth0 root netem delay 50ms loss 10% && nats-server --client_advertise nats-chaos-node-c --cluster_name CHAOS_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-chaos-node-a:6222"]
     cap_add:
       - NET_ADMIN
     depends_on: ["nats-chaos-node-a"]
