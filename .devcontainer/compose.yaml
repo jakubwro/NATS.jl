@@ -12,7 +12,7 @@ services:
     environment:
       - NATS_CONNECT_URL=nats-server:4222
     cap_add:
-      - NET_ADMIN  
+      - NET_ADMIN
   setup:
     image: alpine
     command: >
@@ -23,22 +23,73 @@ services:
       - shared-data:/shared-data
 
   nats-server:
+    restart: always
     image: nats:latest
   nats-server-tls:
+    restart: always
     image: nats:latest
     volumes:
         - shared-data:/shared-data
   nats-cluster-node-a:
+    restart: always
     image: nats
     command: "--client_advertise nats-cluster-node-a --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 "
   nats-cluster-node-b:
+    restart: always
     image: nats
     command: "--client_advertise nats-cluster-node-b --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-cluster-node-a:6222"
     depends_on: ["nats-cluster-node-a"]
   nats-cluster-node-c:
+    restart: always
     image: nats
     command: "--client_advertise nats-cluster-node-c --cluster_name TEST_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-cluster-node-a:6222"
     depends_on: ["nats-cluster-node-a"]
+
+
+  nats-chaos-node-a:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.chaos-nats
+    command: "--client_advertise nats-chaos-node-a --cluster_name CHAOS_CLUSTER --cluster nats://0.0.0.0:6222 "
+    cap_add:
+      - NET_ADMIN
+  nats-chaos-node-b:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.chaos-nats
+    command: "--client_advertise nats-chaos-node-b --cluster_name CHAOS_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-chaos-node-a:6222"
+    cap_add:
+      - NET_ADMIN
+    depends_on: ["nats-chaos-node-a"]
+  nats-chaos-node-c:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.chaos-nats
+    command: "--client_advertise nats-chaos-node-c --cluster_name CHAOS_CLUSTER --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats-chaos-node-a:6222"
+    cap_add:
+      - NET_ADMIN
+    depends_on: ["nats-chaos-node-a"]
+
+  chaos-maker:
+    build:
+      context: .
+      dockerfile: Dockerfile.chaos-docker
+    environment:
+      - RANDOM_SEED=12345
+    command: >
+      bash -c "
+        ls /root
+        bash chaos.sh
+      "
+    depends_on:
+      - nats-chaos-node-a
+      - nats-chaos-node-b
+      - nats-chaos-node-c
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   shared-data:

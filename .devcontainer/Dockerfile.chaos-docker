@@ -1,0 +1,5 @@
+FROM docker:stable
+COPY chaos.sh chaos.sh
+RUN apk add bash
+
+CMD [ "bash", "chaos.sh" ]

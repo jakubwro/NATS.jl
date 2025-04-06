@@ -1,0 +1,3 @@
+FROM nats:alpine
+
+RUN apk add iproute2

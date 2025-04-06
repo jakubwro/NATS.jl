@@ -17,8 +17,8 @@
 	// 	"target=/mnt/ramdisk,type=tmpfs,tmpfs-size=20971520"
 	// ],
 	"features": {
-		"ghcr.io/devcontainers-extra/features/curl-apt-get:1": {},
-		"ghcr.io/devcontainers-extra/features/wget-apt-get:1": {},
+	//	"ghcr.io/devcontainers-extra/features/curl-apt-get:1": {},
+	//	"ghcr.io/devcontainers-extra/features/wget-apt-get:1": {},
         "ghcr.io/julialang/devcontainer-features/julia:1": {}
 	}
 
