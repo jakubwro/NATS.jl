@@ -9,7 +9,6 @@ function show(io::IO, stream_sub::StreamSub)
     print(io, "StreamSub(\"$(stream_sub.subject)\")")
 end
 
-
 include("manage.jl")
 include("info.jl")
 include("message.jl")

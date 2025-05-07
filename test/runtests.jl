@@ -1,20 +1,12 @@
 using NATS
-using Test
-using JSON3
 using Sockets
-
-using NATS: next_protocol_message
-using NATS: Info, Msg, Ping, Pong, Ok, Err, Pub, Sub, Unsub, Connect
-using NATS: Headers, headers, header
-using NATS: MIME_PROTOCOL, MIME_PAYLOAD, MIME_HEADERS
-
-include("util.jl")
+using Test
+using TestItems
+using TestItemRunner
 
 @show Threads.nthreads()
 @show Threads.nthreads(:interactive)
 @show Threads.nthreads(:default)
-
-include("protocol.jl")
 
 function is_nats_available()
     try
@@ -34,18 +26,9 @@ end
 
 have_nats = is_nats_available()
 
-@testset "Should run connected tests" begin
-    @test have_nats
-end
-
 if have_nats
-    include("connection.jl")
-    include("pubsub.jl")
-    include("reqreply.jl")
-    # include("channel.jl")
-    include("fallback_handler.jl")
-    include("experimental.jl")
-
+    @run_package_tests verbose=true
+    
     @testset "All subs should be closed" begin
         sleep(5)
         for nc in NATS.state.connections
@@ -59,4 +42,8 @@ if have_nats
     end
 
     NATS.status()
+else
+    @run_package_tests verbose=true filter=ti->basename(ti.filename)=="protocol.jl"
+
+    @test have_nats
 end

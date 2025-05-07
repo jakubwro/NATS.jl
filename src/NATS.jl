@@ -29,6 +29,7 @@ using CodecBase
 using ScopedValues
 using URIs
 using Dates
+using TestItems
 
 import Base: show, convert
 

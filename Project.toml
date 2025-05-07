@@ -17,6 +17,8 @@ ScopedValues = "7e506255-f358-4e82-b7e4-beb19740aa63"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 Sodium = "4f5b5e99-b0ad-42cd-b47a-334e172ec8bd"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 
 [compat]
@@ -29,6 +31,8 @@ NanoDates = "1.0.3"
 ScopedValues = "1.2.1"
 Sodium = "1.1.2"
 StructTypes = "1.11.0"
+TestItemRunner = "1.1.0"
+TestItems = "1.0.0"
 URIs = "1.5.1"
 julia = "1.10"
 

@@ -84,4 +84,3 @@ function drain(connection::Connection)
         end
     end
 end
-
