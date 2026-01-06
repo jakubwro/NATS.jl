@@ -1,6 +1,6 @@
 
 function consumer_create_or_update(connection::NATS.Connection, config::ConsumerConfiguration, stream::String)
-    consumer_name = @something config.name consumer_config.durable_name randstring(20)
+    consumer_name = @something config.name config.durable_name randstring(20)
     subject = "\$JS.API.CONSUMER.CREATE.$stream.$consumer_name"
     req_data = Dict(:stream_name => stream, :config => config)
     # if !isnothing(action) #TODO: handle action
