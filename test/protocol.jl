@@ -150,6 +150,15 @@ end
     @test NATS.sign(nonce, seed) == sig
 end
 
+@testset "Public key from seed" begin
+    @test NATS.public_key("SUAJ4LZRG3KF7C7U4E5737YMAOGUAWBODUM6DBWLY4UPUMXH6TH7JLQFDM") ==
+          "UAGPV4UFVS34M2XGY7HLSNEBDVJZZDZ6XMQ4NTXVEMKZQNSFH2AJFUA5"
+    @test NATS.public_key("SUADPKZWX3XJQO4GJEX2IGZAKCYUSLSLNJXFG7KPAYAODEVABRK6ZKKALA") ==
+          "UDBKUC5JFUX5SDF6CGBT3WAZEZSJTGMWWSCRJMODEUPVOKBPCLVODH2J"
+    # A public nkey passed where a seed is expected is rejected.
+    @test_throws Exception NATS.public_key("UAGPV4UFVS34M2XGY7HLSNEBDVJZZDZ6XMQ4NTXVEMKZQNSFH2AJFUA5")
+end
+
 @testset "Plain text messages" begin
     msg = NATS.Msg("FOO.BAR", 9, "some_inbox", 34, uint8_vec("NATS/1.0\r\nFoodGroup: vegetable\r\n\r\nHello World"))
     msg_text = repr(MIME("text/plain"), msg)
