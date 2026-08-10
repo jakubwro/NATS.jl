@@ -31,20 +31,26 @@ function subscribe(
     connection::Connection,
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
-    spawn::Bool = false,
+    spawn::Symbol = :once,
     channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
     monitoring_throttle_seconds::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
-    f_typed = wrap_handler(f)
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
-    subscription_channel = Channel(channel_size)
-    with(scoped_subscription_stats => sub_stats) do
-        _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, subscription_channel, monitoring_throttle_seconds)
-    end
-    @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock())
+    if spawn == :never
+        @lock connection.lock begin
+            connection.sub_data[sid] = SubscriptionData(sub, f, sub_stats, true, ReentrantLock())
+        end
+    else
+        @time f_typed = wrap_handler(f)
+        subscription_channel = Channel(channel_size)
+        with(scoped_subscription_stats => sub_stats) do
+            _start_tasks(f_typed, sub_stats, connection.stats, spawn == :always, subject, subscription_channel, monitoring_throttle_seconds)
+        end
+        @lock connection.lock begin
+            connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock())
+        end
     end
     send(connection, sub)
     sub
@@ -72,7 +78,7 @@ function subscribe(
     sub_stats = Stats()
     subscription_channel = Channel(channel_size)
     @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock(), nothing)
     end
     send(connection, sub)
     subscription_monitoring_task = Threads.@spawn :interactive disable_sigint() do

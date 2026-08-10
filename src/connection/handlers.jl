@@ -60,24 +60,44 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
         sub_data = @lock nc.lock get(nc.sub_data, sid, nothing)
         if !isnothing(sub_data)
             sub_stats = sub_data.stats
-            max_msgs = sub_data.channel.sz_max 
-            n_dropped = max(0, sub_stats.msgs_pending + n_received - max_msgs)
-            if n_dropped > 0
-                inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
-                n -= n_dropped
-                msgs = first(msgs, n)
-                # TODO: send NAK for dropped messages
-            end
-            if n > 0
-                try
-                    inc_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
-                    put!(sub_data.channel, msgs)
-                    inc_stats(:msgs_received, n, state.stats, nc.stats, sub_stats)
-                catch
-                    # TODO: if msg needs ack send nak here
-                    # Channel was closed by `unsubscribe`.
-                    dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
-                    inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
+            if sub_data.channel isa Function
+                for msg in msgs
+                    try
+                        sub_data.channel(convert(Msg, msg))
+                        inc_stats(:msgs_handled, 1, state.stats, nc.stats, sub_stats)
+                    catch err
+                        if err isa MethodError
+                            try
+                                Base.invokelatest(sub_data.channel, convert(Msg, msg))
+                                inc_stats(:msgs_handled, 1, state.stats, nc.stats, sub_stats)
+                            catch
+                                inc_stats(:msgs_errored, 1, state.stats, nc.stats, sub_stats)
+                            end
+                        else
+                            inc_stats(:msgs_errored, 1, state.stats, nc.stats, sub_stats)
+                        end
+                    end
+                end
+            else
+                max_msgs = sub_data.channel.sz_max 
+                n_dropped = max(0, sub_stats.msgs_pending + n_received - max_msgs)
+                if n_dropped > 0
+                    inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
+                    n -= n_dropped
+                    msgs = first(msgs, n)
+                    # TODO: send NAK for dropped messages
+                end
+                if n > 0
+                    try
+                        inc_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
+                        @time put!(sub_data.channel, msgs)
+                        inc_stats(:msgs_received, n, state.stats, nc.stats, sub_stats)
+                    catch
+                        # TODO: if msg needs ack send nak here
+                        # Channel was closed by `unsubscribe`.
+                        dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
+                        inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
+                    end
                 end
             end
             cleanup_sub_resources_if_all_msgs_received(nc, sid, n_received)

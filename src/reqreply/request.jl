@@ -99,6 +99,40 @@ function request(
     result
 end
 
+function request(
+    f,
+    connection::Connection,
+    nreplies::Integer,
+    subject::String,
+    data = nothing;
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+)
+    find_data_conversion_or_throw(typeof(data))
+    if NATS.status(connection) in [NATS.DRAINED, NATS.DRAINING]
+        throw(NATS.NATSError(499, "Connection is drained."))
+    end
+    nreplies < 1 && error("`nreplies` have to be greater than 0.")
+    reply_to = new_inbox(connection)
+    sub = subscribe(f, connection, reply_to; spawn = :never)
+    unsubscribe(connection, sub; max_msgs = nreplies)
+    publish(connection, subject, data; reply_to)
+    if timeout isa Period # TODO: get rid of if in 1.11
+        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
+    end
+    Timer(timeout) do _; drain(connection, sub) end
+    nothing
+end
+
+function request(
+    f,
+    connection::Connection,
+    subject::String,
+    data = nothing;
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+)
+    request(f, connection, 1, subject, data; timeout)
+end
+
 """
 Request a reply from a service listening for `subject` messages. Reply is converted to specified type. Apropriate `convert` method must be defined, otherwise error is thrown.
 """

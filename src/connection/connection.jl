@@ -21,7 +21,7 @@ include("stats.jl")
 
 struct SubscriptionData
     sub::Sub
-    channel::Channel
+    channel::Union{Channel, Function}
     stats::Stats
     is_async::Bool
     lock::ReentrantLock

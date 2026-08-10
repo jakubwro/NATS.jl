@@ -50,7 +50,7 @@ function parser_loop(f, io::IO)
         batch_ready_time = time()
         f(data.results)
         handler_call_time = time()
-        # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
+        @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
         empty!(data.results)
     end
 end
