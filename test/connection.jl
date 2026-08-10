@@ -158,6 +158,26 @@ NATS.status()
     @test_throws "Client requires TLS but it is not available for the server." NATS.connect(tls_required = true)
 end
 
+@testset "TLS-first is a recognized client option" begin
+    # `tls_first` must be a known connect option (never an "Unknown
+    # `connect` options" error); the connect itself fails because nothing
+    # listens on the port.
+    err = try
+        NATS.connect("tls://localhost:4321"; tls_first = true)
+    catch e
+        e
+    end
+    @test !occursin("Unknown `connect` options", sprint(showerror, err))
+end
+
+@testset "TLS-first refuses a plaintext broker (fail closed)" begin
+    # handshake_first upgrades to TLS as the FIRST bytes; against the
+    # suite's PLAINTEXT server the handshake fails, so the connect fails
+    # closed rather than silently continuing in the clear (never reads or
+    # acts on the plaintext INFO banner).
+    @test_throws Exception NATS.connect(tls_first = true)
+end
+
 NATS.status()
 
 @testset "Subscription warnings" begin
