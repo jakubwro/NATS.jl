@@ -1,65 +1,52 @@
-# ### tls.jl
-# #
-# # Copyright (C) 2023 Jakub Wronowski.
-# #
-# # Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
-# # Keywords: nats, nats-client, julia
-# #
-# # This file is a part of NATS.jl.
-# #
-# # License is MIT.
-# #
-# ### Commentary:
-# #
-# # This file contains utilities for handling TLS handshake.
-# #
-# ### Code:
+### tls.jl
+#
+# Copyright (C) 2023 Jakub Wronowski.
+#
+# Maintainer: Jakub Wronowski <jakubwro@users.noreply.github.com>
+# Keywords: nats, nats-client, julia
+#
+# This file is a part of NATS.jl.
+#
+# License is MIT.
+#
+### Commentary:
+#
+# This file contains utilities for handling TLS handshake.
+#
+### Code:
 
-# function upgrade_to_tls(sock::Sockets.TCPSocket, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing})
-#     entropy = MbedTLS.Entropy()
-#     rng = MbedTLS.CtrDrbg()
-#     MbedTLS.seed!(rng, entropy)
-#     ctx = MbedTLS.SSLContext()
-#     conf = MbedTLS.SSLConfig()
-#     MbedTLS.config_defaults!(conf)
-#     MbedTLS.authmode!(conf, MbedTLS.MBEDTLS_SSL_VERIFY_REQUIRED)
-#     MbedTLS.rng!(conf, rng)
+#TODO: add env variables
+function default_tls_options()
+    (
+        server_name = nothing,
+        verify_peer = false, #true
+        verify_hostname = false, #true
+        ca_file = nothing,
+        cert_file = nothing,
+        key_file = nothing,
+        handshake_timeout_ns = Int64(round(0.5 * 1_000_000_000)),
+        min_version = Reseau.TLS.TLS1_2_VERSION,
+        max_version = nothing,
+    )
+end
 
-#     # function show_debug(level, filename, number, msg)
-#     #     @show level, filename, number, msg
-#     # end
-    
-#     # MbedTLS.dbg!(conf, show_debug)
-    
-#     if !isnothing(ca_cert_path)
-#         MbedTLS.ca_chain!(conf, MbedTLS.crt_parse_file(ca_cert_path))
-#     end
+function open_tcp_transport(host, port)
+    return Reseau.TCP.connect("$(host):$(port)")
+end
 
-#     MbedTLS.setup!(ctx, conf)
-#     MbedTLS.set_bio!(ctx, sock)
-#     if !isnothing(client_key_path) && !isnothing(client_key_path)
-#         cert = MbedTLS.crt_parse_file(client_cert_path)
-#         key = MbedTLS.parse_keyfile(client_key_path)
-#         MbedTLS.own_cert!(conf, cert, key)
-#     end
-    
-#     MbedTLS.handshake(ctx)
+function open_tls_transport(host, port; options...)
+    options = merge(default_tls_options(), options)
+    return Reseau.TLS.connect(
+        "tcp",
+        "$(host):$(port)",
+        Reseau.TLS.Config(; options...)
+    )
+end
 
-#     get_tls_input_buffered(ctx), ctx
-# end
-
-# function get_tls_input_buffered(ssl)
-#     io = Base.BufferStream()
-#     t = Threads.@spawn :interactive disable_sigint() do
-#         try
-#             while !eof(ssl)
-#                 av = readavailable(ssl)
-#                 write(io, av)
-#             end
-#         finally
-#             close(io)
-#         end
-#     end
-#     errormonitor(t)
-#     BufferedInputStream(io, 1)
-# end
+function upgrade_to_tls(tcp; options...)
+    options = merge(default_tls_options(), options)
+    config = Reseau.TLS.Config(; options...)
+    tls_io = Reseau.TLS.client(tcp, config)
+    Reseau.TLS.handshake!(tls_io)
+    return tls_io
+end
