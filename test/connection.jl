@@ -4,6 +4,7 @@ using NATS
 using Random
 using ScopedValues
 using StructTypes
+using Reseau
 
 NATS.status()
 
@@ -51,7 +52,7 @@ end
 
 @testset "Connection url schemes" begin
     try
-        @test_throws Base.IOError NATS.connect("tls://localhost:4321")
+        @test_throws Reseau.HostResolvers.OpError NATS.connect("tls://localhost:4321")
 
         conn = NATS.connect("nats://username:passw0rd@localhost:4222")
         @test NATS.status(conn) == NATS.CONNECTED
