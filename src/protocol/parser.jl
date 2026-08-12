@@ -60,13 +60,47 @@ macro uint8(char::Char)
 end
 
 
+# Upper bound for a single protocol message payload. The server advertises its
+# own `max_payload` in INFO (1 MB by default), this is only a sanity limit to
+# ensure a corrupted or hostile length header cannot cause a huge allocation.
+const MAX_PROTOCOL_PAYLOAD_BYTES = 64 * 2^20 # 64 MB
+
 @inline function bytes_to_int64(buffer, range)::Int64
+    isempty(range) && error("Parser error: expected a number, got an empty argument.")
     ret = Int64(0)
     for i in range
+        digit = buffer[i]
+        if digit < 0x30 || digit > 0x39
+            error("Parser error: expected a decimal digit, got '$(Char(digit))'.")
+        end
         ret = (ret << 3) + (ret << 1)
-        ret += buffer[i] - 0x30
+        ret += digit - 0x30
+        if ret > MAX_PROTOCOL_PAYLOAD_BYTES
+            error("Parser error: length header exceeds $MAX_PROTOCOL_PAYLOAD_BYTES bytes.")
+        end
     end
     ret
+end
+
+# Read the remainder of a protocol line, including its "\r\n" terminator.
+# `readuntil` returns partial data without error when the connection dies
+# mid-line, so the terminator is verified rather than assumed. Throwing here
+# tears down the receiver task, which triggers a reconnect.
+@inline function read_until_crlf(io::IO)
+    chunk = codeunits(readuntil(io, "\r\n"; keep = true))
+    if length(chunk) < 2 || chunk[end - 1] != (@uint8 '\r') || chunk[end] != (@uint8 '\n')
+        throw(EOFError())
+    end
+    chunk
+end
+
+# Read exactly `n` more bytes, failing on a truncated stream.
+@inline function read_exactly(io::IO, n::Integer)
+    chunk = read(io, n)
+    if length(chunk) != n
+        throw(EOFError())
+    end
+    chunk
 end
 
 function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
@@ -179,17 +213,17 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 data.arg_begin = pos
                 data.arg_no += 1
                 if pos == len
-                    rest = readuntil(io, "\r\n")
-                    append!(buffer, rest, "\r\n")
-                    len += length(rest) + 2
+                    rest = read_until_crlf(io)
+                    append!(buffer, rest)
+                    len += length(rest)
                 end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
             if pos == len && byte != (@uint8 '\n')
-                rest = readuntil(io, "\r\n")
-                len += length(rest) + 2
-                append!(buffer, rest, "\r\n")
+                rest = read_until_crlf(io)
+                len += length(rest)
+                append!(buffer, rest)
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
@@ -227,7 +261,7 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 end
                 ending = pos + data.total_bytes + 2
                 if ending > len
-                    rest = read(io, ending - len)
+                    rest = read_exactly(io, ending - len)
                     len += length(rest)
                     append!(buffer, rest)
                 end
@@ -240,6 +274,9 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 data.state = OP_START
             else
                 if data.arg_no == 2
+                    if byte < 0x30 || byte > 0x39
+                        parse_error(buffer, pos, data)
+                    end
                     data.sid = data.sid * 10
                     data.sid += byte - 0x30
                 end

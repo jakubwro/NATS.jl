@@ -83,6 +83,94 @@
     @test_throws ErrorException NATS.parser_loop(io) do; end
 end
 
+# IO that yields at most `chunk` bytes per read, forcing the parser through its
+# mid-message refill paths the way a real socket does.
+mutable struct ChokedIO <: IO
+    data::Vector{UInt8}
+    pos::Int
+    chunk::Int
+end
+ChokedIO(s, c) = ChokedIO(Vector{UInt8}(s), 1, c)
+Base.eof(io::ChokedIO) = io.pos > length(io.data)
+function Base.readavailable(io::ChokedIO)
+    n = min(io.chunk, length(io.data) - io.pos + 1)
+    out = io.data[io.pos:io.pos+n-1]
+    io.pos += n
+    out
+end
+function Base.read(io::ChokedIO, n::Integer)
+    n = min(n, length(io.data) - io.pos + 1)
+    out = io.data[io.pos:io.pos+n-1]
+    io.pos += n
+    out
+end
+function Base.readuntil(io::ChokedIO, delim::String; keep::Bool = false)
+    d = Vector{UInt8}(delim)
+    idx = findfirst(i -> io.data[i:min(end, i+length(d)-1)] == d, io.pos:length(io.data))
+    if isnothing(idx)
+        # Mimic `readuntil` on a closed connection: partial data, no error.
+        out = io.data[io.pos:end]
+        io.pos = length(io.data) + 1
+        return String(out)
+    end
+    stop = io.pos + idx - 2
+    out = io.data[io.pos:stop]
+    io.pos = stop + length(d) + 1
+    String(keep ? vcat(out, d) : out)
+end
+
+@testset "Parsing truncated and malformed messages." begin
+    collect_msgs(io) = begin
+        result = NATS.ProtocolMessage[]
+        NATS.parser_loop(io) do msgs; append!(result, msgs) end
+        result
+    end
+
+    # A connection dying mid-header must raise, not fabricate a "\r\n"
+    # terminator and parse a garbage argument list.
+    @test_throws Exception collect_msgs(IOBuffer("MSG FOO.BAR 9 1"))
+    @test_throws Exception collect_msgs(ChokedIO("MSG FOO.BAR 9 1", 3))
+
+    # A payload shorter than the declared length must raise.
+    @test_throws Exception collect_msgs(IOBuffer("MSG FOO.BAR 9 11\r\nHello"))
+    @test_throws Exception collect_msgs(ChokedIO("MSG FOO.BAR 9 11\r\nHel", 3))
+
+    # A non-digit in a length field used to underflow UInt8 into a huge
+    # `total_bytes`, which was then passed straight to `read`.
+    @test_throws Exception collect_msgs(IOBuffer("MSG FOO.BAR 9 1/1\r\nHello World\r\n"))
+
+    # An absurd declared length must be rejected before allocating for it.
+    @test_throws Exception collect_msgs(IOBuffer("MSG FOO.BAR 9 999999999999\r\n"))
+
+    # A non-digit sid must not be silently folded into the sid.
+    @test_throws Exception collect_msgs(IOBuffer("MSG FOO.BAR 9x 11\r\nHello World\r\n"))
+end
+
+@testset "Parsing messages split across reads." begin
+    collect_msgs(io) = begin
+        result = NATS.ProtocolMessage[]
+        NATS.parser_loop(io) do msgs; append!(result, msgs) end
+        result
+    end
+
+    # Subject is deliberately multi-byte UTF-8: appending a `String` to the
+    # byte buffer used to iterate `Char`s and corrupt it.
+    wire = "MSG FOO.åäö 9 GREETING.34 11\r\nHello World\r\nMSG BAR 7 5\r\nhello\r\nPING\r\n"
+    for chunk in 1:12
+        msgs = collect_msgs(ChokedIO(wire, chunk))
+        @test length(msgs) == 3
+        msg = convert(NATS.Msg, msgs[1])
+        @test msg.subject == "FOO.åäö"
+        @test msg.sid == 9
+        @test msg.reply_to == "GREETING.34"
+        @test NATS.payload(msg) == "Hello World"
+        msg2 = convert(NATS.Msg, msgs[2])
+        @test msg2.subject == "BAR"
+        @test NATS.payload(msg2) == "hello"
+        @test msgs[3] == NATS.Ping()
+    end
+end
+
 @testset "Serializing client operations." begin
     serialize(m) = String(repr(NATS.MIME_PROTOCOL(), m))
 
