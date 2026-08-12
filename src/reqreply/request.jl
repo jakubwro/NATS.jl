@@ -79,23 +79,73 @@ function request(
         throw(NATS.NATSError(499, "Connection is drained."))
     end
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
+    if timeout isa Period # TODO: get rid of if in 1.11
+        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
+    end
+    if request_dedicated_inbox(subject)
+        return request_with_own_inbox(connection, nreplies, subject, data, timeout)
+    end
+    # Replies arrive on the connection wide muxer subscription, so a request
+    # costs no SUB or UNSUB round trip and does not touch the subscription
+    # registry. Registration happens before publishing so a reply cannot
+    # arrive before there is a channel to route it to.
+    reply_to, token, ch = register_reply_channel(connection, nreplies)
+    result = Msg[]
+    try
+        publish(connection, subject, data; reply_to)
+        # Closing the channel is what wakes up a blocked `take!`.
+        timer = Timer(timeout) do _
+            try close(ch) catch end
+        end
+        try
+            for _ in 1:nreplies
+                msg = try
+                    take!(ch)
+                catch err
+                    # Closed by the timer, or drained.
+                    err isa InvalidStateException || rethrow()
+                    break
+                end
+                push!(result, msg)
+                has_error_status(msg) && break
+            end
+        finally
+            close(timer)
+        end
+    finally
+        unregister_reply_channel(connection, token)
+    end
+    result
+end
+
+# """
+# Request using a subscription dedicated to this request. Needed when replies
+# do not arrive on the inbox subject, see `request_dedicated_inbox`.
+# """
+function request_with_own_inbox(
+    connection::Connection,
+    nreplies::Integer,
+    subject::String,
+    data,
+    timeout::Real
+)
     reply_to = new_inbox(connection)
     sub = subscribe(connection, reply_to)
     unsubscribe(connection, sub; max_msgs = nreplies)
     publish(connection, subject, data; reply_to)
-    if timeout isa Period # TODO: get rid of if in 1.11
-        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
-    end
     timer = Timer(timeout) do _; drain(connection, sub) end
     result = Msg[]
-    for _ in 1:nreplies
-        msg = next(connection, sub; no_throw = true)
-        isnothing(msg) && break # Do not throw when unsubscribed.
-        push!(result, msg)
-        has_error_status(msg) && break
+    try
+        for _ in 1:nreplies
+            msg = next(connection, sub; no_throw = true)
+            isnothing(msg) && break # Do not throw when unsubscribed.
+            push!(result, msg)
+            has_error_status(msg) && break
+        end
+    finally
+        close(timer)
+        drain(connection, sub)
     end
-    close(timer)
-    drain(connection, sub)
     result
 end
 

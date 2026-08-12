@@ -70,6 +70,13 @@ const DEFAULT_REQUEST_TIMEOUT_SECONDS = 5.0
 const DEFAULT_DRAIN_TIMEOUT_SECONDS = 5.0
 const DEFAULT_DRAIN_POLL_INTERVAL_SECONDS = 0.2
 
+# Prefix for request reply inboxes. Replies for all requests on a connection
+# arrive on a single wildcard subscription under this prefix.
+const DEFAULT_INBOX_PREFIX = "_INBOX."
+# Length of the random part of an inbox prefix and of a per request token.
+# NATS clients conventionally use 22 characters.
+const INBOX_RANDOM_LENGTH = 22
+
 const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code
 
 include("protocol/protocol.jl")

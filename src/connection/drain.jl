@@ -19,6 +19,10 @@
 # Actual drain logic, for thread safety executed in connection controller task.
 function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, Period} = nc.drain_timeout)
     timer = Timer(timeout)
+    # Wake up anyone blocked in `request`, they will never get a reply now.
+    # Done before unsubscribing so requesters stop waiting promptly rather
+    # than holding the drain open until their own timeout expires.
+    stop_muxer!(nc)
     sids = @lock nc.lock copy(keys(nc.sub_data))
     for sid in sids
         send(nc, Unsub(sid, 0))
@@ -84,4 +88,3 @@ function drain(connection::Connection)
         end
     end
 end
-

@@ -15,5 +15,6 @@
 #
 ### Code:
 
+include("muxer.jl")
 include("request.jl")
 include("reply.jl")

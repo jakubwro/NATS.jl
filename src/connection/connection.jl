@@ -56,6 +56,18 @@ end
     allow_direct_lock = ReentrantLock()
     "Handles messages for which handler was not found."
     fallback_handlers::Vector{Function} = Function[]
+    "Prefix for request inboxes, the muxer subscribes to `<inbox_prefix><random>.*`."
+    inbox_prefix::String = DEFAULT_INBOX_PREFIX
+    "Subject prefix of the request muxer subscription, `nothing` until first request."
+    reply_subject::Union{String, Nothing} = nothing
+    "The wildcard subscription that receives all replies for this connection."
+    reply_sub::Union{Sub, Nothing} = nothing
+    "Channels awaiting replies, keyed by the last token of the reply subject."
+    reply_channels::Dict{String, Channel{Msg}} = Dict{String, Channel{Msg}}()
+    "Guards `reply_subject`, `reply_sub` and `reply_channels`."
+    reply_lock::ReentrantLock = ReentrantLock()
+    "Serializes lazy creation of the muxer subscription."
+    muxer_init_lock::ReentrantLock = ReentrantLock()
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
@@ -77,9 +89,9 @@ function clustername(c::Connection)
     end
 end
 
-function new_inbox(connection::Connection, prefix::String = "inbox.")
-    random_suffix = @lock connection.lock randstring(connection.rng, 10)
-    "inbox.$random_suffix"
+function new_inbox(connection::Connection, prefix::String = connection.inbox_prefix)
+    random_suffix = @lock connection.lock randstring(connection.rng, INBOX_RANDOM_LENGTH)
+    "$prefix$random_suffix"
 end
 
 function new_sid(connection::Connection)

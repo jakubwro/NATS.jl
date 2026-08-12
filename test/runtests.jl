@@ -42,6 +42,7 @@ if have_nats
     include("connection.jl")
     include("pubsub.jl")
     include("reqreply.jl")
+    include("muxer.jl")
     # include("channel.jl")
     include("fallback_handler.jl")
     include("experimental.jl")
@@ -49,7 +50,12 @@ if have_nats
     @testset "All subs should be closed" begin
         sleep(5)
         for nc in NATS.state.connections
-            @test isempty(nc.sub_data)
+            # The request muxer keeps one long lived wildcard subscription per
+            # connection that has ever issued a request. It is torn down on
+            # drain, not on unsubscribe of user subscriptions.
+            user_subs = filter(sid -> !NATS.is_muxer_sub(nc, sid), collect(keys(nc.sub_data)))
+            @test isempty(user_subs)
+            @test NATS.pending_requests(nc) == 0
             @test isempty(nc.unsubs)
             if nc.send_buffer.size > 0
                 @info "Buffer content" String(nc.send_buffer.data[begin:nc.send_buffer.size])
