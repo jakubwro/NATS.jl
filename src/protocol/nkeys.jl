@@ -19,6 +19,13 @@ const PUBLIC_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_PUBLICKEYBYTES
 const SECRET_KEY_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_SECRETKEYBYTES
 const SIGNATURE_LENGTH = Sodium.LibSodium.crypto_sign_ed25519_BYTES
 
+"""
+    sign(nonce::String, nkey_seed::String) -> String
+
+Sign a server challenge `nonce` with a private `nkey_seed` (`"S..."`) using
+Ed25519. Returns the URL-safe Base64-encoded detached signature sent in the
+`CONNECT` protocol message.
+"""
 function sign(nonce::String, nkey_seed::String)
     public_key =  Vector{Cuchar}(undef, PUBLIC_KEY_LENGTH)
     secret_key =  Vector{Cuchar}(undef, SECRET_KEY_LENGTH)

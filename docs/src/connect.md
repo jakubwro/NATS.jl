@@ -61,6 +61,20 @@ nothing
 ```
 ![](lifecycle.svg)
 
+## Authentication
+
+NATS supports several authentication schemes, including username/password,
+tokens, TLS certificates, and public-key authentication via NKeys.
+
+### NKeys
+
+When connecting with an NKey private seed (`nkey_seed`), you can derive the
+corresponding public NKey (`nkey`) using `public_key`:
+
+```@docs
+NATS.public_key
+NATS.sign
+```
 
 ## Environment variables
 
