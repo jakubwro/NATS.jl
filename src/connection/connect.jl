@@ -74,8 +74,13 @@ function validate_connect_options(server_info::Info, options)
     server_info.proto > 0 || error("Server supports too old protocol version.")
     server_info.headers   || error("Server does not support headers.") # TODO: maybe this can be relaxed.
 
-    # Check TLS requirements
-    if get(options, :tls_required, false)
+    # Check TLS requirements. Skipped under TLS-first: the socket was
+    # upgraded BEFORE this INFO was read, so the requirement is already
+    # satisfied by construction -- and a handshake-first server has no
+    # reason to advertise `tls_available` in an INFO it only ever sends
+    # over TLS. Acting on the banner here would refuse exactly the
+    # connections TLS-first exists to secure.
+    if get(options, :tls_required, false) && !get(options, :tls_first, false)
         !isnothing(server_info.tls_available) && server_info.tls_available || error("Client requires TLS but it is not available for the server.")
     end
 end

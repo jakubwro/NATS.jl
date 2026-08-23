@@ -178,6 +178,27 @@ end
     @test_throws Exception NATS.connect(tls_first = true)
 end
 
+@testset "TLS-first skips the INFO tls_available check" begin
+    # A handshake-first server sends INFO only over the already-TLS
+    # session and has no reason to advertise `tls_available` (TLS is the
+    # transport, not an offered upgrade). With `tls_first` the socket was
+    # upgraded BEFORE validate ran, so `tls_required` is satisfied by
+    # construction and the banner check must not fire -- it would refuse
+    # exactly the connections TLS-first exists to secure (as `tls://`
+    # URLs do implicitly: the scheme sets tls_required per ADR-40).
+    # Without `tls_first` the legacy banner-driven check stays active.
+    buf() = IOBuffer("INFO {\"server_id\":\"t\",\"server_name\":\"t\"," *
+                     "\"version\":\"2.10.0\",\"go\":\"go1.21\"," *
+                     "\"host\":\"0.0.0.0\",\"port\":4222,\"headers\":true," *
+                     "\"proto\":1,\"max_payload\":1048576,\"client_id\":1}\r\n")
+    info = NATS.next_protocol_message(buf())
+    @test info isa NATS.Info && isnothing(info.tls_available)
+    @test isnothing(NATS.validate_connect_options(
+        info, (tls_required = true, tls_first = true)))
+    @test_throws "Client requires TLS but it is not available for the server." NATS.validate_connect_options(
+        info, (tls_required = true,))
+end
+
 NATS.status()
 
 @testset "Subscription warnings" begin
