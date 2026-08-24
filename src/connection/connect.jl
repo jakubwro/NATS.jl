@@ -132,26 +132,24 @@ function init_protocol(nc, url, options)
             options = merge(options, (pass = pass,))
         end
     end
-    sock = Sockets.connect(host, port)
+    tls_first = get(options, :tls_first, false)
+    tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
+    tls_options = (ca_file = tls_options.tls_ca_path, cert_file = tls_options.tls_cert_path, key_file = tls_options.tls_key_path)
+    sock = if tls_first
+            open_tls_transport(host, port; tls_options...)
+        else
+            open_tcp_transport(host, port)
+        end
     try
         read_stream, write_stream = sock, sock
-        tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
-        # TLS-first: upgrade BEFORE reading INFO, so the handshake is the
-        # first bytes and the client never acts on a pre-TLS server banner.
-        # Against a plaintext listener the handshake fails here, so the
-        # connect fails closed instead of silently continuing in the clear.
-        tls_first = get(options, :tls_first, false)
-        if tls_first
-            (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
-            @debug "Socket upgraded (TLS-first)"
-        end
         info_msg = next_protocol_message(read_stream)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
         # Legacy banner-driven upgrade: only when not already TLS-first and
         # the server's INFO advertises tls_required.
         if !tls_first && !isnothing(info_msg.tls_required) && info_msg.tls_required
-            (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
+            tls_io = upgrade_to_tls(sock; tls_options...)
+            (read_stream, write_stream) = (tls_io, tls_io)
             @debug "Socket upgraded"
         end
 
