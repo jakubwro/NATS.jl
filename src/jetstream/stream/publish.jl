@@ -8,3 +8,19 @@ Publish a message to stream.
 function stream_publish(connection::NATS.Connection, subject, data; delays = DEFAULT_STREAM_PUBLISH_DELAYS)
     jetstream_api_call(PubAck, connection, subject, data; delays)
 end
+
+struct PublishControl #TODO: to be renamed
+    max_acks_pending::Int
+
+end
+
+function stream_publish(f, connection::NATS.Connection, subject, data; delays = DEFAULT_STREAM_PUBLISH_DELAYS)
+    
+    #TODO: wait for max acks pending
+    
+    # ++count
+    jetstream_api_call(PubAck, connection, subject, data; delays) do res::Union{PubAck, NATS.NATSError}
+        # --count
+        f(res)
+    end
+end

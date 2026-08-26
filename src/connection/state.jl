@@ -51,7 +51,9 @@ function cleanup_sub_resources(nc::Connection, sid::Int64)
             # Already cleaned up by other task.
             return
         end
-        close(sub_data.channel)
+        if sub_data.channel isa Channel
+            close(sub_data.channel)
+        end
         if sub_data.is_async == true || Base.n_avail(sub_data.channel) == 0
             # `next` rely on lookup of sub data, in this case let sub data stay and do cleanup
             # when `next` gets the last message of a closed channel.
