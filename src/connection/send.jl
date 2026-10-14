@@ -133,9 +133,8 @@ function is_send_buffer_flushed(nc::Connection)
     end
 end
 
-function sendloop(nc::Connection, io::IO)
+function sendloop(nc::Connection, io::IO, send_buffer::IO)
     # @show Threads.threadid()
-    send_buffer = nc.send_buffer
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         buf = @lock nc.send_buffer_cond begin
             # TODO: check for eof on io

@@ -208,9 +208,8 @@ function receiver(nc::Connection, io::IO)
     end
 end
 
-function ping_loop(nc::Connection, ping_interval::Union{Real, Period}, max_pings_out::Int64)
+function ping_loop(nc::Connection, ping_interval::Union{Real, Period}, max_pings_out::Int64, reconnects::Int64)
     pings_out = 0
-    reconnects = (@atomic nc.reconnect_count)
     while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
         sleep(ping_interval)
         if !(status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count))
@@ -291,6 +290,7 @@ function connect(
     read_stream = nothing
     write_stream = nothing
     info_msg = nothing
+    send_buffer = nc.send_buffer
     try
         sock, read_stream, write_stream, info_msg = init_protocol(nc, url, options)
         info(nc, info_msg)
@@ -323,7 +323,11 @@ function connect(
                 retry_init_protocol = retry(init_protocol, delays=options.reconnect_delays, check = check_errors)
                 try
                     sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, url, options)
+                    info(nc, info_msg)
+                    send_buffer = nc.send_buffer
+                    @atomic nc.reconnect_count += 1
                     status(nc, CONNECTED)
+                    @info "Reconnected to $(clustername(nc)) cluster on `$(nc.url)` after $(time() - start_time) seconds."
                 catch err
                     time_diff = time() - start_reconnect_time
                     @error "Connection disconnected after $(nc.connect_init_count) reconnect retries, it took $time_diff seconds." err
@@ -335,11 +339,7 @@ function connect(
                         status(nc, DISCONNECTED)
                     end
                 end
-                if status(nc) == CONNECTED
-                    @atomic nc.reconnect_count += 1
-                    info(nc, info_msg)
-                    @info "Reconnected to $(clustername(nc)) cluster on `$(nc.url)` after $(time() - start_time) seconds."
-                elseif status(nc) == DISCONNECTED
+                if status(nc) == DISCONNECTED
                     wait(nc.reconnect_event)
                     @debug "Reconnect requested"
                     if (@atomic nc.drain_event.set) == true
@@ -358,13 +358,16 @@ function connect(
                     break
                 end
             end
+            # Late-starting workers must retain their own attempt's resources and generation.
+            reconnect_count = @atomic nc.reconnect_count
             reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event); end
-            receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
-            sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
-            ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
+            receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, $read_stream) end
+            sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, $write_stream, $send_buffer) end
+            ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out, $reconnect_count) end
 
             tasks = [receiver_task, sender_task, ping_task, reconnect_await_task, drain_await_task]
             names = ["receiver", "sender", "ping", "reconnect", "drain"]
+            @assert length(tasks) == length(names)
             err_channel = Channel()
             for task in tasks
                 bind(err_channel, task)
