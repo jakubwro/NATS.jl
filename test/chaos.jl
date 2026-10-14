@@ -53,7 +53,18 @@ nc = NATS.connect()
     @test restart_nats_server() == 0
     @test timedwait(() -> (@atomic nc.reconnect_count) > previous_reconnects &&
         NATS.status(nc) == NATS.CONNECTED, 30.0; pollint = 0.01) == :ok
-    @test nc.status == NATS.CONNECTED
+    @test NATS.status(nc) == NATS.CONNECTED
+    # The external reply service reconnects independently and may subscribe later.
+    responder_ready = timedwait(30.0; pollint = 0.1) do
+        try
+            request(nc, "help.please"; timeout = 5.0)
+            true
+        catch err
+            err isa NATS.NATSError && err.code == 503 || rethrow()
+            false
+        end
+    end
+    @test responder_ready == :ok
     resp = request(nc, "help.please")
     @test resp isa NATS.Msg
 end
