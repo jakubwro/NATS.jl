@@ -15,6 +15,7 @@ include("util.jl")
 @show Threads.nthreads(:default)
 
 include("protocol.jl")
+include("parser_fragmentation.jl")
 
 function is_nats_available()
     try

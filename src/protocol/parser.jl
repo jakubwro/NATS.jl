@@ -179,17 +179,18 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 data.arg_begin = pos
                 data.arg_no += 1
                 if pos == len
-                    rest = readuntil(io, "\r\n")
-                    append!(buffer, rest, "\r\n")
-                    len += length(rest) + 2
+                    rest = readuntil(io, UInt8('\n'); keep = true)
+                    append!(buffer, rest)
+                    len += length(rest)
                 end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
             if pos == len && byte != (@uint8 '\n')
-                rest = readuntil(io, "\r\n")
-                len += length(rest) + 2
-                append!(buffer, rest, "\r\n")
+                # CR may already be in buffer; read through LF without decoding bytes.
+                rest = readuntil(io, UInt8('\n'); keep = true)
+                append!(buffer, rest)
+                len += length(rest)
             end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
