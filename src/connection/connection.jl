@@ -64,7 +64,7 @@ status(c::Connection)::ConnectionStatus = @lock c.status_change_cond c.status
 function status(c::Connection, status::ConnectionStatus)
     @lock c.status_change_cond begin
         c.status = status
-        notify(c.status_change_cond)
+        notify(c.status_change_cond, status)
     end
 end
 
