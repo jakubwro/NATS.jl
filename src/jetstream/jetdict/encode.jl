@@ -1,6 +1,6 @@
 
 
-# Encoding must confirm to `validate_key`, so not url safe base64 is not allowed because of '+'
+# Encoding must confirm to `validate_key`, so non-URL-safe base64 is not allowed because of '+'
 
 struct KeyEncoding{encoding} end
 

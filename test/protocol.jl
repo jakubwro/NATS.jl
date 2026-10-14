@@ -36,7 +36,7 @@
     end
     @test result == expected
 
-    # Test case insensivity of protocol parser.
+    # Test case insensitivity of the protocol parser.
     data_to_parse = UInt8[]
     append!(data_to_parse, """info {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
     append!(data_to_parse, "msg FOO.BAR 9 11\r\nHello World\r\n")
@@ -56,7 +56,7 @@
     end
     @test result == expected
 
-    # Test multiple whitespaces parsing.
+    # Test multiple whitespace parsing.
     data_to_parse = UInt8[]
     append!(data_to_parse, """INFO   {"server_id":"NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK","server_name":"my_nats_server","version":"2.9.21","proto":1,"git_commit":"b2e7725","go":"go1.19.12","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"jetstream":true,"client_id":61,"client_ip":"127.0.0.1"} \r\n""")
     append!(data_to_parse, "MSG\tFOO.BAR\t9\t11\r\nHello World\r\n")

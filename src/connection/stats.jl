@@ -11,19 +11,19 @@
 #
 ### Commentary:
 #
-# This file contains utilities for collecting statistics connections, subscrptions and NATS.jl package.
+# This file contains utilities for collecting statistics for connections, subscriptions and the NATS.jl package.
 #
 ### Code:
 
 const NATS_STATS_MAX_RECENT_ERRORS = 100
 mutable struct Stats
-    "Count of msgs received but maybe not yet handled by subscription."
+    "Count of msgs received but maybe not yet handled by the subscription."
     @atomic msgs_received::Int64
-    "Count of msgs received that was not pickuped by subscription handler yet."
+    "Count of msgs received that was not picked up by the subscription handler yet."
     @atomic msgs_pending::Int64
-    "Count of msgs handled without error."
+    "Count of msgs handled without an error."
     @atomic msgs_handled::Int64
-    "Count of msgs that caused handler function error."
+    "Count of msgs that caused a handler function error."
     @atomic msgs_errored::Int64
     "Msgs that was not put to a subscription channel because it was full or `sid` was not known."
     @atomic msgs_dropped::Int64
@@ -70,7 +70,7 @@ function dec_stat(stat, field, value)
     Base.modifyproperty!(stat, field, -, value, :sequentially_consistent)
 end
 
-# Tell if all received messages are delivered to subscription and handlers finished.
+# Tell if all received messages are delivered to the subscription and handlers finished.
 function is_every_message_handled(stats::Stats)
     (@atomic stats.msgs_pending) == 0 &&
     (@atomic stats.handlers_running) == 0 &&

@@ -166,7 +166,7 @@ end
     tm = Timer(1.0)
     response = try request(connection, "help.please") catch err; err end
     if response isa NATSError && response.code == 503
-        @info "No external service working, skipping test"
+        @info "No external service is working, skipping test"
         return
     end
     
@@ -174,7 +174,7 @@ end
         res = request(connection, "help.please")
         counter = counter + 1
     end
-    @info "Exteranal service: $counter requests / second."
+    @info "External service: $counter requests / second."
     NATS.status()
 end
 
@@ -201,7 +201,7 @@ end
     docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
 
     if isnothing(docker_network)
-        @info "No docker network specified, skipping benchmarks"
+        @info "No Docker network specified, skipping benchmarks"
         return
     end
 
@@ -240,7 +240,7 @@ end
     docker_network = get(ENV, "TEST_JOB_CONTAINER_NETWORK", nothing)
 
     if isnothing(docker_network)
-        @info "No docker network specified, skipping benchmarks"
+        @info "No Docker network specified, skipping benchmarks"
         return
     end
 

@@ -26,7 +26,7 @@ function is_nats_available()
         nc = NATS.connect()
         NATS.ping(nc; timeout = 10.0, measure = false)
         @assert NATS.status(nc) == NATS.CONNECTED
-        @info "NATS avaliable, running connected tests."
+        @info "NATS available, running connected tests."
         true
     catch err
         @info "NATS unavailable, skipping connected tests."  err

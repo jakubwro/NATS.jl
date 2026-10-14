@@ -18,10 +18,10 @@
 """
 $(SIGNATURES)
 
-Unsubscrible from a subject. `sub` is an object returned from `subscribe` or `reply`.
+Unsubscribe from a subject. `sub` is an object returned from `subscribe` or `reply`.
 
 Optional keyword arguments are:
-- `max_msgs`: maximum number of messages server will send after `unsubscribe` message received in server side, what can occur after some time lag
+- `max_msgs`: maximum number of messages the server will send after the `unsubscribe` message is received on the server side, what can occur after some time lag
 """
 function unsubscribe(
     connection::Connection,

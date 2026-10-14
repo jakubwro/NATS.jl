@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains utilities for maintaining global state of NATS.jl package.
+# This file contains utilities for maintaining global state of the NATS.jl package.
 #
 ### Code:
 
@@ -48,7 +48,7 @@ function cleanup_sub_resources(nc::Connection, sid::Int64)
     @lock nc.lock begin
         sub_data = get(nc.sub_data, sid, nothing)
         if isnothing(sub_data)
-            # Already cleaned up by other task.
+            # Already cleaned up by another task.
             return
         end
         close(sub_data.channel)
@@ -62,7 +62,7 @@ function cleanup_sub_resources(nc::Connection, sid::Int64)
 end
 
 # """
-# Update state on message received and conditionaly do cleanup.
+# Update state on a message received and conditionally do cleanup.
 # Check if previously unsubscribed sub needs cleanup when no more messages are expected.
 # """
 function cleanup_sub_resources_if_all_msgs_received(nc::Connection, sid::Int64, n::Int64)

@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementation of functions for validation of protocol messages.
+# This file contains implementation of functions for the validation of protocol messages.
 #
 ### Code:
 

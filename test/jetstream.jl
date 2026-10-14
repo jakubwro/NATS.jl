@@ -12,7 +12,7 @@ function have_nats()
         nc = NATS.connect()
         @assert nc.status == NATS.CONNECTED
         @assert NATS.info(nc).jetstream == true
-        @info "JetStream avaliable, running connected tests."
+        @info "JetStream available, running connected tests."
         true
     catch err
         @info "JetStream unavailable, skipping connected tests."  err
@@ -179,7 +179,7 @@ end
 
 uint8_vec(s::String) = convert.(UInt8, collect(s))
 
-# TODO: fix this testest
+# TODO: fix this test
 # @testset "Ack" begin
 #     connection = NATS.connect()
 #     no_reply_to_msg = NATS.Msg("FOO.BAR", "9", nothing, 0, uint8_vec("Hello World"))

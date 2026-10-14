@@ -2,7 +2,7 @@
 
 ## Using custom types as handler input
 
-It is possible to use and return custom types inside subscription handlers if `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for example implementation for `String`.
+It is possible to use and return custom types inside subscription handlers if a `convert` method from `NATS.Msg` is provided. See `src/protocol/convert.jl` for an example implementation for `String`.
 
 ```@repl
 using NATS
@@ -36,7 +36,7 @@ const MIME_PAYLOAD  = MIME"application/nats-payload"
 const MIME_HEADERS  = MIME"application/nats-headers"
 ```
 
-Conversion method should look like this.
+A conversion method should look like this.
 
 ```@repl
 using NATS

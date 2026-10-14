@@ -31,19 +31,19 @@ function Base.show(io::IO, ::MIME_PAYLOAD, ::Headers)
 end
 
 function Base.show(io::IO, ::MIME_PAYLOAD, payload::String)
-    # Allows to return string from handler for `reply`.
+    # Allows to return a string from the handler for `reply`.
     write(io, payload)
     nothing
 end
 
 function Base.show(io::IO, ::MIME_PAYLOAD, payload::JSON3.Object)
-    # Allows to return json from handler for `reply`.
+    # Allows to return JSON from the handler for `reply`.
     JSON3.write(io, payload)
     nothing
 end
 
 function Base.show(io::IO, mime::MIME_PAYLOAD, tup::Tuple{<:Any, Headers})
-    # Allows to return tuple from handler, useful to override headers.
+    # Allows to return a tuple from the handler, useful to override headers.
     Base.show(io, mime, first(tup))
     nothing
 end

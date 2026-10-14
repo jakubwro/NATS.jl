@@ -4,7 +4,7 @@ using NATS
 try
     NATS.connect(default = true)
 catch
-    @info "Default conneciton already exists."
+    @info "Default connection already exists."
 end
 
 @testset "Single message" begin

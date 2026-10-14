@@ -18,19 +18,19 @@ $(TYPEDFIELDS)
     "The number of times a message will be redelivered to consumers if not acknowledged in time"
     max_deliver::Union{Int64, Nothing} = 1000
     # This one is only for NATS 2.9 and older
-    # "Filter the stream by a single subjects"
+    # "Filter the stream by a single subject"
     # filter_subject::Union{String, Nothing} = nothing
     "Filter the stream by multiple subjects"
     filter_subjects::Union{Vector{String}, Nothing} = nothing
     replay_policy::Symbol = :instant
     sample_freq::Union{String, Nothing} = nothing
-    "The rate at which messages will be delivered to clients, expressed in bit per second"
+    "The rate at which messages will be delivered to clients, expressed in bits per second"
     rate_limit_bps::Union{UInt64, Nothing} = nothing
-    "The maximum number of messages without acknowledgement that can be outstanding, once this limit is reached message delivery will be suspended"
+    "The maximum number of messages without acknowledgement that can be outstanding, once this limit is reached the message delivery will be suspended"
     max_ack_pending::Union{Int64, Nothing} = nothing
-    "If the Consumer is idle for more than this many nano seconds a empty message with Status header 100 will be sent indicating the consumer is still alive"
+    "If the Consumer is idle for more than this many nanoseconds an empty message with a Status header 100 will be sent indicating the consumer is still alive"
     idle_heartbeat::Union{Int64, Nothing} = nothing
-    "For push consumers this will regularly send an empty mess with Status header 100 and a reply subject, consumers must reply to these messages to control the rate of message delivery"
+    "For push consumers this will regularly send an empty message with a Status header 100 and a reply subject, consumers must reply to these messages to control the rate of message delivery"
     flow_control::Union{Bool, Nothing} = nothing
     "The number of pulls that can be outstanding on a pull consumer, pulls received after this is reached are ignored"
     max_waiting::Union{Int64, Nothing} = nothing
@@ -40,9 +40,9 @@ $(TYPEDFIELDS)
     max_batch::Union{Int64, Nothing} = nothing
     "The maximum expires value that may be set when doing a pull on a Pull Consumer"
     max_expires::Union{Int64, Nothing} = nothing
-    "The maximum bytes value that maybe set when dong a pull on a Pull Consumer"
+    "The maximum bytes value that may be set when doing a pull on a Pull Consumer"
     max_bytes::Union{Int64, Nothing} = nothing
-    "Duration that instructs the server to cleanup ephemeral consumers that are inactive for that long"
+    "Duration that instructs the server to clean up ephemeral consumers that are inactive for that long"
     inactive_threshold::Union{Int64, Nothing} = nothing
     "List of durations in Go format that represents a retry time scale for NaK'd messages"
     backoff::Union{Vector{Int64}, Nothing} = nothing

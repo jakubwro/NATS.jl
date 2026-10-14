@@ -18,12 +18,12 @@
 const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=53, first_delay=0.01, max_delay=0.1)
 
 function can_send(nc::Connection, ::ProtocolMessage)
-    # Drained conection is not usable, otherwise allow ping and pong and unsubs.
+    # A drained connection is not usable, otherwise allow ping and pong and unsubs.
     status(nc) != DRAINED
 end
 
 function can_send(nc::Connection, ::Union{Ping, Pong})
-    # Do not let PING and PONG polute send buffer during drain.
+    # Do not let PING and PONG pollute the send buffer during the drain.
     conn_status = status(nc)
     conn_status != DRAINED && conn_status != DRAINING
 end
@@ -37,7 +37,7 @@ function can_send(nc::Connection, ::Union{Pub, Vector{Pub}})
     elseif conn_status == DISCONNECTED
         nc.send_enqueue_when_disconnected
     elseif conn_status == DRAINING
-        # Allow handlers to publish results during drain
+        # Allow handlers to publish the results during the drain
         sub_stats = ScopedValues.get(scoped_subscription_stats)
         is_called_from_subscription_handler = !isnothing(sub_stats)
         is_called_from_subscription_handler
@@ -55,7 +55,7 @@ function can_send(nc::Connection, ::Sub)
     elseif conn_status == DISCONNECTED
         true
     elseif conn_status == DRAINING
-        # No new subs allowed during drain.
+        # No new subs are allowed during the drain.
         false
     elseif conn_status == DRAINED
         false
@@ -83,7 +83,7 @@ function try_send(nc::Connection, msg::ProtocolMessage)
 
     @lock nc.send_buffer_cond begin
         if msg isa Pub && nc.send_buffer.size > nc.send_buffer_limit
-            # Apply limits only for publications, to allow unsubs and subs be done with higher priority.
+            # Apply limits only for publications, to allow unsubs and subs to be done with higher priority.
             false
         else
             show(nc.send_buffer, MIME_PROTOCOL(), msg)
@@ -106,7 +106,7 @@ function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
     error("Cannot send, send buffer too large.")
 end
 
-# Calling this function is an easy way to force crash of sender task what will force reconnect.
+# Calling this function is an easy way to force a crash of the sender task what will force a reconnect.
 function reopen_send_buffer(nc::Connection)
     @lock nc.send_buffer_cond begin
         new_send_buffer = IOBuffer()
@@ -125,7 +125,7 @@ function reopen_send_buffer(nc::Connection)
     end
 end
 
-# Tells if send buffer if flushed what means no protocol messages are waiting
+# Tells if the send buffer is flushed, which means no protocol messages are waiting
 # to be delivered to the server.
 function is_send_buffer_flushed(nc::Connection)
     @lock nc.send_buffer_cond begin

@@ -1,7 +1,7 @@
 
 # Request - Reply
 
-Functions implementing [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) pattern.
+Functions implementing the [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) pattern.
 
 ```@docs
 request

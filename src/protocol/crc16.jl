@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementations of CRC16 checksum used by NATS nkeys authentication.
+# This file contains implementations of the CRC16 checksum used by NATS nkeys authentication.
 #
 ### Code:
 

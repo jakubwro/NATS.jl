@@ -1,6 +1,6 @@
 # Benchmarks
 
-Procedures to compare NATS.jl performance with `go` implementation.
+Procedures to compare NATS.jl performance with the `go` implementation.
 
 Prerequisites:
 - start nats-server
@@ -9,7 +9,7 @@ Prerequisites:
 docker run -p 4222:4222 nats:latest
 ```
 
-- enusre `nats` CLI tool is installed
+- ensure the `nats` CLI tool is installed
 
 ## Request-Reply latency
 
@@ -193,7 +193,7 @@ Sub stats: 904,350 msgs/sec ~ 13.80 MB/sec
 
 ### Benchmark NATS.jl subscribe
 
-Supress warnings
+Suppress warnings
 
 ```julia
 julia> using Logging
@@ -259,4 +259,4 @@ julia> subscribe_for_one_second()
 [ Info: Processed 1680882 messages in 0.9680750370025635 s.
 ```
 
-1,68M messages in NATS.jl vs 1.7M messages by go client.
+1.68M messages in NATS.jl vs 1.7M messages by go client.

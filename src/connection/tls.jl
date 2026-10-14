@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains utilities for handling TLS handshake.
+# This file contains utilities for handling the TLS handshake.
 #
 ### Code:
 

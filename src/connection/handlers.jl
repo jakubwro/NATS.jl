@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains logic related to processing messages received from NATS server.
+# This file contains logic related to processing messages received from the NATS server.
 #
 ### Code:
 

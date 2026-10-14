@@ -54,7 +54,7 @@ end
 """
 $(SIGNATURES)
 
-Purge a stream. It is equivalent of deleting all messages.
+Purge a stream. It is the equivalent of deleting all messages.
 """
 function stream_purge(connection::NATS.Connection, stream::String; no_throw = false)
     res = NATS.request(Union{ApiResult, ApiError}, connection, "\$JS.API.STREAM.PURGE.$stream")

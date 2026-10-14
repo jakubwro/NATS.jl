@@ -18,12 +18,12 @@
 """
 $(SIGNATURES)
 
-Send NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) message.
+Send a NATS [Request-Reply](https://docs.nats.io/nats-concepts/core-nats/reqreply) message.
 
-Default timeout is $DEFAULT_REQUEST_TIMEOUT_SECONDS seconds which can be overriden by passing `timeout`. It can be configured globally with `NATS_REQUEST_TIMEOUT_SECONDS` env variable.
+The default timeout is $DEFAULT_REQUEST_TIMEOUT_SECONDS seconds which can be overridden by passing `timeout`. It can be configured globally with the `NATS_REQUEST_TIMEOUT_SECONDS` env variable.
 
 Optional keyword arguments are:
-- `timeout`: error will be thrown if no replies received until `timeout` number of seconds
+- `timeout`: error will be thrown if no replies are received until `timeout` number of seconds
 
 # Examples
 ```julia-repl
@@ -55,11 +55,11 @@ end
 """
 $(SIGNATURES)
 
-Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or timer expired.
-Can return less messages than specified (also empty array if timeout occurs), errors are not filtered.
+Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or the timer expired.
+Can return less messages than specified (also an empty array if a timeout occurs), errors are not filtered.
 
 Optional keyword arguments are:
-- `timout`: empty vector will be returned if no replies received until `timeout` number of seconds
+- `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds
 
 # Examples
 ```julia-repl
@@ -100,7 +100,7 @@ function request(
 end
 
 """
-Request a reply from a service listening for `subject` messages. Reply is converted to specified type. Apropriate `convert` method must be defined, otherwise error is thrown.
+Request a reply from a service listening for `subject` messages. Reply is converted to specified type. An appropriate `convert` method must be defined, otherwise an error is thrown.
 """
 function request(
     T::Type,

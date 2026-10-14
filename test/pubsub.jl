@@ -96,7 +96,7 @@ NATS.status()
 @testset "Subscription with multiple arguments" begin
     subject = randstring(8)
 
-    @test_throws "Conversion of NATS message into type Tuple{Any, Any, Any} is not defined" subscribe(nc, subject) do x, y, z
+    @test_throws "Conversion of a NATS message into type Tuple{Any, Any, Any} is not defined" subscribe(nc, subject) do x, y, z
         "nothing to do"
     end
 

@@ -1,7 +1,7 @@
 
 
 # Subscribe to a stream by creating a consumer.
-# Might be more performant to configure republish subject on steram.
+# Might be more performant to configure republish subject on stream.
 """
 $(SIGNATURES)
 

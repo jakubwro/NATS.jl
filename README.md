@@ -16,12 +16,12 @@
 
 [NATS](https://nats.io) client for Julia.
 
-This client is feature complete in terms of `Core NATS` protocol and most of [JetStream](https://docs.nats.io/nats-concepts/jetstream) API.
+This client is feature complete in terms of the `Core NATS` protocol and most of the [JetStream](https://docs.nats.io/nats-concepts/jetstream) API.
 - [x] All `NATS` authentication methods
 - [x] TLS support
 - [x] Zero copy protocol parser
 
-Performance is matching reference `go` implementation.
+Performance is matching the reference `go` implementation.
 
 ## Compatibility
 
@@ -63,7 +63,7 @@ julia> drain(nc, sub)
 
 ## Request reply
 
-### Connecting to external service
+### Connecting to an external service
 
 ```bash
 > nats reply help.please 'OK, I CAN HELP!!!'
@@ -93,14 +93,14 @@ julia> nc = NATS.connect()
 NATS.Connection(my_cluster cluster, CONNECTED, 0 subs, 0 unsubs)
 
 julia> sub = reply(nc, "some.service") do msg
-                 "This is response"
+                 "This is a response"
              end
 
 julia> rep = @time NATS.request(nc, "some.service");
   0.002897 seconds (231 allocations: 143.078 KiB)
 
 julia> payload(rep)
-"This is response"
+"This is a response"
 
 julia> drain(nc, sub)
 

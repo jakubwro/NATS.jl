@@ -13,7 +13,7 @@ const MAX_HISTORY = 64
 """
 $(SIGNATURES)
 
-Create a stream for KV bucket.
+Create a stream for a KV bucket.
 """
 function keyvalue_stream_create(connection::NATS.Connection, bucket::String, encoding::Symbol, history = MAX_HISTORY)
     history in 1:MAX_HISTORY || error("History must be greater than 0 and cannot be greater than $MAX_HISTORY")
@@ -55,7 +55,7 @@ end
 """
 $(SIGNATURES)
 
-Get a value from KV stream.
+Get a value from a KV stream.
 """
 function keyvalue_get(connection::NATS.Connection, bucket::String, key::String)::NATS.Msg
     validate_key(key)
@@ -67,7 +67,7 @@ end
 """
 $(SIGNATURES)
 
-Put a value to KV stream.
+Put a value to a KV stream.
 """
 function keyvalue_put(connection::NATS.Connection, bucket::String, key::String, value, revision = 0)::PubAck
     validate_key(key)
@@ -82,7 +82,7 @@ end
 """
 $(SIGNATURES)
 
-Delete a value from KV stream.
+Delete a value from a KV stream.
 """
 function keyvalue_delete(connection::NATS.Connection, bucket::String, key)::PubAck
     validate_key(key)
