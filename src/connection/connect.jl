@@ -39,10 +39,7 @@ function default_connect_options()
         tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
         tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
         tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
-        # TLS-first: perform the TLS handshake as the first bytes on the
-        # connection, before reading the server INFO, so the client decides
-        # the transport-security posture rather than the server's advertised
-        # `tls_required`. (nats-py calls this `tls_handshake_first`.)
+        # TLS-first performs the handshake before reading server INFO.
         tls_first = parse(Bool, get(ENV, "NATS_TLS_FIRST", "false")),
         ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
         max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
@@ -74,12 +71,7 @@ function validate_connect_options(server_info::Info, options)
     server_info.proto > 0 || error("Server supports too old protocol version.")
     server_info.headers   || error("Server does not support headers.") # TODO: maybe this can be relaxed.
 
-    # Check TLS requirements. Skipped under TLS-first: the socket was
-    # upgraded BEFORE this INFO was read, so the requirement is already
-    # satisfied by construction -- and a handshake-first server has no
-    # reason to advertise `tls_available` in an INFO it only ever sends
-    # over TLS. Acting on the banner here would refuse exactly the
-    # connections TLS-first exists to secure.
+    # TLS-first servers may omit `tls_available` because INFO arrives over TLS.
     if get(options, :tls_required, false) && !get(options, :tls_first, false)
         !isnothing(server_info.tls_available) && server_info.tls_available || error("Client requires TLS but it is not available for the server.")
     end
@@ -136,10 +128,6 @@ function init_protocol(nc, url, options)
     try
         read_stream, write_stream = sock, sock
         tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
-        # TLS-first: upgrade BEFORE reading INFO, so the handshake is the
-        # first bytes and the client never acts on a pre-TLS server banner.
-        # Against a plaintext listener the handshake fails here, so the
-        # connect fails closed instead of silently continuing in the clear.
         tls_first = get(options, :tls_first, false)
         if tls_first
             (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
@@ -148,8 +136,6 @@ function init_protocol(nc, url, options)
         info_msg = next_protocol_message(read_stream)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
-        # Legacy banner-driven upgrade: only when not already TLS-first and
-        # the server's INFO advertises tls_required.
         if !tls_first && !isnothing(info_msg.tls_required) && info_msg.tls_required
             (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
             @debug "Socket upgraded"
