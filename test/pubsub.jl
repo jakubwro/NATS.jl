@@ -100,23 +100,26 @@ NATS.status()
         "nothing to do"
     end
 
-    received_payload = nothing
-    received_headers = nothing
+    received = Channel(1)
     sub = subscribe(nc, subject) do msg::String, hdr::NATS.Headers
-        received_payload = msg
-        received_headers = hdr
+        put!(received, (msg, hdr))
     end
     publish(nc, subject, ("data", ["x" => "y"]))
-    sleep(0.2)
-    @test received_payload == "data"
-    @test received_headers isa NATS.Headers
-    @test received_headers[1] == Pair("x", "y")
+    delivered = timedwait(() -> isready(received), 10.0; pollint = 0.01)
+    @test delivered == :ok
+    if delivered == :ok
+        received_payload, received_headers = take!(received)
+        @test received_payload == "data"
+        @test received_headers isa NATS.Headers
+        @test received_headers[1] == Pair("x", "y")
+    end
     drain(nc, sub)
 end
 
 @testset "Synchronous subscriptions" begin
     subject = randstring(8)
     sub = subscribe(nc, subject)
+    sub_stats = NATS.stats(nc, sub)
     
     msg = next(nc, sub; no_wait = true)
     @test isnothing(msg)
@@ -126,8 +129,6 @@ end
             sleep(0.01)
             publish(nc, subject, """{"x": 1}""")
         end
-        sleep(0.2)
-        unsubscribe(nc, sub)
     end
 
     msg = next(nc, sub)
@@ -143,7 +144,10 @@ end
     jsons = next(JSON3.Object, nc, sub, 10)
     @test length(jsons) == 10
 
-    sleep(2)
+    # Close only after every publication has reached the subscription buffer.
+    @test timedwait(() -> (@atomic sub_stats.msgs_received) >= 100,
+        10.0; pollint = 0.01) == :ok
+    unsubscribe(nc, sub)
 
     msgs = next(nc, sub, 78)
     @test msgs isa Vector{NATS.Msg}
@@ -179,19 +183,21 @@ end
             publish(sub_nc, subject_ack, "ack")
         end
     end
-    sleep(5)
+    # The other connection may publish as soon as the server has these subscriptions.
+    NATS.ping(sub_nc; timeout = 30.0, measure = false)
 
     pub_nc = NATS.connect()
     ack_count = Threads.Atomic{Int64}(0)
     subscribe(pub_nc, subject_ack) do msg
         Threads.atomic_add!(ack_count, 1)
     end
-    sleep(5)
+    NATS.ping(pub_nc; timeout = 10.0, measure = false)
 
     for i in 1:n_pubs
         publish(pub_nc, subject, "Test 10k subs: msg $i.")
     end
-    sleep(10)
+    @test timedwait(() -> ack_count[] >= n_pubs * n_subs,
+        60.0; pollint = 0.01) == :ok
     drain(sub_nc)
     drain(pub_nc)
     sub_stats = NATS.stats(sub_nc)

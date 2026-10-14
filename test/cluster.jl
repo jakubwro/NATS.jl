@@ -93,7 +93,10 @@ end
     end
     @info "Published $n messages in $(time() - start_time) seconds."
 
-    sleep(0.1)
+    pub_stats = NATS.stats(pub_conn, sub2)
+    sub_stats = NATS.stats(sub_conn, sub1)
+    @test timedwait(() -> (@atomic pub_stats.msgs_handled) > n - 5 &&
+        (@atomic sub_stats.msgs_handled) >= n, 30.0; pollint = 0.01) == :ok
 
     @info "Distrupted connection received $pub_conn_received_count msgs."
 
@@ -150,7 +153,8 @@ end
         sleep(2)
         @info "Published: $(published_count.value), received: $(received_count.value)."
     end
-    sleep(5) # Wait all messages delivered
+    @test timedwait(() -> received_count[] >= published_count[],
+        30.0; pollint = 0.01) == :ok
     unsubscribe(connection, sub)
     @info "Published: $(published_count.value), received: $(received_count.value)."
 

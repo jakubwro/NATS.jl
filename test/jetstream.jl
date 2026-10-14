@@ -62,13 +62,16 @@ end
         stream_publish(connection, "SOME_STREAM.foo", "test $i")
     end
     results = []
+    results_lock = ReentrantLock()
     stream_sub = stream_subscribe(connection, "SOME_STREAM.foo") do msg
-        push!(results, msg)
+        lock(results_lock) do
+            push!(results, msg)
+        end
     end
     @test repr(stream_sub) == "StreamSub(\"SOME_STREAM.foo\")"
-    sleep(0.5)
+    @test timedwait(() -> lock(() -> length(results) >= n, results_lock), 10.0; pollint = 0.01) == :ok
     stream_unsubscribe(connection, stream_sub)
-    @test length(results) == n
+    @test lock(() -> length(results), results_lock) == n
     stream_delete(connection, stream_info)
 
     @test_throws "No stream found for subject" stream_subscribe(connection, "NOT_EXISTS.foo") do msg
@@ -258,8 +261,11 @@ end
     kv = JetStream.JetDict{String}(connection, "test_kv")
 
     changes = []
+    changes_lock = ReentrantLock()
     sub = watch(kv) do change
-        push!(changes, change)
+        lock(changes_lock) do
+            push!(changes, change)
+        end
     end
 
     t = @async begin
@@ -272,14 +278,16 @@ end
         kv["b"] = "3"
         sleep(0.1)
         kv["a"] = "4"
-        sleep(0.5)
     end
 
     wait(t)
+    @test timedwait(() -> lock(() -> length(changes) >= 5, changes_lock), 10.0; pollint = 0.01) == :ok
     stream_unsubscribe(connection, sub)
 
-    @test length(changes) == 5
-    @test changes == ["a" => "1", "b" => "2", "a" => nothing, "b" => "3", "a" => "4"]
+    lock(changes_lock) do
+        @test length(changes) == 5
+        @test changes == ["a" => "1", "b" => "2", "a" => nothing, "b" => "3", "a" => "4"]
+    end
     keyvalue_stream_delete(connection, "test_kv")
 end
 
@@ -312,11 +320,16 @@ end
     @test take!(ch) == "msg 1"
 
     t = @async take!(ch)
+    # Exercise an empty channel across multiple consumer request expirations.
     sleep(5)
     put!(ch, "msg 2")
-    wait(t)
-    @test t.result == "msg 2"
+    reader_finished = timedwait(() -> istaskdone(t), 10.0; pollint = 0.01)
+    @test reader_finished == :ok
+    if reader_finished == :ok
+        @test fetch(t) == "msg 2"
+    end
 
+    last_put_started = Base.Event()
     t = @async begin
         sleep(0.5)
         put!(ch, "msg 3")
@@ -325,14 +338,18 @@ end
         sleep(0.5)
         put!(ch, "msg 5")
         sleep(0.5)
+        notify(last_put_started)
         put!(ch, "msg 6")
-        sleep(0.5)
     end
-    sleep(3)
-    @test !istaskdone(t)
+    @test timedwait(() -> (@atomic last_put_started.set), 10.0; pollint = 0.01) == :ok
+    # The fourth put must remain blocked while all three channel slots are full.
+    @test timedwait(() -> istaskdone(t), 0.5; pollint = 0.01) == :timed_out
     @test take!(ch) == "msg 3"
-    wait(t)
-    @test istaskdone(t)
+    writer_finished = timedwait(() -> istaskdone(t), 10.0; pollint = 0.01)
+    @test writer_finished == :ok
+    if writer_finished == :ok
+        fetch(t)
+    end
     @test take!(ch) == "msg 4"
     @test take!(ch) == "msg 5"
     @test take!(ch) == "msg 6"
@@ -360,15 +377,19 @@ end
     stream_info = JetStream.stream_create(connection, stream_config)
 
     republished = []
+    republished_lock = ReentrantLock()
     sub = subscribe(connection, "REPUBLISHED.foo") do msg
-        push!(republished, msg)
+        lock(republished_lock) do
+            push!(republished, msg)
+        end
     end
 
-    sleep(0.1)
+    NATS.ping(connection; timeout = 10.0, measure = false)
     stream_publish(connection, "SOME_STREAM.foo", "test message")
+    @test timedwait(() -> lock(() -> !isempty(republished), republished_lock), 10.0; pollint = 0.01) == :ok
     drain(connection, sub)
 
-    @test length(republished) == 1
+    @test lock(() -> length(republished), republished_lock) == 1
     stream_delete(connection, stream_info)
 end
 

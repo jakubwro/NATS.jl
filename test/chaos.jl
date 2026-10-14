@@ -49,9 +49,22 @@ end
 nc = NATS.connect()
 
 @testset "Reconnecting." begin
+    previous_reconnects = @atomic nc.reconnect_count
     @test restart_nats_server() == 0
-    sleep(10)
-    @test nc.status == NATS.CONNECTED
+    @test timedwait(() -> (@atomic nc.reconnect_count) > previous_reconnects &&
+        NATS.status(nc) == NATS.CONNECTED, 30.0; pollint = 0.01) == :ok
+    @test NATS.status(nc) == NATS.CONNECTED
+    # The external reply service reconnects independently and may subscribe later.
+    responder_ready = timedwait(30.0; pollint = 0.1) do
+        try
+            request(nc, "help.please"; timeout = 5.0)
+            true
+        catch err
+            err isa NATS.NATSError && err.code == 503 || rethrow()
+            false
+        end
+    end
+    @test responder_ready == :ok
     resp = request(nc, "help.please")
     @test resp isa NATS.Msg
 end
@@ -83,12 +96,14 @@ end
     sub = subscribe(nc, subject) do msg
         put!(c, msg)
     end
-    sleep(0.5)
+    ping(nc; timeout = 10.0, measure = false)
+    previous_reconnects = @atomic nc.reconnect_count
     @test restart_nats_server() == 0
-    sleep(5)
+    @test timedwait(() -> (@atomic nc.reconnect_count) > previous_reconnects &&
+        NATS.status(nc) == NATS.CONNECTED, 30.0; pollint = 0.01) == :ok
     @test nc.status == NATS.CONNECTED
     publish(nc, subject, "Hi!")
-    sleep(5)
+    @test timedwait(() -> Base.n_avail(c) >= 1, 10.0; pollint = 0.01) == :ok
     @test Base.n_avail(c) == 1
 end
 
@@ -206,7 +221,7 @@ end
     sub = subscribe(nc, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
-    sleep(0.5)
+    ping(nc; timeout = 10.0, measure = false)
 
     pub_task = Threads.@spawn begin
         for i in 1:10000
@@ -238,19 +253,22 @@ end
     container_id = find_nats_container_id()
     nc = NATS.connect(; reconnect_delays = [])
     @test stop_nats_server(container_id) == 0
-    sleep(5)
+    @test timedwait(() -> NATS.status(nc) == NATS.DISCONNECTED,
+        30.0; pollint = 0.01) == :ok
     @test nc.status == NATS.DISCONNECTED
     @test start_nats_server(container_id) == 0
     sleep(5)
     NATS.reconnect(nc)
-    sleep(10)
+    @test timedwait(() -> NATS.status(nc) == NATS.CONNECTED,
+        30.0; pollint = 0.01) == :ok
     @test nc.status == NATS.CONNECTED
 end
 
 @testset "Disconnecting when retries exhausted." begin
     nc = NATS.connect(; reconnect_delays = [])
     @test stop_nats_server() == 0
-    sleep(5)
+    @test timedwait(() -> NATS.status(nc) == NATS.DISCONNECTED,
+        30.0; pollint = 0.01) == :ok
     @test nc.status == NATS.DISCONNECTED
 end
 
