@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains data structures describing NATS protocol.
+# This file contains data structures describing the NATS protocol.
 #
 ### Code:
 
@@ -51,9 +51,9 @@ struct Info <: ProtocolMessage
     tls_verify::Union{Bool, Nothing}
     "If this is true, the client can provide a valid certificate during the TLS handshake."
     tls_available::Union{Bool, Nothing}
-    "List of server urls that a client can connect to."
+    "A list of server URLs that a client can connect to."
     connect_urls::Union{Vector{String}, Nothing}
-    "List of server urls that a websocket client can connect to."
+    "A list of server URLs that a websocket client can connect to."
     ws_connect_urls::Union{Vector{String}, Nothing}
     "If the server supports *Lame Duck Mode* notifications, and the current server has transitioned to lame duck, `ldm` will be set to `true`."
     ldm::Union{Bool, Nothing}
@@ -84,7 +84,7 @@ struct Connect <: ProtocolMessage
     verbose::Bool
     "Turns on additional strict format checking, e.g. for properly formed subjects."
     pedantic::Bool
-    "Indicates whether the client requires SSL connection."
+    "Indicates whether the client requires an SSL connection."
     tls_required::Bool
     "Client authorization token."
     auth_token::Union{String, Nothing}
@@ -99,13 +99,13 @@ struct Connect <: ProtocolMessage
     "The version of the client."
     version::String
     # TODO: restore link ./#NATS.Info
-    "Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving `INFO` messages with known servers it can reconnect to."
+    "Sending `0` (or absent) indicates the client supports the original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving `INFO` messages with known servers it can reconnect to."
     protocol::Union{Int, Nothing}
-    "If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`."
+    "If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for a server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`."
     echo::Union{Bool, Nothing}
     "In case the server has responded with a `nonce` on `INFO`, then a NATS client must use this field to reply with the signed `nonce`."
     sig::Union{String, Nothing}
-    "The JWT that identifies a user permissions and account."
+    "The JWT that identifies a user's permissions and account."
     jwt::Union{String, Nothing}
     "Enable quick replies for cases where a request is sent to a topic with no responders."
     no_responders::Union{Bool, Nothing}
@@ -127,7 +127,7 @@ struct Pub <: ProtocolMessage
     subject::String
     "The reply subject that subscribers can use to send a response back to the publisher/requestor."
     reply_to::Union{String, Nothing}
-    "Length of headers data inside payload"
+    "Length of the headers data inside the payload"
     headers_length::Int64
     "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
     payload::Vector{UInt8}
@@ -159,7 +159,7 @@ struct Unsub <: ProtocolMessage
     max_msgs::Union{Int, Nothing}
 end
 
-# Representation of MSG returned by parser, it will be converted to `Msg` struct in subscription handler task.
+# Representation of MSG returned by the parser, it will be converted to `Msg` struct in the subscription handler task.
 struct MsgRaw <: ProtocolMessage
     sid::Int64
     buffer::Vector{UInt8}
@@ -177,13 +177,13 @@ The HMSG message is the same as MSG, but extends the message payload with header
 $(TYPEDFIELDS)
 """
 struct Msg <: ProtocolMessage
-    "Subject name this message was received on."
+    "The subject name this message was received on."
     subject::String
     "The unique alphanumeric subscription ID of the subject."
     sid::Int64
     "The subject on which the publisher is listening for responses."
     reply_to::Union{String, Nothing}
-    "Length of headers data inside payload"
+    "Length of the headers data inside the payload"
     headers_length::Int64
     "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
     payload::AbstractVector{UInt8}
@@ -206,7 +206,7 @@ struct Pong <: ProtocolMessage
 end
 
 """
-The `-ERR` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
+The `-ERR` message is used by the server to indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
 
 $(TYPEDFIELDS)
 """

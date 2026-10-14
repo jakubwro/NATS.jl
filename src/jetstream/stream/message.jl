@@ -15,7 +15,7 @@ end
 """
 $(SIGNATURES)
 
-Get a message from stream.
+Get a message from a stream.
 """
 function stream_message_get(connection::NATS.Connection, stream_name::String, subject::String; allow_direct = nothing)
     allow_direct = @something allow_direct check_allow_direct(connection, stream_name)
@@ -43,7 +43,7 @@ end
 """
 $(SIGNATURES)
 
-Get a message from stream.
+Get a message from a stream.
 """
 function stream_message_get(connection::NATS.Connection, stream::StreamInfo, subject::String)
     stream_message_get(connection, stream.config.name, subject; stream.config.allow_direct)
@@ -52,7 +52,7 @@ end
 """
 $(SIGNATURES)
 
-Delete a message from stream.
+Delete a message from a stream.
 """
 function stream_message_delete(connection::NATS.Connection, stream::StreamInfo, msg::NATS.Msg)
     seq = NATS.header(msg, "Nats-Sequence")

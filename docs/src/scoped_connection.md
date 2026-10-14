@@ -1,6 +1,6 @@
 # Scoped connection
 
-This feature allows to use implicit connection in a block of code. It utilizes [ScopedValues](https://github.com/vchuravy/ScopedValues.jl) package.
+This feature allows to use an implicit connection in a block of code. It utilizes the [ScopedValues](https://github.com/vchuravy/ScopedValues.jl) package.
 
 ## Functions
 

@@ -1,7 +1,7 @@
 """
 $(SIGNATURES)
 
-Unsubscribe stream subscription.
+Unsubscribe a stream subscription.
 """
 function stream_unsubscribe(connection::NATS.Connection, stream_sub::StreamSub)
     NATS.unsubscribe(connection, stream_sub.sub)

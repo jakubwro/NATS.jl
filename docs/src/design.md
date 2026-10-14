@@ -52,7 +52,7 @@ true
 
 ### Use strings not raw bytes
 
-Parser is not returning raw bytes but rather `String`. This fast thanks to how `String` constructor works.
+Parser is not returning raw bytes but rather `String`. This is fast thanks to how the `String` constructor works.
 
 ```julia-repl
 julia> bytes = UInt8['a', 'b', 'c'];

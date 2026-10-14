@@ -98,7 +98,7 @@ end
     @test timedwait(() -> (@atomic pub_stats.msgs_handled) > n - 5 &&
         (@atomic sub_stats.msgs_handled) >= n, 30.0; pollint = 0.01) == :ok
 
-    @info "Distrupted connection received $pub_conn_received_count msgs."
+    @info "Disrupted connection received $pub_conn_received_count msgs."
 
     @test pub_conn_received_count > n - 5
     @test pub_conn_received_count <= n

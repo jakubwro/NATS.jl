@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains aggregates utils for publish - subscribe pattern.
+# This file contains aggregate utilities for publish - subscribe pattern.
 #
 ### Code:
 

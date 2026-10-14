@@ -9,7 +9,7 @@ connect
 
 ## Reconnecting
 
-Reconnect can be forced by user with `reconnect` function. This function can be also used
+Reconnect can be forced by a user with the `reconnect` function. This function can be also used
 for reconnect a connection in `DISCONNECTED` state after reconnect retries were exhausted.
 
 ```@docs
@@ -18,28 +18,28 @@ reconnect
 
 ## Disconnecting
 
-To gracefully close connection `drain` function is provided.
+To gracefully close a connection the `drain` function is provided.
 
 ```@docs
 drain(::NATS.Connection)
 ```
 
-To use NATS it is needed to create connection handle with `connect` function. Connection creates asynchronous tasks to handle messages from server, sending published messages, monitor state of TCP connection and reconnect on network failure.
+To use NATS it is needed to create a connection handle with the `connect` function. A connection creates asynchronous tasks to handle messages from the server, sending published messages, monitor the state of the TCP connection and reconnect on network failure.
 
 ## Connection lifecycle
 
-When `connect` is called it tries to initialize connection with NATS server. If
+When `connect` is called it tries to initialize a connection with the NATS server. If
 this process fails two things may happen depending on `retry_on_init_fail`
 option:
-1. Rethrow exception causing protocol initialization failure.
-2. Return connection in state `CONNECTING` continuing reconnect process in background 
+1. Rethrow the exception causing protocol initialization failure.
+2. Return a connection in state `CONNECTING` continuing the reconnect process in the background
 
-Other wise connection in `CONNECTED` state is returned from `connect`.
+Otherwise a connection in `CONNECTED` state is returned from `connect`.
 
-In case of some critical failure like TCP connection closing or mallformed
-protocol message conection will enter `CONNECTING` and try reconnect
-according `reconnect_delays` specified. If it is unable to establish
-connection with allowed retries connection will land in `DISCONNECTED`
+In case of some critical failure like a TCP connection closing or a malformed
+protocol message the connection will enter `CONNECTING` and try reconnect
+according to the `reconnect_delays` specified. If it is unable to establish
+a connection with the allowed retries the connection will land in `DISCONNECTED`
 state and only manual invocation of `reconnect` may restore it.
 
 ```@eval
@@ -50,7 +50,7 @@ lifecycle = dot""" digraph G {
     CONNECTED -> CONNECTING [label="TCP failure", fontname="Courier New", fontsize=5, color="#aa0000", fontcolor="#aa0000"]
     CONNECTING -> DISCONNECTED [label="reconnect\nretries\nexhausted", fontname="Courier New", fontsize=5, color="#aa0000", fontcolor="#aa0000"]
     DISCONNECTED -> CONNECTING [label="reconnect()", fontname="Courier New", fontsize=5]
-    DISCONNECTED -> DRAINING [lable="unsubscribe and\nprocess messages"]
+    DISCONNECTED -> DRAINING [label="unsubscribe and\nprocess messages"]
 }"""
 
 GraphViz.layout!(lifecycle, engine="dot")
@@ -78,7 +78,7 @@ NATS.sign
 
 ## Environment variables
 
-There are several `ENV` variables defined to provide default parameters for `connect`. It is advised to rather define `ENV` variables and use parameter less invocation like `NATS.connect()` for better code portability.
+There are several `ENV` variables defined to provide default parameters for `connect`. It is advised to rather define `ENV` variables and use a parameterless invocation like `NATS.connect()` for better code portability.
 
 | Parameter          | `ENV` variable          |  Default value   | Sent to server |
 |--------------------|-------------------------|------------------|-----------------|
@@ -97,7 +97,7 @@ There are several `ENV` variables defined to provide default parameters for `con
 | `tls_cert_path`    | `NATS_TLS_CERT_PATH`    |                  | no
 | `tls_key_path`     | `NATS_TLS_KEY_PATH`     |                  | no
 
-Additionally some parameters are provided to fine tune client for specific deployment setup.
+Additionally some parameters are provided to fine tune the client for a specific deployment setup.
 
 | Parameter                   | `ENV` variable                      |  Default value   | Sent to server |
 |-----------------------------|-------------------------------------|------------------|-----------------|
@@ -110,7 +110,7 @@ Additionally some parameters are provided to fine tune client for specific deplo
 | `drain_poll`                | `NATS_DRAIN_POLL_INTERVAL_SECONDS`  | `0.2`            | no
 | `send_buffer_limit`         | `NATS_SEND_BUFFER_LIMIT_BYTES`      | `2097152`        | no
 
-Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as argument.
+Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as an argument.
 
 | `ENV` variable                  |  Default value       |
 |---------------------------------|----------------------|

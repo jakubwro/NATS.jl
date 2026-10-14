@@ -17,7 +17,7 @@ sleep(7) # Wait a moment to get DRAINED status as well
 
 There are detailed statistics of published and received messages collected.
 They can be accessed for each subscription and connection. Connection statistics
-aggregates stats for all its subscriptions.
+aggregate stats for all its subscriptions.
 
 ```@repl
 using NATS

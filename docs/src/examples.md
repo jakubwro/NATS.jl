@@ -26,7 +26,7 @@ sub = subscribe(nc, "test_subject") do msg
 publish(nc, "test_subject", "Hello.")
 sleep(0.2) # Wait for message.
 drain(nc, sub)
-publish(nc, "test_subject", "Hello.") # Ater drain msg won't be delivared.
+publish(nc, "test_subject", "Hello.") # After drain msg won't be delivered.
 ```
 
 ## Request reply

@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains aggregates utils for request - reply pattern.
+# This file contains aggregate utilities for request - reply pattern.
 #
 ### Code:
 

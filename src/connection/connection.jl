@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains data structure definitions and aggregates utilities for handling connection to NATS server.
+# This file contains data structure definitions and aggregates utilities for handling a connection to the NATS server.
 #
 ### Code:
 
@@ -47,14 +47,14 @@ end
     @atomic pong_count::Int64
     @atomic pong_received_at::Float64
     status_change_cond::Threads.Condition = Threads.Condition()
-    @atomic connect_init_count::Int64 # How many tries of protocol init was done on last reconnect.
+    @atomic connect_init_count::Int64 # How many tries of protocol init was done on the last reconnect.
     @atomic reconnect_count::Int64
     @atomic send_buffer_flushed::Bool
     drain_timeout::Float64
     drain_poll::Float64
-    allow_direct::Dict{String, Bool} = Dict{String, Bool}() # Cache for jetstream for fast lookup of streams that have direct access.
+    allow_direct::Dict{String, Bool} = Dict{String, Bool}() # Cache for JetStream for a fast lookup of streams that have direct access.
     allow_direct_lock = ReentrantLock()
-    "Handles messages for which handler was not found."
+    "Handles messages for which a handler was not found."
     fallback_handlers::Vector{Function} = Function[]
 end
 

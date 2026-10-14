@@ -16,14 +16,14 @@ keyvalue_stream_delete(nc, "example_kv")
 
 ## Key encoding
 
-Keys of keyvalue stream have limitations. They cannot start and and with '.' and can contain limited set of characters.
+Keys of a keyvalue stream have limitations. They cannot start and end with '.' and can contain a limited set of characters.
 
-Alowed characters:
+Allowed characters:
 - letters
 - digits
 - `'-', '/', '_', '=', '.'`
 
-To allow arbitrary string as a key `:base64url` `encoding` parameter may be specified.
+To allow an arbitrary string as a key the `:base64url` `encoding` parameter may be specified.
 
 
 ```@repl

@@ -90,7 +90,7 @@ end
 #     @test length(NATS.state.handlers) == 0
 # end
 
-@testset "Subscribtion survive reconnect." begin
+@testset "Subscription survives reconnect." begin
     c = Channel(100)
     subject = randstring(5)
     sub = subscribe(nc, subject) do msg
@@ -154,7 +154,7 @@ end
     end
     @async begin sleep(60); close(cond); close(results) end
     sleep(5)
-    @info "Received $(Base.n_avail(results)) / $n results after half of time. "
+    @info "Received $(Base.n_avail(results)) / $n results after half of the time. "
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)
@@ -199,7 +199,7 @@ end
     end
     @async begin sleep(120); close(cond); close(results) end
     sleep(2)
-    @info "Received $(Base.n_avail(results)) / $n results after half of time. "
+    @info "Received $(Base.n_avail(results)) / $n results after half of the time. "
     @test restart_nats_server(nats_container_id) == 0
     if !haskey(ENV, "CI")
         @async interactive_status(cond)

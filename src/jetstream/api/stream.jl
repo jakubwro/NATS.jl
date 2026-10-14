@@ -26,7 +26,7 @@ end
     opt_start_seq::Union{UInt64, Nothing} = nothing
     "Time stamp to start replicating from"
     opt_start_time::Union{NanoDate, Nothing} = nothing
-    "Replicate only a subset of messages based on filter"
+    "Replicate only a subset of messages based on a filter"
     filter_subject::Union{String, Nothing} = nothing
     "The subject filtering sources and associated destination transforms"
     subject_transforms::Union{Vector{SubjectTransform}, Nothing} = nothing
@@ -87,7 +87,7 @@ $(TYPEDFIELDS)
     num_replicas::Int64 = 1
     "Disables acknowledging messages that are received by the Stream."
     no_ack::Union{Bool, Nothing} = nothing
-    "When a Stream reach it's limits either old messages are deleted or new ones are denied"
+    "When a Stream reaches its limits either old messages are deleted or new ones are denied"
     discard::Union{Symbol, Nothing} = nothing
     "The time window to track duplicate messages for, expressed in nanoseconds. 0 for default"
     duplicate_window::Union{Int64, Nothing} = nothing
@@ -101,7 +101,7 @@ $(TYPEDFIELDS)
     sealed::Union{Bool, Nothing} = nothing
     "Restricts the ability to delete messages from a stream via the API. Cannot be changed once set to true"
     deny_delete::Union{Bool, Nothing} = nothing
-    "Restricts the ability to purge messages from a stream via the API. Cannot be change once set to true"
+    "Restricts the ability to purge messages from a stream via the API. Cannot be changed once set to true"
     deny_purge::Union{Bool, Nothing} = nothing
     "Allows the use of the Nats-Rollup header to replace all contents of a stream, or subject in a stream, with a single new message"
     allow_rollup_hdrs::Union{Bool, Nothing} = nothing
@@ -186,7 +186,7 @@ end
     name::String
     "The name of the cluster holding the stream"
     cluster::String
-    "The domain holding the string"
+    "The domain holding the stream"
     domain::Union{String, Nothing} = nothing
 end
 

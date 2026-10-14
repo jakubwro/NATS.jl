@@ -1,6 +1,6 @@
 # Key Value streams
 
-Low level APIs for manipulating KV buckets. See `JetDict` for interface conforming to `Base.AbstractDict`.
+Low level APIs for manipulating KV buckets. See `JetDict` for an interface conforming to `Base.AbstractDict`.
 
 ## Management
 

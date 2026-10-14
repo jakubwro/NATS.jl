@@ -40,10 +40,10 @@ end
 NATS.status()
 
 @testset "Method error hints." begin
-    @test_throws "Conversion of NATS message into type Float64 is not defined" subscribe(nc, "SOME.THING") do msg::Float64 end
+    @test_throws "Conversion of a NATS message into type Float64 is not defined" subscribe(nc, "SOME.THING") do msg::Float64 end
     @test_throws "Conversion of type Int64 to NATS payload is not defined." request(nc, "SOME.REQUESTS", 4)
     @test_throws "Conversion of type Int64 to NATS payload is not defined." request(nc, 4, "SOME.REQUESTS", 4)
-    @test_throws "Conversion of NATS message into type Integer is not defined." reply(nc, "SOME.REQUESTS") do msg::Integer
+    @test_throws "Conversion of a NATS message into type Integer is not defined." reply(nc, "SOME.REQUESTS") do msg::Integer
         "Received $msg"
     end
 end
@@ -69,7 +69,7 @@ end
         @test (@atomic conn.reconnect_count) == 1
         @test (@atomic conn.connect_init_count) == 3
     catch
-        # This may fail for some NATS server setup and this is ok.
+        # This may fail for some NATS server setups and this is ok.
         @info "`Connection url schemes` tests ignored."
     end
 end
@@ -139,7 +139,7 @@ NATS.status()
     @test_throws ErrorException publish(nc, "DRAIN_TEST")
     @test_throws ErrorException ping(nc)
     @test NATS.status(nc) == NATS.DRAINED
-    NATS.drain(nc) # Draining drained connection is noop.
+    NATS.drain(nc) # Draining a drained connection is a no-op.
     @test NATS.status(nc) == NATS.DRAINED
     @test isempty(nc.sub_data)
 end
@@ -216,7 +216,7 @@ NATS.status()
     end
     for _ in 1:82
         publish(nc, "overload_channel")
-        sleep(0.01) # Sleep causes that msga are not batches.
+        sleep(0.01) # Sleep causes that msgs are not batched.
     end
     sleep(21)
     unsubscribe(nc, sub1)
@@ -228,7 +228,7 @@ NATS.status()
     end
     for _ in 1:15
         publish(nc, "overload_channel")
-        sleep(0.01) # Sleep causes that msga are not batches.
+        sleep(0.01) # Sleep causes that msgs are not batched.
     end
     sleep(5)
     unsubscribe(nc, sub3)
@@ -243,7 +243,7 @@ NATS.status()
     @test_throws ErrorException for _ in 1:100
         publish(connection, "overflow_buffer", "some long payload to overflow buffer")
     end
-    NATS.ping(connection) # Ping should work even when buffer is overflown
+    NATS.ping(connection) # Ping should work even when buffer has overflowed
     
     connection = NATS.connect(send_buffer_limit = 5)
     counter = Threads.Atomic{Int}(0)

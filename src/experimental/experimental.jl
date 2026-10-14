@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains aggregates experimantal NATS client features.
+# This file contains aggregates experimental NATS client features.
 #
 ### Code:
 

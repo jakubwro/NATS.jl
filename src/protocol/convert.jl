@@ -26,17 +26,17 @@ function convert(::Type{Msg}, msgraw::NATS.MsgRaw)
 end
 
 function convert(::Type{String}, msg::NATS.Msg)
-    # Default representation on msg content is payload string.
+    # The default representation of msg content is the payload string.
     # This allows to use handlers that take just a payload string and do not use other fields.
     payload(msg)
 end
 
 function convert(::Type{JSON3.Object}, msg::NATS.Msg)
-    # TODO: some validation if header has error headers
+    # TODO: some validation if the header has error headers
     JSON3.read(@view msg.payload[(begin + msg.headers_length):end])
 end
 
 function convert(::Type{Tuple{String, NATS.Headers}}, msg::NATS.Msg)
-    # TODO: some validation if header has error headers
+    # TODO: some validation if the header has error headers
     payload(msg), headers(msg)
 end

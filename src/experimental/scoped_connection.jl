@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementation of simplified interface utilizing connection as dynamically scoped variable.
+# This file contains implementation of a simplified interface utilizing a connection as a dynamically scoped variable.
 #
 ### Code:
 
@@ -21,7 +21,7 @@ function scoped_connection()
     conn = ScopedValues.get(sconnection)
     if isnothing(conn)
         error("""No scoped connection.
-            To use methods without explicit `connection` parameter you need to wrap your logic into `with_connection` function.
+            To use methods without an explicit `connection` parameter you need to wrap your logic into `with_connection` function.
             
             Example:
             ```
@@ -44,7 +44,7 @@ end
 """
 $(SIGNATURES)
 
-Create scope with ambient context connection, in which connection argument might be skipped during invocation of functions.
+Create a scope with an ambient context connection, in which the connection argument might be skipped during invocation of functions.
 
 Usage:
 ```

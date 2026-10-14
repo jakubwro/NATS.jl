@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains functions for estabilishing connection and maintaining connectivity when TCP connection fails.
+# This file contains functions for establishing a connection and maintaining connectivity when a TCP connection fails.
 #
 ### Code:
 
@@ -120,7 +120,7 @@ function init_protocol(nc, url, options)
     end
     host, port, scheme, userinfo = host_port(url)
     if scheme == "tls"
-        # Due to ADR-40 url schema can enforce TLS.
+        # Due to ADR-40 a URL scheme can enforce TLS.
         options = merge(options, (tls_required = true,))
     end
     if !isnothing(userinfo) && !isempty(userinfo)
@@ -214,8 +214,8 @@ function ping_loop(nc::Connection, ping_interval::Union{Real, Period}, max_pings
     while status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count)
         sleep(ping_interval)
         if !(status(nc) == CONNECTED && reconnects == (@atomic nc.reconnect_count))
-            # In case if connection is broken new task will be spawned.
-            # If another reconnect occured in meanwhile, stop this task cause another was already spawned.
+            # In case if the connection is broken a new task will be spawned.
+            # If another reconnect occurred in the meanwhile, stop this task cause another was already spawned.
             break
         end
         try
@@ -237,16 +237,16 @@ end
 """
 $(SIGNATURES)
 
-Connect to NATS server. The function is blocking until connection is
-initialized. In case of error during initialization process `connect` will
-throw exception if `retry_on_init_fail` is set to `false` (what is default).
-Otherwise handle will be returned and reconnect will continue in background.
+Connect to the NATS server. The function is blocking until the connection is
+initialized. In case of an error during the initialization process `connect` will
+throw an exception if `retry_on_init_fail` is set to `false` (what is the default).
+Otherwise a handle will be returned and reconnect will continue in the background.
 
 Options are:
 - `verbose`: turns on protocol acknowledgements
 - `pedantic`: turns on additional strict format checking, e.g. for properly formed subjects
-- `tls_required`: indicates whether the client requires SSL connection
-- `tls_ca_path`: CA certuficate file path
+- `tls_required`: indicates whether the client requires an SSL connection
+- `tls_ca_path`: CA certificate file path
 - `tls_cert_path`: client public certificate file
 - `tls_key_path`: client private certificate file
 - `auth_token`: client authorization token
@@ -254,19 +254,19 @@ Options are:
 - `pass`: connection password
 - `name`: client name
 - `echo`: if set to `false`, the server will not send originating messages from this connection to its own subscriptions
-- `jwt`: the JWT that identifies a user permissions and account.
+- `jwt`: the JWT that identifies a user's permissions and account.
 - `no_responders`: enable quick replies for cases where a request is sent to a topic with no responders.
 - `nkey`: the public NKey to authenticate the client
 - `nkey_seed`: the private NKey to authenticate the client
-- `ping_interval`: interval in seconds how often server should be pinged to check connection health. Default is $DEFAULT_PING_INTERVAL_SECONDS seconds
-- `max_pings_out`: how many pings in a row might fail before connection will be restarted. Default is `$DEFAULT_MAX_PINGS_OUT`
-- `retry_on_init_fail`: if set connection handle will be returned even if initial connect fails. Otherwise error causing failure will be trown. Default is `$DEFAULT_RETRY_ON_INIT_FAIL`
-- `ignore_advertised_servers`: ignores other cluster servers returned by server. Default is `$DEFAULT_IGNORE_ADVERTISED_SERVERS`
-- `retain_servers_order`: try to connect server in order specified in `url` or list returned by the server. Defaylt is `$DEFAULT_RETAIN_SERVERS_ORDER`
+- `ping_interval`: interval in seconds how often the server should be pinged to check connection health. Default is $DEFAULT_PING_INTERVAL_SECONDS seconds
+- `max_pings_out`: how many pings in a row might fail before the connection will be restarted. Default is `$DEFAULT_MAX_PINGS_OUT`
+- `retry_on_init_fail`: if set a connection handle will be returned even if the initial connect fails. Otherwise the error causing failure will be thrown. Default is `$DEFAULT_RETRY_ON_INIT_FAIL`
+- `ignore_advertised_servers`: ignores other cluster servers returned by the server. Default is `$DEFAULT_IGNORE_ADVERTISED_SERVERS`
+- `retain_servers_order`: try to connect to the server in the order specified in `url` or the list returned by the server. Default is `$DEFAULT_RETAIN_SERVERS_ORDER`
 - `send_enqueue_when_disconnected`: allows buffering outgoing messages during disconnection. Default is `$DEFAULT_ENQUEUE_WHEN_DISCONNECTED`
 - `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
-- `send_buffer_limit`: soft limit for buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to server (e.g. `publish`) may throw an exception
-- `drain_timeout`: Timeout for drain process. After timeout in case of not everyting is processed drain will stop and error will be reported.
+- `send_buffer_limit`: soft limit for the buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to the server (e.g. `publish`) may throw an exception
+- `drain_timeout`: Timeout for the drain process. After the timeout in case of not everything is processed drain will stop and an error will be reported.
 - `drain_poll`: Interval for `drain` to check if all messages in buffers are processed.
 """
 function connect(
@@ -304,7 +304,7 @@ function connect(
     drain_await_task = Threads.@spawn :interactive disable_sigint() do
         wait(nc.drain_event)
     end
-    # This works as controller for connection state. It spawns other task and listens for their completion to do
+    # This works as a controller for connection state. It spawns another task and listens for their completion to do
     # reconnect logic.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
         # @show Threads.threadid()
@@ -394,7 +394,7 @@ function connect(
             reopen_send_buffer(nc) # Finish sender_task.
             close(sock) # Finish receiver_task.
 
-            #TODO: maybe in some case waiting for tasks to finish is not needed, it will shortned reconnect time 10x
+            #TODO: maybe in some case waiting for tasks to finish is not needed, it will shorten reconnect time 10x
             try wait(sender_task) catch end
             try wait(receiver_task) catch end
             
@@ -425,17 +425,17 @@ end
 """
 $(SIGNATURES)
 
-Force a connection reconnect. If connection is `CONNECTED` this will close it
+Force a connection reconnect. If the connection is `CONNECTED` this will close it
 and reopen again resubscribing all existing subscriptions. If connection is
-`DISCONNECTED` it will try to connect with all previously existing subscription
-restored. In case connection is already `CONNECTING` this method have no effect.
-If called on connection that is `DRAINING` or `DRAINED` error will be thrown.
+`DISCONNECTED` it will try to connect with all previously existing subscriptions
+restored. In case the connection is already `CONNECTING` this method has no effect.
+If called on a connection that is `DRAINING` or `DRAINED` an error will be thrown.
 
-During reconnect period some messages both published and received by the
+During the reconnect period some messages both published and received by the
 connection might be lost.
 
-Optional keyword aruguments:
-- `should_wait`: If `true` method will block until reconnection process is started, default is `true`.
+Optional keyword arguments:
+- `should_wait`: If `true` the method will block until the reconnection process is started, default is `true`.
 """
 function reconnect(connection::NATS.Connection; should_wait::Bool = true)
     @lock connection.status_change_cond begin

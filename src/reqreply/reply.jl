@@ -22,7 +22,7 @@ Reply for messages for a `subject`. Works like `subscribe` with automatic `publi
 
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
-- `spawn`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
+- `spawn`: if `true` a task will be spawned for each `f` invocation, otherwise messages are processed sequentially, default is `false`
 
 # Examples
 ```julia-repl

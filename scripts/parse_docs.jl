@@ -71,8 +71,8 @@ When using the updated client protocol (see CONNECT below), INFO messages can be
 | `tls_required`    | If this is true, then the client must perform the TLS/1.2 handshake. Note, this used to be `ssl_required` and has been updated along with the protocol from SSL to TLS.| bool     | optional |
 | `tls_verify`      | If this is true, the client must provide a valid certificate during the TLS handshake.                                                                                 | bool     | optional |
 | `tls_available`   | If this is true, the client can provide a valid certificate during the TLS handshake.                                                                                  | bool     | optional |
-| `connect_urls`    | List of server urls that a client can connect to.                                                                                                                      | [string] | optional |
-| `ws_connect_urls` | List of server urls that a websocket client can connect to.                                                                                                            | [string] | optional |
+| `connect_urls`    | A list of server URLs that a client can connect to.                                                                                                                      | [string] | optional |
+| `ws_connect_urls` | A list of server URLs that a websocket client can connect to.                                                                                                            | [string] | optional |
 | `ldm`             | If the server supports _Lame Duck Mode_ notifications, and the current server has transitioned to lame duck, `ldm` will be set to `true`.                              | bool     | optional |
 | `git_commit`      | The git hash at which the NATS server was built.                                                                                                                       | string   | optional |
 | `jetstream`       | Whether the server supports JetStream.                                                                                                                                 | bool     | optional |
@@ -90,17 +90,17 @@ The CONNECT message is the client version of the `INFO` message. Once the client
 |-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|------------------------------|
 | `verbose`       | Turns on [`+OK`](./#NATS.Ok) protocol acknowledgements.                                                                                                                                                                                                                             | bool   | true                         |
 | `pedantic`      | Turns on additional strict format checking, e.g. for properly formed subjects.                                                                                                                                                                                                    | bool   | true                         |
-| `tls_required`  | Indicates whether the client requires SSL connection.                                                                                                                                                                                                                          | bool   | true                         |
+| `tls_required`  | Indicates whether the client requires an SSL connection.                                                                                                                                                                                                                          | bool   | true                         |
 | `auth_token`    | Client authorization token.                                                                                                                                                                                                                                                       | string | if `auth_required` is `true` |
 | `user`          | Connection username.                                                                                                                                                                                                                                                              | string | if `auth_required` is `true` |
 | `pass`          | Connection password.                                                                                                                                                                                                                                                              | string | if `auth_required` is `true` |
 | `name`          | Client name.                                                                                                                                                                                                                                                                      | string | false                        |
 | `lang`          | The implementation language of the client.                                                                                                                                                                                                                                        | string | true                         |
 | `version`       | The version of the client.                                                                                                                                                                                                                                                        | string | true                         |
-| `protocol`      | Sending `0` (or absent) indicates client supports original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving [`INFO`](./#NATS.Info) messages with known servers it can reconnect to.            | int    | false                        |
-| `echo`          | If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`. | bool   | false                        |
+| `protocol`      | Sending `0` (or absent) indicates the client supports the original protocol. Sending `1` indicates that the client supports dynamic reconfiguration of cluster topology changes by asynchronously receiving [`INFO`](./#NATS.Info) messages with known servers it can reconnect to.            | int    | false                        |
+| `echo`          | If set to `false`, the server (version 1.2.0+) will not send originating messages from this connection to its own subscriptions. Clients should set this to `false` only for a server supporting this feature, which is when `proto` in the `INFO` protocol is set to at least `1`. | bool   | false                        |
 | `sig`           | In case the server has responded with a `nonce` on `INFO`, then a NATS client must use this field to reply with the signed `nonce`.                                                                                                                                               | string | if `nonce` received          |
-| `jwt`           | The JWT that identifies a user permissions and account.                                                                                                                                                                                                                           | string | false                        |
+| `jwt`           | The JWT that identifies a user's permissions and account.                                                                                                                                                                                                                           | string | false                        |
 | `no_responders` | Enable quick replies for cases where a request is sent to a topic with no responders.                                                                                                                                           | bool   | false      |
 | `headers`       | Whether the client supports headers.                                                                                                                                                                                                                                              | bool   | false                        |
 | `nkey`          | The public NKey to authenticate the client. This will be used to verify the signature (`sig`) against the `nonce` provided in the `INFO` message.                                                                                                                                 | string | false                        |
@@ -154,7 +154,7 @@ The `MSG` protocol message is used to deliver an application message to the clie
 
 | name       | description                                                   | type   | presence |
 |------------|---------------------------------------------------------------|--------|----------|
-| `subject`  | Subject name this message was received on.                    | string | always   |
+| `subject`  | The subject name this message was received on.                    | string | always   |
 | `sid`      | The unique alphanumeric subscription ID of the subject.       | string | always   |
 | `reply-to` | The subject on which the publisher is listening for responses.| string | optional |
 | `#bytes`   | Size of the payload in bytes.                                 | int    | always   |
@@ -166,7 +166,7 @@ The HMSG message is the same as MSG, but extends the message payload with header
 
 | name            | description                                                                                     | type   | presence |
 |-----------------|-------------------------------------------------------------------------------------------------|--------|----------|
-| `subject`       | Subject name this message was received on.                                                      | string | always   
+| `subject`       | The subject name this message was received on.                                                      | string | always   |
 | `sid`           | The unique alphanumeric subscription ID of the subject.                                         | string | always   |
 | `reply-to`      | The subject on which the publisher is listening for responses.                                  | string | optional |
 | `#header bytes` | The size of the headers section in bytes including the `␍␊␍␊` delimiter before the payload.     | int    | always   |
@@ -192,7 +192,7 @@ pong = md"""
 """
 
 err = md"""
-The `-ERR` message is used by the server indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
+The `-ERR` message is used by the server to indicate a protocol, authorization, or other runtime connection error to the client. Most of these errors result in the server closing the connection.
 
 | name      | description    | type   | presence |
 |-----------|----------------|--------|----------|
@@ -211,7 +211,7 @@ docs = [info, connect, pub, hpub, sub, unsub, msg, hmsg, ping, pong, err, ok]
 structs = [:Info, :Connect, :Pub, :HPub, :Sub, :Unsub, :Msg, :HMsg, :Ping, :Pong, :Err, :Ok]
 
 open("../src/protocol/structs.jl", "w") do f;
-    println(f, "# This file is autogenerated by `$(relpath(@__FILE__, dirname(@__DIR__)))`. Maunal changes will be lost.")
+    println(f, "# This file is autogenerated by `$(relpath(@__FILE__, dirname(@__DIR__)))`. Manual changes will be lost.")
     println(f)
     # println(f, parse_operations(operations))
     # println(f)

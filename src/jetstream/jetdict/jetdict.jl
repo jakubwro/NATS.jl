@@ -79,7 +79,7 @@ function delete!(jetdict::JetDict, key::String)
     jetdict
 end
 
-# No way to get number of not deleted items fast, also kv can change during iteration.
+# No way to get number of undeleted items fast, also kv can change during iteration.
 IteratorSize(::JetDict) = Base.SizeUnknown()
 IteratorSize(::Base.KeySet{String, JetDict{T}}) where {T} = Base.SizeUnknown()
 IteratorSize(::Base.ValueIterator{JetDict{T}}) where {T} = Base.SizeUnknown()
@@ -122,7 +122,7 @@ end
 
 
 function length(jetdict::JetDict)
-    # TODO: this is not reliable way to check length, it counts deleted items
+    # TODO: this is not a reliable way to check length, it counts deleted items
     consumer_config = ConsumerConfiguration(
         name = randstring(20)
     )

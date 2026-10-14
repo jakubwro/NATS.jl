@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains utilities for NATS messages payload manipulation.
+# This file contains utilities for NATS message payload manipulation.
 #
 ### Code:
 

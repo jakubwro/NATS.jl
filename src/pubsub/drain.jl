@@ -11,24 +11,24 @@
 #
 ### Commentary:
 #
-# This file contains implementation of subscrption draining what means to
-# unsubscribe and ensure all pending messages in buffers are processed.
+# This file contains implementation of subscription draining what means to
+# unsubscribe and ensure all pending messages in the buffers are processed.
 #
 ### Code:
 
 """
 $SIGNATURES
 
-Unsubscribe a subscription and wait for precessing all messages in the buffer.
+Unsubscribe a subscription and wait for processing all messages in the buffer.
 
-Underneeth it periodicaly checks for state of the buffer, interval for checks
-is configurable per connection with `drain_poll` parameter of `connect` method.
-It can also be set globally with `NATS_DRAIN_POLL_INTERVAL_SECONDS` environment
-variable. If not set explicitly default polling interval is
+Underneath it periodically checks for the state of the buffer, the interval for checks
+is configurable per connection with the `drain_poll` parameter of the `connect` method.
+It can also be set globally with the `NATS_DRAIN_POLL_INTERVAL_SECONDS` environment
+variable. If not set explicitly the default polling interval is
 `$DEFAULT_DRAIN_POLL_INTERVAL_SECONDS` seconds. 
 
 Optional keyword arguments:
-- `timeout`: error will be thrown if drain not finished until `timeout` expires. Default value is configurable per connection on `connect` with `drain_timeout`. Can be also set globally with `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
+- `timeout`: an error will be thrown if the drain is not finished until `timeout` expires. Default value is configurable per connection on `connect` with `drain_timeout`. It can be also set globally with the `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly the default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
 """
 function drain(connection::Connection, sub::Sub; timeout::Union{Real, Period} = connection.drain_timeout)
     timer = Timer(timeout)

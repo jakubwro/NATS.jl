@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementation of functions for subscribing to subjects.
+# This file contains implementations of functions for subscribing to subjects.
 #
 ### Code:
 
@@ -22,8 +22,8 @@ Subscribe to a subject.
 
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
-- `spawn`: if `true` task will be spawn for each `f` invocation, otherwise messages are processed sequentially, default is `false`
-- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
+- `spawn`: if `true` a task will be spawned for each `f` invocation, otherwise messages are processed sequentially, default is `false`
+- `channel_size`: maximum number of items buffered for processing, if full the messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
 - `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds, can be configured globally with `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` env variable
 """
 function subscribe(
@@ -53,11 +53,11 @@ end
 """
 $(SIGNATURES)
 
-Subscribe to a subject in synchronous mode. Client is supposed to call `next` manually to obtain messages.
+Subscribe to a subject in synchronous mode. The client is supposed to call `next` manually to obtain messages.
 
 Optional keyword arguments are:
 - `queue_group`: NATS server will distribute messages across queue group members
-- `channel_size`: maximum items buffered for processing, if full messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
+- `channel_size`: maximum number of items buffered for processing, if full the messages will be ignored, default is `$DEFAULT_SUBSCRIPTION_CHANNEL_SIZE`, can be configured globally with `NATS_SUBSCRIPTION_CHANNEL_SIZE` env variable
 - `monitoring_throttle_seconds`: time intervals in seconds that handler errors will be reported in logs, default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds, can be configured globally with `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` env variable
 """
 function subscribe(
@@ -94,7 +94,7 @@ end
 """
 $(SIGNATURES)
 
-Obtains next message for synchronous subscription.
+Obtains the next message for synchronous subscription.
 
 Optional keyword arguments:
 - `no_wait`: do not wait for next message, return `nothing` if buffer is empty
@@ -150,7 +150,7 @@ end
 """
 $(SIGNATURES)
 
-Obtains next message for synchronous subscription converting it to requested `T` type.
+Obtains the next message for synchronous subscription converting it to requested `T` type.
 
 Optional keyword arguments:
 - `no_wait`: do not wait for next message, return `nothing` if buffer is empty
@@ -168,7 +168,7 @@ $(SIGNATURES)
 Obtains batch of messages for synchronous subscription.
 
 Optional keyword arguments:
-- `no_wait`: do not wait for next message, return empty vector if buffer is empty
+- `no_wait`: do not wait for next message, return an empty vector if buffer is empty
 - `no_throw`: do not throw exception, stops collecting messages on error
 """
 function next(connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{Msg}
@@ -184,10 +184,10 @@ end
 """
 $(SIGNATURES)
 
-Obtains batch of messages for synchronous subscription converting them to reqested `T` type.
+Obtains batch of messages for synchronous subscription converting them to the requested `T` type.
 
 Optional keyword arguments:
-- `no_wait`: do not wait for next message, return empty vector if buffer is empty
+- `no_wait`: do not wait for next message, return an empty vector if buffer is empty
 - `no_throw`: do not throw exception, stops collecting messages on error
 """
 function next(T::Type, connection::Connection, sub::Sub, batch::Integer; no_wait = false, no_throw = false)::Vector{T}
@@ -210,7 +210,7 @@ function report_error!(data::SubscriptionMonitoringData, err, msg::Msg)
     end
 end
 
-# Resets errors counter and obtains current state.
+# Resets the errors counter and obtains current state.
 function reset_counter!(data::SubscriptionMonitoringData)
     @lock data.lock begin
         save = data.errors_since_last_report

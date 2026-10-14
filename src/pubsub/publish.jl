@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementation of functions for publishing messages.
+# This file contains implementations of functions for publishing messages.
 #
 ### Code:
 
@@ -21,9 +21,9 @@ const mime_headers = MIME_HEADERS()
 """
 $(SIGNATURES)
 
-Publish `data` to a `subject`, payload is obtained with `show` method taking `mime` `$(MIME_PAYLOAD())`, headers are obtained with `show` method taking `mime` `$(MIME_HEADERS())`.
+Publish `data` to a `subject`, the payload is obtained with the `show` method taking `mime` `$(MIME_PAYLOAD())`, headers are obtained with the `show` method taking `mime` `$(MIME_HEADERS())`.
 
-There are predefined convertion defined for `String` type. To publish headers there is defined conversion from tuple taking vector of pairs of strings.
+There are predefined conversions defined for the `String` type. To publish headers there is a defined conversion from a tuple taking a vector of pairs of strings.
 
 Optional parameters:
 - `reply_to`: subject to which a result should be published

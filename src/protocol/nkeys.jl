@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementations nkeys signingature which is one of methods of authentication used by NATS protocol.
+# This file contains implementations of nkeys signatures, which are one of the methods of authentication used by the NATS protocol.
 #
 ### Code:
 

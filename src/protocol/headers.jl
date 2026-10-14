@@ -11,7 +11,7 @@
 #
 ### Commentary:
 #
-# This file contains implementations headers parsig and serialization. Headers are represented as vector of paris of strings.
+# This file contains implementations of header parsing and serialization. Headers are represented as a vector of pairs of strings.
 #
 ### Code:
 

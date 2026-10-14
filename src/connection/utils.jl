@@ -11,14 +11,14 @@
 #
 ### Commentary:
 #
-# This file contains utilities for managing NATS connection that do not fit anywhere else.
+# This file contains utilities for managing a NATS connection that do not fit anywhere else.
 #
 ### Code:
 
 function argtype(handler)
     handler_methods = methods(handler)
     if length(handler_methods) > 1
-        error("Multimethod functions not suported as subscription handler.")
+        error("Multimethod functions not supported as a subscription handler.")
     end
     signature = first(methods(handler)).sig
     if length(signature.parameters) == 1
@@ -32,9 +32,9 @@ end
 
 function find_msg_conversion_or_throw(T::Type)
     if T != Any && !hasmethod(Base.convert, (Type{T}, Msg))
-        error("""Conversion of NATS message into type $T is not defined.
+        error("""Conversion of a NATS message into type $T is not defined.
             
-        Example how to define it:
+        An example how to define it:
         ```
         import Base: convert
 
@@ -53,12 +53,12 @@ function find_data_conversion_or_throw(T::Type)
     if T != Any && !hasmethod(Base.show, (IO, NATS.MIME_PAYLOAD, T))
         error("""Conversion of type $T to NATS payload is not defined.
             
-            Example how to define it:
+            An example how to define it:
             ```
             import Base: show
 
             function Base.show(io::IO, ::NATS.MIME_PAYLOAD, x::$T)
-                # Write content to `io` here, it can be UTF-8 string or byte array.
+                # Write content to `io` here, it can be a UTF-8 string or a byte array.
             end
 
             ```
@@ -66,7 +66,7 @@ function find_data_conversion_or_throw(T::Type)
             Optionally you might want to attach headers to a message:
             ```
             function Base.show(io::IO, ::NATS.MIME_HEADERS, x::$T)
-                # Create vector of pairs of strings
+                # Create a vector of pairs of strings
                 hdrs = ["header_key" => "header_value"]
                 # Write them to the buffer
                 show(io, ::NATS.MIME_HEADERS, hdrs)
@@ -77,8 +77,8 @@ function find_data_conversion_or_throw(T::Type)
 end
 
 # """
-# Return lambda that avoids type conversions for certain types.
-# Also allows for use of parameterless handlers for subs that do not need look into msg payload. 
+# Return a lambda that avoids type conversions for certain types.
+# Also allows for use of parameterless handlers for subs that do not need to look into the msg payload.
 # """
 function wrap_handler(f::Function)
     arg_t = argtype(f)
