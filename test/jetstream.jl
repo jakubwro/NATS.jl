@@ -300,31 +300,12 @@ end
         kv["a"] = "5"
     end
 
-    read_finished = Base.Event()
-    writer = @async begin
-        wait(read_finished)
-        kv["a"] = "6"
-    end
+    @async (sleep(2); kv["a"] = "6")
 
-    try
-        @test_throws "wrong last sequence" with_optimistic_concurrency(kv) do
-            old = kv["a"]
-            notify(read_finished)
-            writer_finished = timedwait(() -> istaskdone(writer), 10.0; pollint = 0.01)
-            @test writer_finished == :ok
-            if writer_finished == :ok
-                fetch(writer)
-            end
-            kv["a"] = "$(old)_updated"
-        end
-    finally
-        # Release the writer even if reading the original revision fails.
-        notify(read_finished)
-        writer_finished = timedwait(() -> istaskdone(writer), 10.0; pollint = 0.01)
-        @test writer_finished == :ok
-        if writer_finished == :ok
-            fetch(writer)
-        end
+    @test_throws "wrong last sequence" with_optimistic_concurrency(kv) do
+        old = kv["a"]
+        sleep(3)
+        kv["a"] = "$(old)_updated"
     end
     @test kv["a"] == "6"
     keyvalue_stream_delete(connection, "test_kv")
