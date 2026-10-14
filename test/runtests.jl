@@ -23,8 +23,8 @@ function is_nats_available()
         host, port = NATS.host_port(url)
         Sockets.getaddrinfo(host)
         nc = NATS.connect()
-        sleep(5)
-        @assert nc.status == NATS.CONNECTED
+        NATS.ping(nc; timeout = 10.0, measure = false)
+        @assert NATS.status(nc) == NATS.CONNECTED
         @info "NATS avaliable, running connected tests."
         true
     catch err
@@ -48,14 +48,32 @@ if have_nats
     include("experimental.jl")
 
     @testset "All subs should be closed" begin
-        sleep(5)
-        for nc in NATS.state.connections
-            @test isempty(nc.sub_data)
-            @test isempty(nc.unsubs)
-            if nc.send_buffer.size > 0
-                @info "Buffer content" String(nc.send_buffer.data[begin:nc.send_buffer.size])
+        connections = lock(NATS.state.lock) do
+            copy(NATS.state.connections)
+        end
+        settled = timedwait(10.0) do
+            all(connections) do nc
+                subs_closed = lock(nc.lock) do
+                    isempty(nc.sub_data) && isempty(nc.unsubs)
+                end
+                buffer_empty = lock(nc.send_buffer_cond) do
+                    nc.send_buffer.size == 0
+                end
+                subs_closed && buffer_empty
             end
-            @test nc.send_buffer.size == 0
+        end
+        @test settled == :ok
+        for nc in connections
+            lock(nc.lock) do
+                @test isempty(nc.sub_data)
+                @test isempty(nc.unsubs)
+            end
+            lock(nc.send_buffer_cond) do
+                if nc.send_buffer.size > 0
+                    @info "Buffer content" String(nc.send_buffer.data[begin:nc.send_buffer.size])
+                end
+                @test nc.send_buffer.size == 0
+            end
         end
     end
 

@@ -29,12 +29,11 @@ NATS.status()
             Threads.@spawn publish(conn, "some_other_subject", "Some payload")
         end
     end
-    sleep(0.2)
+    sub_stats = NATS.stats(conn, sub)
     publish(conn, "stats_test")
-    sleep(0.2)
-    @test conn.stats.msgs_published == 2
-    sub_stats = conn.sub_data[sub.sid].stats
-    @test sub_stats.msgs_published == 1
+    @test timedwait(() -> (@atomic sub_stats.msgs_published) >= 1, 10.0) == :ok
+    @test (@atomic conn.stats.msgs_published) == 2
+    @test (@atomic sub_stats.msgs_published) == 1
     drain(conn, sub)
 end
 
@@ -66,9 +65,9 @@ end
         @test NATS.status(conn) == NATS.CONNECTED
 
         conn = NATS.connect("localhost:4321,localhost:4322,localhost:4222", retry_on_init_fail = true, retain_servers_order = true, reconnect_delays = [0.1, 0.1, 0.1])
-        sleep(1)
-        @test conn.reconnect_count == 1
-        @test conn.connect_init_count == 3
+        @test timedwait(() -> (@atomic conn.reconnect_count) >= 1, 10.0) == :ok
+        @test (@atomic conn.reconnect_count) == 1
+        @test (@atomic conn.connect_init_count) == 3
     catch
         # This may fail for some NATS server setup and this is ok.
         @info "`Connection url schemes` tests ignored."
@@ -113,17 +112,19 @@ NATS.status()
 @testset "Should reconnect on malformed msg" begin
     options = merge(NATS.default_connect_options(), (protocol=100,) )
     con_msg = StructTypes.constructfrom(Connect, options)
+    reconnects = @atomic nc.reconnect_count
     NATS.send(nc, con_msg)
-    sleep(10)
-    @test nc.status == NATS.CONNECTED
+    @test timedwait(() -> (@atomic nc.reconnect_count) > reconnects &&
+        NATS.status(nc) == NATS.CONNECTED, 15.0) == :ok
 end
 
 NATS.status()
 
 @testset "Should reconnect on send buffer closed" begin
+    reconnects = @atomic nc.reconnect_count
     NATS.reopen_send_buffer(nc)
-    sleep(5)
-    @test nc.status == NATS.CONNECTED
+    @test timedwait(() -> (@atomic nc.reconnect_count) > reconnects &&
+        NATS.status(nc) == NATS.CONNECTED, 15.0) == :ok
 end
 
 NATS.status()
@@ -245,16 +246,16 @@ NATS.status()
     NATS.ping(connection) # Ping should work even when buffer is overflown
     
     connection = NATS.connect(send_buffer_limit = 5)
-    counter = 0
+    counter = Threads.Atomic{Int}(0)
     sub = subscribe(connection, "overflow_buffer") do msg
-        counter += 1
+        Threads.atomic_add!(counter, 1)
     end
     for _ in 1:100
         publish(connection, "overflow_buffer", "test retry path")
     end
-    sleep(1)
+    @test timedwait(() -> counter[] > 90, 10.0) == :ok
     unsubscribe(connection, sub)
-    @test counter > 90
+    @test counter[] > 90
 end
 
 NATS.status()
@@ -262,8 +263,9 @@ NATS.status()
 @testset "Publish on drained connection fails" begin
     connection = NATS.connect()
 
-    @async NATS.drain(connection)
-    sleep(0.1)
+    draining = @async NATS.drain(connection)
+    @test timedwait(() -> istaskdone(draining), 10.0) == :ok
+    istaskdone(draining) && fetch(draining)
     @test_throws ErrorException publish(connection, "test_publish_on_drained")
 
     pub = NATS.Pub("test_publish_on_drained", nothing, 0, UInt8[])
@@ -276,25 +278,25 @@ NATS.status()
     connection = NATS.connect()
 
     published_count = 0
-    delivered_count = 0
+    delivered_count = Threads.Atomic{Int}(0)
     sub = subscribe(connection, "some_topic") do msg
         sleep(0.1)
-        delivered_count += 1
+        Threads.atomic_add!(delivered_count, 1)
     end
-    sleep(1) # Let server to notice subscribtion.
+    NATS.ping(connection; timeout = 10.0, measure = false)
     publisher = @async for i in 1:300
         publish(connection, "some_topic", "Hi!")
         published_count += 1
         sleep(0.01)
     end
-    sleep(0.2)
+    @test timedwait(() -> delivered_count[] > 0, 10.0) == :ok
     drain(connection, sub)
-    sleep(1)
-    @test delivered_count > 0
-    wait(publisher)
-    @show delivered_count published_count
-    @test connection.stats.msgs_handled == delivered_count
-    @test connection.stats.msgs_received == delivered_count
+    @test delivered_count[] > 0
+    @test timedwait(() -> istaskdone(publisher), 10.0) == :ok
+    istaskdone(publisher) && fetch(publisher)
+    @show delivered_count[] published_count
+    @test (@atomic connection.stats.msgs_handled) == delivered_count[]
+    @test (@atomic connection.stats.msgs_received) == delivered_count[]
 end
 
 NATS.status()
@@ -303,25 +305,27 @@ NATS.status()
     connection = NATS.connect()
 
     published_count = 0
-    delivered_count = 0
+    delivered_count = Threads.Atomic{Int}(0)
     sub = subscribe(connection, "some_topic") do msg
         sleep(0.05)
-        delivered_count += 1
+        Threads.atomic_add!(delivered_count, 1)
     end
-    sleep(1) # Let server to notice subscription.
+    NATS.ping(connection; timeout = 10.0, measure = false)
     publisher = @async for i in 1:300
         publish(connection, "some_topic", "Hi!")
         published_count += 1
         sleep(0.01)
     end
-    sleep(0.3)
+    @test timedwait(() -> delivered_count[] > 0, 10.0) == :ok
     @time drain(connection)
-    sleep(1)
-    @test delivered_count > 0
-    @test_throws "Cannot send on connection with status DRAINING" wait(publisher)
-    @show delivered_count published_count
-    @test connection.stats.msgs_handled == delivered_count
-    @test connection.stats.msgs_received == delivered_count
+    @test delivered_count[] > 0
+    @test timedwait(() -> istaskdone(publisher), 10.0) == :ok
+    if istaskdone(publisher)
+        @test_throws r"Cannot send on connection with status DRAIN(ING|ED)" wait(publisher)
+    end
+    @show delivered_count[] published_count
+    @test (@atomic connection.stats.msgs_handled) == delivered_count[]
+    @test (@atomic connection.stats.msgs_received) == delivered_count[]
 end
 
 NATS.status()

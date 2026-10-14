@@ -18,7 +18,7 @@ function run_test()
     sub = subscribe(connection, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
-    sleep(0.5)
+    ping(connection; timeout = 10.0, measure = false)
 
     pub_task = Threads.@spawn disable_sigint() do
         Base.sigatomic_begin()

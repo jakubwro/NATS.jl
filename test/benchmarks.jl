@@ -90,7 +90,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
             Threads.atomic_add!(msgs_after_timeout, 1)
         end
     end
-    sleep(1)
+    ping(connection; timeout = 10.0, measure = false)
     t = Threads.@spawn :default begin
         @time while isopen(tm)
             if time_first_pub == 0.0
@@ -124,7 +124,9 @@ end
 end
 
 @testset "Requests per second with sync handlers." begin
-    sleep(5) # Wait for buffers flush from previous tests.
+    connections = @lock NATS.state.lock copy(NATS.state.connections)
+    @test timedwait(() -> all(NATS.is_send_buffer_flushed, connections),
+        30.0; pollint = 0.01) == :ok
     connection = NATS.connect()
     subject = randstring(5)
     sub = reply(connection, subject) do msg
@@ -257,7 +259,7 @@ end
                 last_msg_time = time()
             end
           end
-    sleep(0.1) # Give server time to process sub.
+    ping(conn; timeout = 10.0, measure = false)
     t = @async begin
         cmd = `docker run --network $docker_network -e GITHUB_ACTIONS=true -e CI=true --entrypoint nats synadia/nats-box:latest --server nats:4222 bench foo --pub 1 --size 16 --msgs $n`
         io = IOBuffer();

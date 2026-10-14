@@ -24,8 +24,7 @@ function show(io::IO, ::NATS.MIME_PAYLOAD, person::Person)
 end
 
 nc = NATS.connect()
-sleep(5)
-@assert nc.status == NATS.CONNECTED "Cannot establish connection."
+@assert NATS.status(nc) == NATS.CONNECTED "Cannot establish connection."
 
 @testset "Publish subscribe with custom data" begin
     c = Channel()

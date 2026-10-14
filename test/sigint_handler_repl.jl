@@ -19,7 +19,7 @@ function run_test()
     sub = subscribe(connection, subject) do msg
         Threads.atomic_add!(received_count, 1)
     end
-    sleep(0.5)
+    ping(connection; timeout = 10.0, measure = false)
 
     pub_task = Threads.@spawn begin
         for i in 1:10000
@@ -49,7 +49,8 @@ end
 t = Threads.@spawn :default run_test()
 
 wait(t)
-sleep(5)
+timedwait(() -> NATS.status(NATS.connection(1)) == NATS.DRAINED,
+    15.0; pollint = 0.01)
 NATS.status()
 if NATS.status(NATS.connection(1)) == NATS.DRAINED
     @info "Test passed correctly."
