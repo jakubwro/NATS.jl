@@ -348,17 +348,20 @@ function connect(
                         status(nc, DRAINED)
                         break
                     else
-                        status(nc, CONNECTING)
+                        @lock nc.status_change_cond begin
+                            reset(nc.reconnect_event)
+                            status(nc, CONNECTING)
+                        end
                         continue
                     end
                 elseif status(nc) == DRAINED
                     break
                 end
             end
+            reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event); end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, write_stream) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out) end
-            reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event) end
 
             tasks = [receiver_task, sender_task, ping_task, reconnect_await_task, drain_await_task]
             names = ["receiver", "sender", "ping", "reconnect", "drain"]
@@ -387,10 +390,6 @@ function connect(
                 close(sock)
                 break
             end
-            
-            notify(nc.reconnect_event) # Finish reconnect_await_task.
-            # TODO: maybe `autoreset` should be used, but special care needs to be taken to not consume it anywhere else.
-            reset(nc.reconnect_event) # Reset event to prevent forever reconnect.
 
             reopen_send_buffer(nc) # Finish sender_task.
             close(sock) # Finish receiver_task.
@@ -398,7 +397,14 @@ function connect(
             #TODO: maybe in some case waiting for tasks to finish is not needed, it will shortned reconnect time 10x
             try wait(sender_task) catch end
             try wait(receiver_task) catch end
+            
+            notify(nc.reconnect_event)
             try wait(reconnect_await_task) catch end
+            @lock nc.status_change_cond begin
+                reset(nc.reconnect_event)
+                status(nc, CONNECTING)
+            end
+
             # `ping_task` will complete eventually seeing `reconnect_count` increased.
 
             @assert istaskdone(receiver_task)
@@ -406,7 +412,6 @@ function connect(
             @assert istaskdone(reconnect_await_task)
 
             @warn "Connection to $(clustername(nc)) cluster on `$(nc.url)` lost, trynig to reconnect."
-            status(nc, CONNECTING)
             @atomic nc.connect_init_count = 0
             @debug "Cleanup time: $(time() - cleanup_start) seconds"
         end
@@ -434,12 +439,22 @@ Optional keyword aruguments:
 """
 function reconnect(connection::NATS.Connection; should_wait::Bool = true)
     @lock connection.status_change_cond begin
-        if connection.status == DRAINING || connection.status == DRAINED
+        current_status = connection.status
+        if current_status == CONNECTING
+            return
+        elseif current_status == DRAINING || current_status == DRAINED
             error("Cannot reconnect a drained connection.")
         end
+
         notify(connection.reconnect_event)
-        while should_wait && connection.status != CONNECTING
-            wait(connection.status_change_cond)
+        
+        while should_wait
+            current_status = wait(connection.status_change_cond)
+            if current_status == CONNECTING
+                return
+            elseif current_status == DRAINING || current_status == DRAINED
+                error("Cannot reconnect a drained connection.")
+            end
         end
     end
 end
