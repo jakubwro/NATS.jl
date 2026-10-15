@@ -1,4 +1,4 @@
-# Run without a server: julia --project=. test/reconnect_events.jl
+# Run without a server: julia +1.10 --project=. test/reconnect_events.jl
 using Test
 using NATS
 
@@ -23,6 +23,49 @@ using NATS
             nc = offline_connection(NATS.CONNECTING)
             NATS.reconnect(nc; should_wait)
             @test !(@atomic nc.reconnect_event.set)
+        end
+    end
+
+    @testset "A late sender keeps its closed buffer" begin
+        nc = offline_connection()
+        old_buffer = nc.send_buffer
+        write(old_buffer, "pending")
+        output = IOBuffer()
+        sender = Task(() -> NATS.sendloop(nc, output, old_buffer))
+
+        # Replace the buffer before the old connection's sender gets to run.
+        NATS.reopen_send_buffer(nc)
+        schedule(sender)
+        try
+            if finishes(() -> istaskdone(sender))
+                fetch(sender)
+                @test !isopen(old_buffer)
+                @test isopen(nc.send_buffer)
+                @test isempty(take!(output))
+                @test String(take!(nc.send_buffer)) == "pending"
+            end
+        finally
+            # Also release a regressed sender that picked up the replacement buffer.
+            NATS.reopen_send_buffer(nc)
+            finishes(() -> istaskdone(sender))
+        end
+    end
+
+    @testset "A late heartbeat keeps its original reconnect count" begin
+        nc = offline_connection()
+        reconnect_count = @atomic nc.reconnect_count
+        heartbeat = Task(() -> NATS.ping_loop(nc, 0.001, 0, reconnect_count))
+
+        @atomic nc.reconnect_count += 1
+        schedule(heartbeat)
+        try
+            if finishes(() -> istaskdone(heartbeat))
+                fetch(heartbeat)
+                @test isempty(take!(nc.send_buffer))
+            end
+        finally
+            NATS.status(nc, NATS.DRAINED)
+            finishes(() -> istaskdone(heartbeat))
         end
     end
 
@@ -68,6 +111,7 @@ using NATS
             reconnect_delays = [0.001], drain_timeout = 0.1, drain_poll = 0.0)
         try
             for should_wait in (false, true)
+                finishes(() -> NATS.status(nc) == NATS.DISCONNECTED) || break
                 previous_attempts = @atomic nc.connect_init_count
                 expected_attempts = previous_attempts + 2
                 # Bound even a blocking reconnect if its notification is lost.

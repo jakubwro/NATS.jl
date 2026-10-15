@@ -111,16 +111,18 @@ function reopen_send_buffer(nc::Connection)
     @lock nc.send_buffer_cond begin
         new_send_buffer = IOBuffer()
         data = take!(nc.send_buffer)
-        for (sid, sub_data) in pairs(nc.sub_data)
-            show(new_send_buffer, MIME_PROTOCOL(), sub_data.sub)
-            unsub_max_msgs = get(nc.unsubs, sid, nothing) # TODO: lock on connection may be needed
-            isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
+        @lock nc.lock begin
+            for (sid, sub_data) in pairs(nc.sub_data)
+                show(new_send_buffer, MIME_PROTOCOL(), sub_data.sub)
+                unsub_max_msgs = get(nc.unsubs, sid, nothing)
+                isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))
+            end
+            @debug "Restored subs buffer length $(length(data))"
+            write(new_send_buffer, data)
+            @debug "Total restored buffer length $(length(data))"
+            close(nc.send_buffer)
+            nc.send_buffer = new_send_buffer
         end
-        @debug "Restored subs buffer length $(length(data))"
-        write(new_send_buffer, data)
-        @debug "Total restored buffer length $(length(data))"
-        close(nc.send_buffer)
-        nc.send_buffer = new_send_buffer
         notify(nc.send_buffer_cond)
     end
 end
@@ -133,9 +135,8 @@ function is_send_buffer_flushed(nc::Connection)
     end
 end
 
-function sendloop(nc::Connection, io::IO)
+function sendloop(nc::Connection, io::IO, send_buffer::IO)
     # @show Threads.threadid()
-    send_buffer = nc.send_buffer
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         buf = @lock nc.send_buffer_cond begin
             # TODO: check for eof on io

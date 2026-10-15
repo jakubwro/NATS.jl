@@ -37,12 +37,14 @@ function unsubscribe(
     max_msgs::Union{Int, Nothing} = nothing
 )
     usnub = Unsub(sid, max_msgs)
-    send(connection, usnub)
-    if isnothing(max_msgs) || max_msgs == 0
-        cleanup_sub_resources(connection, sid)
-    else
-        @lock connection.lock begin
-            connection.unsubs[sid] = max_msgs
+    @lock connection.send_buffer_cond begin
+        send(connection, usnub)
+        if isnothing(max_msgs) || max_msgs == 0
+            cleanup_sub_resources(connection, sid)
+        else
+            @lock connection.lock begin
+                connection.unsubs[sid] = max_msgs
+            end
         end
     end
     nothing
