@@ -39,7 +39,7 @@ function subscribe(
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
-    subscription_channel = Channel(channel_size)
+    subscription_channel = Channel{Vector{MsgRaw}}(channel_size)
     with(scoped_subscription_stats => sub_stats) do
         _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, subscription_channel, monitoring_throttle_seconds)
     end
@@ -70,7 +70,7 @@ function subscribe(
     sid = new_sid(connection)
     sub = Sub(subject, queue_group, sid)
     sub_stats = Stats()
-    subscription_channel = Channel(channel_size)
+    subscription_channel = Channel{Vector{MsgRaw}}(channel_size)
     @lock connection.lock begin
         connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
     end
@@ -219,7 +219,7 @@ function reset_counter!(data::SubscriptionMonitoringData)
     end
 end
 
-function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::Bool, subject::String, subscription_channel::Channel, monitoring_throttle_seconds::Float64)
+function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::Bool, subject::String, subscription_channel::Channel{Vector{MsgRaw}}, monitoring_throttle_seconds::Float64)
     monitoring_data = SubscriptionMonitoringData()
     if spawn == true
         subscription_task = Threads.@spawn :interactive disable_sigint() do
