@@ -21,7 +21,7 @@ include("stats.jl")
 
 struct SubscriptionData
     sub::Sub
-    channel::Channel
+    channel::Channel{Vector{MsgRaw}}
     stats::Stats
     is_async::Bool
     lock::ReentrantLock
@@ -37,7 +37,7 @@ end
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = MersenneTwister()
     last_sid::Int64 = 0
-    send_buffer::IO = IOBuffer()
+    send_buffer::IOBuffer = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
     send_buffer_limit::Int64 = DEFAULT_SEND_BUFFER_LIMIT_BYTES
     send_retry_delays::Any = SEND_RETRY_DELAYS
