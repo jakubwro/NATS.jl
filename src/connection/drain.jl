@@ -71,6 +71,9 @@ Default timeout value is configurable per connection on `connect` with
 `drain_timeout`. Can be also set globally with `NATS_DRAIN_TIMEOUT_SECONDS`
 environment variable. If not set explicitly default drain timeout is
 `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
+
+If connection is reconnecting, drain may wait for connection attempt to finish.
+Time spent reconnecting is not included in `drain_timeout`.
 """
 function drain(connection::Connection)
     @lock connection.status_change_cond begin

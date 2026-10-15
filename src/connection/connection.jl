@@ -145,13 +145,11 @@ end
 
 function status_change(f, nc::Connection)
     while true
-        st = status(nc)
-        if st == DRAINED
-            break
-        end
-        @lock nc.status_change_cond begin
+        st = @lock nc.status_change_cond begin
+            if nc.status == DRAINED
+                break
+            end
             wait(nc.status_change_cond)
-            st = nc.status
         end
         f(st)
     end

@@ -132,7 +132,7 @@ function init_protocol(nc, url, options)
             options = merge(options, (pass = pass,))
         end
     end
-    sock = Sockets.connect(host, port)
+    sock = Sockets.connect(host, port) # add connection timeout here 5s
     try
         read_stream, write_stream = sock, sock
         tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
