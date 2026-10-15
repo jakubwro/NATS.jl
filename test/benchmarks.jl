@@ -62,7 +62,7 @@ end
         
         latencies = []
         for i in 1:nsamples
-            @timed _, tm = @timed request("latency", "This is request!")
+            _, tm = @timed request("latency", "This is request!")
             i == 1 || push!(latencies, 1000*tm)
         end
         @info "Latencies in ms: $(round.(latencies, digits = 2))"
@@ -73,43 +73,34 @@ end
 
 function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connection, spawn = false)
     empty!(connection.fallback_handlers)
-    c = Channel(100000000)
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
-    tm = Timer(time_to_wait_s)
-    msgs_after_timeout = Threads.Atomic{Int64}(0)
-    time_first_pub = 0.0
-    time_first_msg = 0.0
+    received_total = Threads.Atomic{Int64}(0)
+    time_first_msg = Threads.Atomic{Float64}(0.0)
     sub = subscribe(connection, subject; spawn) do msg
-        if time_first_msg == 0.0
-            time_first_msg = time()
-        end
-        if isopen(tm)
-            try put!(c, msg) catch err @error err end
-        else 
-            Threads.atomic_add!(msgs_after_timeout, 1)
-        end
+        time_first_msg[] == 0.0 && Threads.atomic_cas!(time_first_msg, 0.0, time())
+        Threads.atomic_add!(received_total, 1)
     end
     ping(connection; timeout = 10.0, measure = false)
     t = Threads.@spawn :default begin
+        tm = Timer(time_to_wait_s) # Start after subscription is set up.
+        # @async interactive_status(tm)
+        time_first_pub = time()
         @time while isopen(tm)
-            if time_first_pub == 0.0
-                time_first_pub = time()
-            end
             publish(connection2, subject, "Hi!")
             # NATS.send(connection2, pub)
-
         end
+        received = received_total[]
         drain(connection, sub)
+        received, time_first_pub
     end
     errormonitor(t)
-    # @async interactive_status(tm)
-    wait(t)
-    received = Base.n_avail(c)
+    received, time_first_pub = fetch(t)
+    msgs_after_timeout = received_total[] - received
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."
     NATS.status()
-    @show connection.stats connection2.stats msgs_after_timeout[]
-    @show (time_first_msg - time_first_pub)
+    @show connection.stats connection2.stats msgs_after_timeout
+    @show (time_first_msg[] - time_first_pub)
     sleep(1)
 end
 
