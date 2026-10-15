@@ -358,7 +358,6 @@ function connect(
                     break
                 end
             end
-            # Late-starting workers must retain their own attempt's resources and generation.
             reconnect_count = @atomic nc.reconnect_count
             reconnect_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.reconnect_event); end
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, $read_stream) end
