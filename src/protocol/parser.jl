@@ -32,6 +32,9 @@
     args::Vector{UnitRange{Int64}} = UnitRange{Int64}[0:0, 0:0, 0:0, 0:0, 0:0]
     payload_buffer::Vector{UInt8} = UInt8[]
     results::Vector{ProtocolMessage} = ProtocolMessage[]
+    # Size of an incomplete message at the end of a buffer, from its first byte through the final LF,
+    # when it is already known from the message control line, otherwise 0.
+    needed_bytes::Int64 = 0
 end
 
 function parse_error(buffer, pos, data::ParserData)
@@ -41,18 +44,39 @@ end
 
 function parser_loop(f, io::IO)
     data = ParserData()
+    buffer = UInt8[]
+    unparsed = 1 # Index in `buffer` of an incomplete message carried over to the next batch.
     # TODO: ensure eof does not block for TLS connection
     while !eof(io) # EOF indicates connection is closed, task will be stopped and reconnected.
         data_read_start = time()
-        buffer = readavailable(io) # Sleeps when no data available.
+        try
+            buffer = read_batch(io, buffer, unparsed, data.needed_bytes) # Sleeps until the incomplete message is available.
+        catch err
+            err isa EOFError && break # Connection closed in the middle of a message.
+            rethrow()
+        end
         data_ready_time = time()
-        parse_buffer(io, buffer, data)
+        unparsed = parse_buffer(buffer, data)
         batch_ready_time = time()
         f(data.results)
         handler_call_time = time()
         # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
         empty!(data.results)
     end
+end
+
+# Reads available data into a new buffer, after the bytes of an incomplete message carried over from
+# `previous[from:end]`, and waits until the buffer has at least `needed` bytes.
+# Parsed messages keep views into the buffer, so every batch needs a new one. Unlike `readavailable`,
+# reading into it leaves the internal buffer of the stream in place, so the stream does not allocate
+# and grow a new one for every batch.
+function read_batch(io::IO, previous::Vector{UInt8}, from::Int64, needed::Int64)
+    carried = length(previous) - from + 1
+    n = max(bytesavailable(io), needed - carried, 1)
+    buffer = Vector{UInt8}(undef, carried + n)
+    copyto!(buffer, 1, previous, from, carried)
+    GC.@preserve buffer unsafe_read(io, pointer(buffer, carried + 1), n)
+    buffer
 end
 
 macro uint8(char::Char)
@@ -69,13 +93,20 @@ end
     ret
 end
 
-function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
+# Parses complete protocol messages from `buffer` into `data.results`. Returns the index of the first
+# byte of an incomplete message at the end of the buffer, or `length(buffer) + 1` if there is none.
+# An incomplete message is parsed again from its first byte once more data is read, so ranges of
+# `MsgRaw` always point into a single buffer.
+function parse_buffer(buffer::Vector{UInt8}, data::ParserData)
     pos = 0
     len = length(buffer)
+    op_start = 1
+    data.needed_bytes = 0
     while pos < len
         pos += 1
         byte = buffer[pos]
         if data.state == OP_START
+            op_start = pos
             if byte == (@uint8 'M') || byte == (@uint8 'm')
                 data.state = OP_M
                 data.has_header = false
@@ -178,20 +209,9 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             else
                 data.arg_begin = pos
                 data.arg_no += 1
-                if pos == len
-                    rest = readuntil(io, UInt8('\n'); keep = true)
-                    append!(buffer, rest)
-                    len += length(rest)
-                end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
-            if pos == len && byte != (@uint8 '\n')
-                # CR may already be in buffer; read through LF without decoding bytes.
-                rest = readuntil(io, UInt8('\n'); keep = true)
-                append!(buffer, rest)
-                len += length(rest)
-            end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
                 isempty(argrange) || (data.args[data.arg_no] = argrange)
@@ -228,9 +248,9 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 end
                 ending = pos + data.total_bytes + 2
                 if ending > len
-                    rest = read(io, ending - len)
-                    len += length(rest)
-                    append!(buffer, rest)
+                    # Wait for the whole message instead of appending to this buffer, which can be large.
+                    data.needed_bytes = ending - op_start + 1
+                    break
                 end
                 payload_range = range(pos+1, pos + data.total_bytes)
                 pos = pos + data.total_bytes + 2
@@ -343,6 +363,14 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             end
         end
     end
+    if data.state != OP_START
+        data.state = OP_START
+        data.arg_no = 0
+        data.sid = 0
+        empty!(data.payload_buffer)
+        return op_start
+    end
+    len + 1
 end
 
 # Simple interactive parser for protocol initialization.
