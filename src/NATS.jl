@@ -82,5 +82,6 @@ include("jetstream/JetStream.jl")
 
 precompile(Tuple{typeof(NATS.init_protocol), NATS.Connection, String, typeof(default_connect_options())})
 precompile(Tuple{typeof(NATS.connect)})
+precompile(Tuple{typeof(NATS.wait_for_send_buffer_space), NATS.Connection, Float64})
 
 end

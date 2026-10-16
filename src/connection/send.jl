@@ -98,12 +98,32 @@ function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
         return
     end
     for d in nc.send_retry_delays
-        sleep(d)
+        wait_for_send_buffer_space(nc, d)
         if try_send(nc, message)
             return
         end
     end
     error("Cannot send, send buffer too large.")
+end
+
+# Waits until the sender task takes data from a full send buffer, but no longer than `timeout` seconds.
+function wait_for_send_buffer_space(nc::Connection, timeout::Real)
+    @lock nc.send_buffer_cond begin
+        is_timed_out = false
+        timer = Timer(timeout) do _
+            @lock nc.send_buffer_cond begin
+                is_timed_out = true
+                notify(nc.send_buffer_cond)
+            end
+        end
+        try
+            while !is_timed_out && nc.send_buffer.size >= nc.send_buffer_limit
+                wait(nc.send_buffer_cond)
+            end
+        finally
+            close(timer)
+        end
+    end
 end
 
 # Calling this function is an easy way to force a crash of the sender task what will force a reconnect.
@@ -135,26 +155,36 @@ function is_send_buffer_flushed(nc::Connection)
     end
 end
 
+# Moves the send buffer content to `buf`. Unlike `take!` it keeps memory allocated by the send buffer,
+# so it is not reallocated and grown again for every batch. Memory is released after unusually large
+# batches, e.g. buffered during disconnection.
+function consume_send_buffer!(buf::Vector{UInt8}, send_buffer::IOBuffer, limit::Int64)
+    if send_buffer.size > 2 * limit
+        return take!(send_buffer)
+    end
+    seekstart(send_buffer)
+    read!(send_buffer, resize!(buf, send_buffer.size))
+    truncate(send_buffer, 0)
+    buf
+end
+
 function sendloop(nc::Connection, io::IO, send_buffer::IO)
     # @show Threads.threadid()
+    buf = UInt8[]
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
-        buf = @lock nc.send_buffer_cond begin
+        taken = @lock nc.send_buffer_cond begin
             # TODO: check for eof on io
-            taken = take!(send_buffer)
-            if isempty(taken)
+            while isopen(send_buffer) && send_buffer.size == 0
                 wait(nc.send_buffer_cond)
-                if !isopen(send_buffer)
-                    break
-                end
                 # TODO: check for eof on io
-                @atomic nc.send_buffer_flushed = false
-                take!(send_buffer)
-            else
-                @atomic nc.send_buffer_flushed = false
-                taken
             end
+            isopen(send_buffer) || break # Reconnect might have colsed the send buffer, double check
+            @atomic nc.send_buffer_flushed = false
+            taken = consume_send_buffer!(buf, send_buffer, nc.send_buffer_limit)
+            notify(nc.send_buffer_cond) # Wake up publishers
+            taken
         end
-        write(io, buf)
+        write(io, taken)
         flush(io)
         @atomic nc.send_buffer_flushed = true
     end

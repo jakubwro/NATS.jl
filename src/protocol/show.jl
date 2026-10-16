@@ -17,6 +17,29 @@
 
 import StructTypes: omitempties
 
+# Before Julia 1.12 `unsafe_write` for `IOBuffer` copies data byte by byte, what is slow for
+# large payloads. This is the same logic, but using `memcpy`.
+@static if VERSION < v"1.12"
+    function write_bytes(to::IOBuffer, p::Ptr{UInt8}, nb::UInt)
+        Base.ensureroom(to, nb)
+        ptr = (to.append ? to.size + 1 : to.ptr)
+        written = Int(min(nb, Int(length(to.data))::Int - ptr + 1))
+        data = to.data
+        GC.@preserve data unsafe_copyto!(pointer(data, ptr), p, written)
+        to.size = max(to.size, ptr + written - 1)
+        if !to.append
+            to.ptr += written
+        end
+        written
+    end
+else
+    write_bytes(to::IOBuffer, p::Ptr{UInt8}, nb::UInt) = unsafe_write(to, p, nb)
+end
+
+write_bytes(io::IOBuffer, s::Union{String, SubString{String}}) = GC.@preserve s write_bytes(io, pointer(s), UInt(sizeof(s)))
+write_bytes(io::IOBuffer, v::Vector{UInt8}) = GC.@preserve v write_bytes(io, pointer(v), UInt(length(v)))
+write_bytes(io::IO, data) = write(io, data)
+
 # Payload serialization.
 
 function Base.show(io::IO, ::MIME_PAYLOAD, ::Nothing)
@@ -32,7 +55,7 @@ end
 
 function Base.show(io::IO, ::MIME_PAYLOAD, payload::String)
     # Allows to return a string from the handler for `reply`.
-    write(io, payload)
+    write_bytes(io, payload)
     nothing
 end
 
@@ -71,8 +94,8 @@ function Base.show(io::IO, mime::MIME_HEADERS, tup::Tuple{<:Any, Headers})
     nothing
 end
 
-function Base.show(io::IO, mime::MIME_HEADERS, s::String)
-    startswith(s, "NATS/1.0\r\n") && write(io, s) # TODO: better validations, not sure if this method is needed.
+function Base.show(io::IO, ::MIME_HEADERS, s::String)
+    # TODO: rethink this
     nothing
 end
 
@@ -115,7 +138,7 @@ function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
     show(io, nbytes)
     # write(io, string(nbytes))
     write(io, "\r\n")
-    write(io, pub.payload)
+    write_bytes(io, pub.payload)
     write(io, "\r\n")
 end
 
