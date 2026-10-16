@@ -22,6 +22,9 @@ function convert(::Type{Msg}, msgraw::NATS.MsgRaw)
     reply_to = isempty(msgraw.reply_to_range) ? nothing : String(buffer[msgraw.reply_to_range])
     headers_length = msgraw.header_bytes
     payload = @view buffer[msgraw.payload_range]
+    if !isnothing(msgraw.payload_rest)
+        payload = vcat(payload, msgraw.payload_rest)
+    end
     Msg(subject, sid, reply_to, headers_length, payload)
 end
 

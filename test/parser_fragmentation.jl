@@ -9,6 +9,8 @@ using NATS
         buffer = read(io, first_read_length)
         data = NATS.ParserData()
         NATS.parse_buffer(io, buffer, data)
+        # The next readavailable returns what the parser did not read itself.
+        eof(io) || NATS.parse_buffer(io, read(io), data)
         @test eof(io)
         convert(NATS.Msg, only(data.results))
     end
@@ -16,7 +18,8 @@ using NATS
     for header in ("MSG foo 1 4\r\n", "HMSG foo 1 12 16\r\n")
         headers = startswith(header, "HMSG") ? "NATS/1.0\r\n\r\n" : ""
         wire = header * headers * "🙂\r\n"
-        for first_read_length in (ncodeunits(wire), ncodeunits(header) - 1)
+        # Split in the control line, headers, payload and trailing CRLF.
+        for first_read_length in 1:ncodeunits(wire)
             msg = parse_fragmented(wire, first_read_length)
             @test msg.subject == "foo"
             @test msg.headers_length == ncodeunits(headers)

@@ -44,7 +44,9 @@ function parser_loop(f, io::IO)
     # TODO: ensure eof does not block for TLS connection
     while !eof(io) # EOF indicates connection is closed, task will be stopped and reconnected.
         data_read_start = time()
-        buffer = readavailable(io) # Sleeps when no data available.
+        # Copy available data instead of `readavailable`, which takes the internal buffer of the stream,
+        # so the stream would allocate and grow a new one for every batch.
+        buffer = read(io, bytesavailable(io))
         data_ready_time = time()
         parse_buffer(io, buffer, data)
         batch_ready_time = time()
@@ -72,6 +74,7 @@ end
 function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
     pos = 0
     len = length(buffer)
+    args_start = 0 # Index of the first MSG argument, the subject.
     while pos < len
         pos += 1
         byte = buffer[pos]
@@ -176,22 +179,12 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 # Skip all spaces.
             else
+                args_start = pos
                 data.arg_begin = pos
                 data.arg_no += 1
-                if pos == len
-                    rest = readuntil(io, UInt8('\n'); keep = true)
-                    append!(buffer, rest)
-                    len += length(rest)
-                end
                 data.state = MSG_ARG
             end
         elseif data.state == MSG_ARG
-            if pos == len && byte != (@uint8 '\n')
-                # CR may already be in buffer; read through LF without decoding bytes.
-                rest = readuntil(io, UInt8('\n'); keep = true)
-                append!(buffer, rest)
-                len += length(rest)
-            end
             if byte == (@uint8 ' ') || byte == (@uint8 '\t')
                 argrange = range(data.arg_begin, pos-1)
                 isempty(argrange) || (data.args[data.arg_no] = argrange)
@@ -227,14 +220,17 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                     end
                 end
                 ending = pos + data.total_bytes + 2
+                payload_end = min(pos + data.total_bytes, len)
+                payload_rest = nothing
                 if ending > len
+                    # Read the rest of the message separately instead of appending it to `buffer`, which can be large.
                     rest = read(io, ending - len)
-                    len += length(rest)
-                    append!(buffer, rest)
+                    missing_payload = pos + data.total_bytes - payload_end
+                    missing_payload > 0 && (payload_rest = resize!(rest, missing_payload)) # Drop trailing CRLF.
                 end
-                payload_range = range(pos+1, pos + data.total_bytes)
-                pos = pos + data.total_bytes + 2
-                msg = MsgRaw(data.sid, buffer, subject_range, data.reply_to_range, data.header_bytes, payload_range)
+                payload_range = range(pos+1, payload_end)
+                pos = min(ending, len)
+                msg = MsgRaw(data.sid, buffer, subject_range, data.reply_to_range, data.header_bytes, payload_range, payload_rest)
                 push!(data.results, msg)
                 data.arg_no = 0
                 data.sid = 0
@@ -342,6 +338,18 @@ function parse_buffer(io::IO, buffer::Vector{UInt8}, data::ParserData)
                 push!(data.payload_buffer, byte)
             end
         end
+    end
+    if data.state == MSG_ARG
+        # The buffer ends inside a MSG control line, argument ranges cannot span two buffers. Finish this
+        # message from a small buffer with the rest of the line instead of appending to `buffer`.
+        line = buffer[args_start:len]
+        rest = readuntil(io, UInt8('\n'); keep = true)
+        isempty(rest) && return # Connection closed.
+        append!(line, rest)
+        data.state = OP_MSG_SPC
+        data.arg_no = 0
+        data.sid = 0
+        parse_buffer(io, line, data)
     end
 end
 

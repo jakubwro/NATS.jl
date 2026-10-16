@@ -167,6 +167,7 @@ struct MsgRaw <: ProtocolMessage
     reply_to_range::UnitRange{Int64}
     header_bytes::Int64
     payload_range::UnitRange{Int64}
+    payload_rest::Union{Vector{UInt8}, Nothing} # If payload is truncated by TCP fragmentation, the missing part is here
 end
 
 """
