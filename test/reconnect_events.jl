@@ -51,6 +51,42 @@ using NATS
         end
     end
 
+    @testset "A sender waiting for the buffer lock notices replacement" begin
+        nc = offline_connection()
+        old_buffer = nc.send_buffer
+        write(old_buffer, "pending")
+        output = IOBuffer()
+        started = Base.Event()
+        sender = nothing
+
+        lock(nc.send_buffer_cond)
+        try
+            sender = @async begin
+                notify(started)
+                NATS.sendloop(nc, output, old_buffer)
+            end
+            # The sender runs on this thread until it blocks on the held lock,
+            # after passing its outer isopen check.
+            wait(started)
+            NATS.reopen_send_buffer(nc)
+        finally
+            unlock(nc.send_buffer_cond)
+        end
+
+        try
+            if finishes(() -> istaskdone(sender))
+                fetch(sender)
+                @test !isopen(old_buffer)
+                @test isempty(take!(output))
+                @test String(take!(nc.send_buffer)) == "pending"
+            end
+        finally
+            # Release a regressed sender that missed the replacement notification.
+            @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
+            finishes(() -> istaskdone(sender))
+        end
+    end
+
     @testset "A late heartbeat keeps its original reconnect count" begin
         nc = offline_connection()
         reconnect_count = @atomic nc.reconnect_count

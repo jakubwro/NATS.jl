@@ -41,11 +41,16 @@ function publish(
     data = nothing;
     reply_to::Union{String, Nothing} = nothing
 )
-    payload_io = IOBuffer()
-    show(payload_io, mime_headers, data)
-    headers_length = payload_io.size
-    show(payload_io, mime_payload, data)
-    payload_bytes = take!(payload_io)
+    headers_length, payload_bytes = if data isa String
+        # Fast path for string just to beat benchmarks
+        0, unsafe_wrap(Vector{UInt8}, data)
+    else
+        payload_io = IOBuffer()
+        show(payload_io, mime_headers, data)
+        headers_length = payload_io.size
+        show(payload_io, mime_payload, data)
+        headers_length, take!(payload_io)
+    end
     pub = Pub(subject, reply_to, headers_length, payload_bytes)
     validate(pub)
     send(connection, pub)
