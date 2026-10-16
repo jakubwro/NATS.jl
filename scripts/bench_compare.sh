@@ -29,6 +29,8 @@
 #                      the version matching Manifest.toml
 #     JULIA_THREADS    julia threads, default `2,1`
 #     SUB_TIMEOUT      seconds to wait for a subscriber after the publisher is done, default 60
+#     SUB_PROFILE_DIR  optional directory for Julia subscriber CPU profiles and allocation/GC
+#                      counters; creates a unique subdirectory per run. Profiling adds overhead.
 #
 # Requires the `nats` CLI and a running NATS server.
 
@@ -41,6 +43,7 @@ subject="foo"
 JULIA="${JULIA:-}"
 JULIA_THREADS="${JULIA_THREADS:-2,1}"
 SUB_TIMEOUT="${SUB_TIMEOUT:-60}"
+SUB_PROFILE_DIR="${SUB_PROFILE_DIR:-}"
 
 usage() {
     sed -n '/^# Usage:/,/^# Requires/p' "$0" | sed 's/^# \{0,1\}//'
@@ -78,6 +81,11 @@ if ! load_output=$($JULIA --project=. -e 'using NATS' 2>&1); then
 fi
 
 logs=$(mktemp -d "${TMPDIR:-/tmp}/bench_compare.XXXXXX")
+sub_profile_dir=""
+if [ -n "$SUB_PROFILE_DIR" ]; then
+    mkdir -p "$SUB_PROFILE_DIR" || exit 1
+    sub_profile_dir=$(mktemp -d "$SUB_PROFILE_DIR/bench_compare.XXXXXX") || exit 1
+fi
 trap 'for pid in $(jobs -p); do kill_tree "$pid"; done' EXIT
 
 jl() {
@@ -200,7 +208,11 @@ run_case() {
             sub_pid=$!
             wait_for "$sub_log" "Starting Core NATS subscriber, expecting" 30 "$sub_pid" && sleep 0.5 || sub_started=no ;;
         julia)
-            jl scripts/bench_sub.jl "$subject" --msgs "$msgs" -s "$server" > "$sub_log" 2>&1 &
+            local -a sub_args=(scripts/bench_sub.jl "$subject" --msgs "$msgs" -s "$server")
+            if [ -n "$sub_profile_dir" ]; then
+                sub_args+=(--profile "$sub_profile_dir/$id.txt")
+            fi
+            jl "${sub_args[@]}" > "$sub_log" 2>&1 &
             sub_pid=$!
             wait_for "$sub_log" "Subscribed" 300 "$sub_pid" || sub_started=no ;;
     esac
@@ -252,6 +264,9 @@ measure_nats_startup_cpu
 
 echo "Server: $server, subject: $subject, messages per run: $(commas "$msgs"), julia: $JULIA -t $JULIA_THREADS"
 echo "Logs: $logs, nats startup CPU time: $(awk -v s="$nats_startup_cpu" 'BEGIN { printf "%.0f ms", 1000 * s }')"
+if [ -n "$sub_profile_dir" ]; then
+    echo "Julia subscriber profiles: $sub_profile_dir (profiling affects throughput)"
+fi
 echo
 printf "$row_format" "Size B" "Publisher" "Subscriber" "Pub msgs/s (CPU)" "Sub msgs/s (CPU)" "MiB/s" "vs nats"
 echo "|--------:|------------|------------|---------------------:|---------------------:|-----------:|--------:|"
