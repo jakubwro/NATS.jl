@@ -76,6 +76,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     subject = "SOME_SUBJECT"
     time_to_wait_s = 10.0
     received_total = Threads.Atomic{Int64}(0)
+    publish_failures_total = Threads.Atomic{Int64}(0)
     time_first_msg = Threads.Atomic{Float64}(0.0)
     sub = subscribe(connection, subject; spawn) do msg
         time_first_msg[] == 0.0 && Threads.atomic_cas!(time_first_msg, 0.0, time())
@@ -87,7 +88,11 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
         # @async interactive_status(tm)
         time_first_pub = time()
         @time while isopen(tm)
-            publish(connection2, subject, "Hi!")
+            try
+                publish(connection2, subject, "Hi!")
+            catch
+                Threads.atomic_add!(publish_failures_total, 1)
+            end
             # NATS.send(connection2, pub)
         end
         received = received_total[]
@@ -98,6 +103,7 @@ function msgs_per_second(connection::NATS.Connection, connection2::NATS.Connecti
     received, time_first_pub = fetch(t)
     msgs_after_timeout = received_total[] - received
     @info "Received $received messages in $time_to_wait_s s, $(received / time_to_wait_s) msgs / s."
+    @info "$(publish_failures_total[]) messages failed to publish."
     NATS.status()
     @show connection.stats connection2.stats msgs_after_timeout
     @show (time_first_msg[] - time_first_pub)
