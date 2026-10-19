@@ -130,7 +130,7 @@ struct Pub <: ProtocolMessage
     "Length of the headers data inside the payload"
     headers_length::Int64
     "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
-    payload::Vector{UInt8}
+    payload::Union{Vector{UInt8}, String}
 end
 
 """
@@ -159,6 +159,9 @@ struct Unsub <: ProtocolMessage
     max_msgs::Union{Int, Nothing}
 end
 
+# Message payload is a view into the buffer it was read to.
+const PayloadView = SubArray{UInt8, 1, Vector{UInt8}, Tuple{UnitRange{Int64}}, true}
+
 # Representation of MSG returned by the parser, it will be converted to `Msg` struct in the subscription handler task.
 struct MsgRaw <: ProtocolMessage
     sid::Int64
@@ -186,7 +189,14 @@ struct Msg <: ProtocolMessage
     "Length of the headers data inside the payload"
     headers_length::Int64
     "Optional headers (`NATS/1.0␍␊` followed by one or more `name: value` pairs, each separated by `␍␊`) followed by payload data."
-    payload::AbstractVector{UInt8}
+    payload::PayloadView
+    # Concrete payload type makes field access type stable in handlers.
+    Msg(subject, sid, reply_to, headers_length, payload::PayloadView) = new(subject, sid, reply_to, headers_length, payload)
+end
+
+function Msg(subject, sid, reply_to, headers_length, payload::AbstractVector{UInt8})
+    bytes = payload isa Vector{UInt8} ? payload : Vector{UInt8}(payload)
+    Msg(subject, sid, reply_to, headers_length, view(bytes, 1:length(bytes)))
 end
 
 """

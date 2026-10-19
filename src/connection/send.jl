@@ -67,10 +67,11 @@ function try_send(nc::Connection, msgs::Vector{Pub})::Bool
     
     @lock nc.send_buffer_cond begin
         if nc.send_buffer.size < nc.send_buffer_limit
+            was_empty = nc.send_buffer.size == 0
             for msg in msgs
                 show(nc.send_buffer, MIME_PROTOCOL(), msg)
             end
-            notify(nc.send_buffer_cond)
+            was_empty && notify(nc.send_buffer_cond)
             true
         else
             false
@@ -86,8 +87,10 @@ function try_send(nc::Connection, msg::ProtocolMessage)
             # Apply limits only for publications, to allow unsubs and subs to be done with higher priority.
             false
         else
+            # The sender task waits only when the buffer is empty, notify is needed just for the first message.
+            was_empty = nc.send_buffer.size == 0
             show(nc.send_buffer, MIME_PROTOCOL(), msg)
-            notify(nc.send_buffer_cond)
+            was_empty && notify(nc.send_buffer_cond)
             true
         end
     end

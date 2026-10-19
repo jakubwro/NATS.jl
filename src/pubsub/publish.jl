@@ -43,7 +43,7 @@ function publish(
 )
     headers_length, payload_bytes = if data isa String
         # Fast path for string just to beat benchmarks
-        0, unsafe_wrap(Vector{UInt8}, data)
+        0, data
     else
         payload_io = IOBuffer()
         show(payload_io, mime_headers, data)

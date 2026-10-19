@@ -16,13 +16,11 @@
 ### Code:
 
 function validate(pub::Pub)
-    isempty(pub.subject) && error("Publication subject is empty")
-    startswith(pub.subject, '.') && error("Publication subject '$(pub.subject)' cannot start with '.'")
-    endswith(pub.subject, '.') && error("Publication subject '$(pub.subject)' cannot end with '.'")
-    for c in pub.subject
-        if c == ' '
-            error("Publication subject contains invalid character '$c'.")
-        end
-    end
+    # Checked on bytes, it is called for each publication, ASCII characters cannot be a part of a multibyte UTF-8 character.
+    subject = codeunits(pub.subject)
+    isempty(subject) && error("Publication subject is empty")
+    first(subject) == UInt8('.') && error("Publication subject '$(pub.subject)' cannot start with '.'")
+    last(subject) == UInt8('.') && error("Publication subject '$(pub.subject)' cannot end with '.'")
+    UInt8(' ') in subject && error("Publication subject contains invalid character ' '.")
     true
 end

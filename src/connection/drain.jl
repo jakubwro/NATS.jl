@@ -82,7 +82,7 @@ function drain(connection::Connection)
         # state and became DISCONNECTED before the drain event is handled. Wake it up
         # to force reconnect that will promptly do drain.
         notify(connection.reconnect_event) 
-        while connection.status != DRAINED
+        while (@atomic connection.status) != DRAINED
             wait(connection.status_change_cond)
         end
     end

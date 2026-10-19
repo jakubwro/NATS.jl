@@ -15,4 +15,7 @@
 #
 ### Code:
 
-payload(msg::Msg) = String(msg.payload[begin+msg.headers_length:end]) # TODO: optimize this
+function payload(msg::Msg)
+    data = msg.payload
+    GC.@preserve data unsafe_string(pointer(data, firstindex(data) + msg.headers_length), max(0, length(data) - msg.headers_length))
+end

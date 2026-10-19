@@ -31,7 +31,6 @@ Optional keyword arguments:
 - `timeout`: an error will be thrown if the drain is not finished until `timeout` expires. Default value is configurable per connection on `connect` with `drain_timeout`. It can be also set globally with the `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly the default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
 """
 function drain(connection::Connection, sub::Sub; timeout::Union{Real, Period} = connection.drain_timeout)
-    timer = Timer(timeout)
     sub_stats = stats(connection, sub)
     if isnothing(sub_stats)
         return # Already drained.

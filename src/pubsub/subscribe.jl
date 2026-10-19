@@ -67,14 +67,7 @@ function subscribe(
     channel_size::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
     monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
 )
-    sid = new_sid(connection)
-    sub = Sub(subject, queue_group, sid)
-    sub_stats = Stats()
-    subscription_channel = Channel{Vector{MsgRaw}}(channel_size)
-    @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
-    end
-    send(connection, sub)
+    sub, subscription_channel = subscribe_sync(connection, subject, queue_group, channel_size)
     subscription_monitoring_task = Threads.@spawn :interactive disable_sigint() do
         while isopen(subscription_channel) || Base.n_avail(subscription_channel) > 0
             sleep(monitoring_throttle_seconds)
@@ -89,6 +82,18 @@ function subscribe(
     end
     errormonitor(subscription_monitoring_task)
     sub
+end
+
+# Synchronous subscription without a monitoring task, it is used also for short living request inboxes.
+function subscribe_sync(connection::Connection, subject::String, queue_group::Union{String, Nothing}, channel_size::Int64)
+    sid = new_sid(connection)
+    sub = Sub(subject, queue_group, sid)
+    subscription_channel = Channel{Vector{MsgRaw}}(channel_size)
+    @lock connection.lock begin
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, Stats(), false, ReentrantLock())
+    end
+    send(connection, sub)
+    sub, subscription_channel
 end
 
 """
@@ -142,7 +147,7 @@ function next(connection::Connection, sub::Sub; no_wait = false, no_throw = fals
         end
     dec_stats(:msgs_pending, 1, sub_data.stats, connection.stats, state.stats)
     inc_stats(:msgs_handled, 1, sub_data.stats, connection.stats, state.stats)
-    msg = convert(Msg, msg)
+    msg = convert_msg(msg, sub.subject)
     no_throw || throw_on_error_status(msg)
     msg
 end
@@ -254,20 +259,25 @@ function _start_tasks(f::Function, sub_stats::Stats, conn_stats::Stats, spawn::B
             try
                 while true
                     msgs = take!(subscription_channel)
+                    # Stats are updated once per batch, atomic operations on counters shared between threads are costly.
+                    # Order of updates ensures that drain does not see the batch as handled before it is done.
+                    inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
+                    dec_stats(:msgs_pending, length(msgs), sub_stats, conn_stats, state.stats)
+                    errored = 0
+                    last_subject = subject
                     for msg in msgs
-                        msg = convert(Msg, msg)
+                        msg = convert_msg(msg, last_subject)
+                        last_subject = msg.subject
                         try
-                            dec_stats(:msgs_pending, 1, sub_stats, conn_stats, state.stats)
-                            inc_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                             f(msg)
-                            inc_stats(:msgs_handled, 1, sub_stats, conn_stats, state.stats)
-                            dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                         catch err
-                            inc_stats(:msgs_errored, 1, sub_stats, conn_stats, state.stats)
-                            dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
+                            errored += 1
                             report_error!(monitoring_data, err, msg)
                         end
                     end
+                    inc_stats(:msgs_handled, length(msgs) - errored, sub_stats, conn_stats, state.stats)
+                    errored > 0 && inc_stats(:msgs_errored, errored, sub_stats, conn_stats, state.stats)
+                    dec_stats(:handlers_running, 1, sub_stats, conn_stats, state.stats)
                 end
             catch err
                 err isa InvalidStateException || rethrow()

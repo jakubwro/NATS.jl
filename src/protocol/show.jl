@@ -119,24 +119,31 @@ function show(io::IO, ::MIME_PROTOCOL, connect::Connect)
     write(io, "CONNECT $(JSON3.write(connect))\r\n")
 end
 
+# Writes a non negative integer without allocating a string for it.
+function write_decimal(io::IO, n::Int64)
+    n >= 10 && write_decimal(io, n ÷ 10)
+    write(io, UInt8('0') + (n % 10) % UInt8)
+    nothing
+end
+
 function show(io::IO, ::MIME_PROTOCOL, pub::Pub)
     hbytes = pub.headers_length
-    nbytes = length(pub.payload)
+    nbytes = sizeof(pub.payload)
     if hbytes > 0
-        write(io, "H")
+        write(io, UInt8('H'))
     end
     write(io, "PUB ")
-    write(io, pub.subject)
+    write_bytes(io, pub.subject)
     if !isnothing(pub.reply_to) && !isempty(pub.reply_to)
-        write(io, " ")
-        write(io, pub.reply_to)
+        write(io, UInt8(' '))
+        write_bytes(io, pub.reply_to)
     end
     if hbytes > 0
-        write(io, " $hbytes")
+        write(io, UInt8(' '))
+        write_decimal(io, hbytes)
     end
-    write(io, ' ')
-    show(io, nbytes)
-    # write(io, string(nbytes))
+    write(io, UInt8(' '))
+    write_decimal(io, nbytes)
     write(io, "\r\n")
     write_bytes(io, pub.payload)
     write(io, "\r\n")

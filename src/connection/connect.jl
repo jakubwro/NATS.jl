@@ -92,6 +92,9 @@ function host_port(url::AbstractString)
     host, parse(Int, port), scheme, userinfo
 end
 
+# Address in the `host:port` form expected by `TCP.connect`, IPv6 literals need brackets.
+join_host_port(host::AbstractString, port::Integer) = occursin(':', host) ? "[$host]:$port" : "$host:$port"
+
 function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
     info_msg = info(nc)
     if ignore_advertised_servers || isnothing(info_msg) || isnothing(info_msg.connect_urls) || isempty(info_msg.connect_urls)
@@ -124,20 +127,20 @@ function init_protocol(nc, url, options)
             options = merge(options, (pass = pass,))
         end
     end
-    sock = Sockets.connect(host, port) # add connection timeout here 5s
+    sock = TCP.connect(join_host_port(host, port)) # add connection timeout here 5s
+    read_stream = write_stream = sock
     try
-        read_stream, write_stream = sock, sock
         tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
         tls_first = get(options, :tls_first, false)
         if tls_first
-            (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
+            read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
             @debug "Socket upgraded (TLS-first)"
         end
         info_msg = next_protocol_message(read_stream)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
         if !tls_first && !isnothing(info_msg.tls_required) && info_msg.tls_required
-            (read_stream, write_stream) = upgrade_to_tls(sock, tls_options...)
+            read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
             @debug "Socket upgraded"
         end
 
@@ -182,15 +185,15 @@ function init_protocol(nc, url, options)
         end
         sock, read_stream, write_stream, info_msg
     catch err
-        close(sock)
+        close(write_stream) # Closing TLS closes the TCP connection as well.
         rethrow()
     end
 end
 
 function receiver(nc::Connection, io::IO)
     # @show Threads.threadid()
-    parser_loop(io) do msg
-        process(nc, msg)
+    parser_loop(io) do ops, msgs
+        process(nc, ops, msgs)
     end
 end
 
@@ -261,6 +264,7 @@ function connect(
     options = merge(default_connect_options(), options)
     nc = Connection(;
         url,
+        status = CONNECTING,
         info = nothing,
         pong_count = 0,
         pong_received_at = 0.0,
@@ -375,12 +379,12 @@ function connect(
                 _do_drain(nc, is_connected)
                 status(nc, DRAINED)
                 reopen_send_buffer(nc)
-                close(sock)
+                close(write_stream)
                 break
             end
 
             reopen_send_buffer(nc) # Finish sender_task.
-            close(sock) # Finish receiver_task.
+            close(write_stream) # Finish receiver_task, closing TLS closes the TCP connection as well.
 
             #TODO: maybe in some case waiting for tasks to finish is not needed, it will shorten reconnect time 10x
             try wait(sender_task) catch end
@@ -427,7 +431,7 @@ Optional keyword arguments:
 """
 function reconnect(connection::NATS.Connection; should_wait::Bool = true)
     @lock connection.status_change_cond begin
-        current_status = connection.status
+        current_status = @atomic connection.status
         if current_status == CONNECTING
             return
         elseif current_status == DRAINING || current_status == DRAINED
