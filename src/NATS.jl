@@ -18,12 +18,10 @@
 module NATS
 
 using Random
-using Sockets
+using Reseau
 using StructTypes
 using JSON3
-using MbedTLS
 using DocStringExtensions
-using BufferedStreams
 using Sodium
 using CodecBase
 using ScopedValues
