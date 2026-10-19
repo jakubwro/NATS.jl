@@ -36,64 +36,67 @@ function process(nc::Connection, ::Pong)
     @debug "Received pong."
     @atomic nc.pong_received_at = time()
     @atomic nc.pong_count += 1
+    @lock nc.pong_cond notify(nc.pong_cond)
 end
 
-function process(nc::Connection, batch::Vector{ProtocolMessage})
-    groups = Dict{Int64, Vector{MsgRaw}}()
-    for msg in batch
-        if msg isa MsgRaw
-            arr = get(groups, msg.sid, nothing)
-            if isnothing(arr)
-                arr = MsgRaw[]
-                groups[msg.sid] = arr
-            end
-            push!(arr, msg)
-        else
-            process(nc, msg)
+function process(nc::Connection, ops::Vector{ProtocolMessage}, msgs::Vector{MsgRaw})
+    for op in ops
+        process(nc, op)
+    end
+    isempty(msgs) && return
+    sid = first(msgs).sid
+    if all(msg -> msg.sid == sid, msgs)
+        # Typically all messages read at once are for the same subscription.
+        deliver(nc, sid, msgs)
+    else
+        groups = Dict{Int64, Vector{MsgRaw}}()
+        for msg in msgs
+            push!(get!(Vector{MsgRaw}, groups, msg.sid), msg)
+        end
+        for (sid, group) in groups
+            deliver(nc, sid, group)
         end
     end
+end
 
-    fallbacks = nothing
-    for (sid, msgs) in groups
-        n_received = length(msgs)
-        n = n_received
-        sub_data = @lock nc.lock get(nc.sub_data, sid, nothing)
-        if !isnothing(sub_data)
-            sub_stats = sub_data.stats
-            max_msgs = sub_data.channel.sz_max 
-            n_dropped = max(0, sub_stats.msgs_pending + n_received - max_msgs)
-            if n_dropped > 0
-                inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
-                n -= n_dropped
-                msgs = first(msgs, n)
-                # TODO: send NAK for dropped messages
-            end
-            if n > 0
-                try
-                    inc_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
-                    put!(sub_data.channel, msgs)
-                    inc_stats(:msgs_received, n, state.stats, nc.stats, sub_stats)
-                catch
-                    # TODO: if msg needs ack send nak here
-                    # Channel was closed by `unsubscribe`.
-                    dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
-                    inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
-                end
-            end
-            cleanup_sub_resources_if_all_msgs_received(nc, sid, n_received)
-        else
-            if isnothing(fallbacks)
-                fallbacks = lock(nc.lock) do
-                    collect(nc.fallback_handlers)
-                end
-            end
-            for f in fallbacks
-                for msg in msgs
-                    Base.invokelatest(f, nc, msg)
-                end
-            end
-            inc_stats(:msgs_dropped, n, state.stats, nc.stats)
+# Passes messages to the subscription `sid` or to fallback handlers if the subscription does not exist.
+function deliver(nc::Connection, sid::Int64, msgs::Vector{MsgRaw})
+    n_received = length(msgs)
+    n = n_received
+    sub_data = @lock nc.lock get(nc.sub_data, sid, nothing)
+    if !isnothing(sub_data)
+        sub_stats = sub_data.stats
+        max_msgs = sub_data.channel.sz_max
+        n_dropped = max(0, sub_stats.msgs_pending + n_received - max_msgs)
+        if n_dropped > 0
+            inc_stats(:msgs_dropped, n_dropped, state.stats, nc.stats, sub_stats)
+            n -= n_dropped
+            msgs = first(msgs, n)
+            # TODO: send NAK for dropped messages
         end
+        if n > 0
+            try
+                inc_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
+                put!(sub_data.channel, msgs)
+                inc_stats(:msgs_received, n, state.stats, nc.stats, sub_stats)
+            catch
+                # TODO: if msg needs ack send nak here
+                # Channel was closed by `unsubscribe`.
+                dec_stats(:msgs_pending, n, state.stats, nc.stats, sub_stats)
+                inc_stats(:msgs_dropped, n, state.stats, nc.stats, sub_stats)
+            end
+        end
+        cleanup_sub_resources_if_all_msgs_received(nc, sid, n_received)
+    else
+        fallbacks = lock(nc.lock) do
+            collect(nc.fallback_handlers)
+        end
+        for f in fallbacks
+            for msg in msgs
+                Base.invokelatest(f, nc, msg)
+            end
+        end
+        inc_stats(:msgs_dropped, n, state.stats, nc.stats)
     end
 end
 

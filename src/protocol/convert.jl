@@ -15,14 +15,24 @@
 #
 ### Code:
 
-function convert(::Type{Msg}, msgraw::NATS.MsgRaw)
+bytes_string(buffer::Vector{UInt8}, range::UnitRange{Int64}) = GC.@preserve buffer unsafe_string(pointer(buffer, first(range)), length(range))
+
+convert(::Type{Msg}, msgraw::NATS.MsgRaw) = convert_msg(msgraw, "")
+
+# Converts reusing `subject` if it is equal to the message subject. It avoids allocation for each message
+# when subsequent messages have the same subject, what is typical for a subscription.
+function convert_msg(msgraw::NATS.MsgRaw, subject::String)::Msg
     buffer = msgraw.buffer
-    sid = msgraw.sid
-    subject = String(buffer[msgraw.subject_range])
-    reply_to = isempty(msgraw.reply_to_range) ? nothing : String(buffer[msgraw.reply_to_range])
-    headers_length = msgraw.header_bytes
-    payload = @view buffer[msgraw.payload_range]
-    Msg(subject, sid, reply_to, headers_length, payload)
+    subject_range = msgraw.subject_range
+    is_same_subject = sizeof(subject) == length(subject_range) && GC.@preserve buffer subject begin
+        0 == ccall(:memcmp, Cint, (Ptr{UInt8}, Ptr{UInt8}, Csize_t), pointer(buffer, first(subject_range)), pointer(subject), sizeof(subject))
+    end
+    if !is_same_subject
+        subject = bytes_string(buffer, subject_range)
+    end
+    reply_to = isempty(msgraw.reply_to_range) ? nothing : bytes_string(buffer, msgraw.reply_to_range)
+    payload = view(buffer, msgraw.payload_range)
+    Msg(subject, msgraw.sid, reply_to, msgraw.header_bytes, payload)
 end
 
 function convert(::Type{String}, msg::NATS.Msg)

@@ -29,7 +29,7 @@ end
 
 @kwdef mutable struct Connection
     url::String
-    status::ConnectionStatus = CONNECTING
+    @atomic status::ConnectionStatus # Atomic for a lock free read on every publish, changed under `status_change_cond` lock.
     stats::Stats = Stats()
     info::Union{Info, Nothing}
     sub_data::Dict{Int64, SubscriptionData} = Dict{Int64, SubscriptionData}()
@@ -46,6 +46,7 @@ end
     drain_event::Threads.Event = Threads.Event()
     @atomic pong_count::Int64
     @atomic pong_received_at::Float64
+    pong_cond::Threads.Condition = Threads.Condition()
     status_change_cond::Threads.Condition = Threads.Condition()
     @atomic connect_init_count::Int64 # How many tries of protocol init was done on the last reconnect.
     @atomic reconnect_count::Int64
@@ -60,10 +61,10 @@ end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
 info(c::Connection, info::Info) = @lock c.lock c.info = info
-status(c::Connection)::ConnectionStatus = @lock c.status_change_cond c.status
+status(c::Connection)::ConnectionStatus = @atomic c.status
 function status(c::Connection, status::ConnectionStatus)
     @lock c.status_change_cond begin
-        c.status = status
+        @atomic c.status = status
         notify(c.status_change_cond, status)
     end
 end
@@ -115,14 +116,29 @@ show(io::IO, nc::Connection) = print(io, typeof(nc), "(",
     clustername(nc), " cluster", ", " , status(nc), ", " , length(nc.sub_data)," subs, ", length(nc.unsubs)," unsubs)")
 
 function ping(nc; timeout::Union{Real, Period} = 1.0, measure = true)
+    if timeout isa Period
+        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
+    end
     last_pong_count = @atomic nc.pong_count
     start_time = time()
     send(nc, Ping())
-    result = timedwait(timeout; pollint = 0.001) do
-        (@atomic nc.pong_count) != last_pong_count
+    @lock nc.pong_cond begin
+        is_timed_out = false
+        timer = Timer(timeout) do _
+            @lock nc.pong_cond begin
+                is_timed_out = true
+                notify(nc.pong_cond)
+            end
+        end
+        try
+            while !is_timed_out && (@atomic nc.pong_count) == last_pong_count
+                wait(nc.pong_cond)
+            end
+        finally
+            close(timer)
+        end
+        is_timed_out && error("No PONG received in specified timeout ($timeout seconds).")
     end
-    result == :timed_out && error("No PONG received in specified timeout ($timeout seconds).")
-    result == :ok || error("Unexpected status symbol: :$result")
     if measure && (@atomic nc.pong_received_at) > 0.0
         @info "Measured ping time is $(1000 * ((@atomic nc.pong_received_at) - start_time)) milliseconds"
     end
@@ -146,7 +162,7 @@ end
 function status_change(f, nc::Connection)
     while true
         st = @lock nc.status_change_cond begin
-            if nc.status == DRAINED
+            if (@atomic nc.status) == DRAINED
                 break
             end
             wait(nc.status_change_cond)

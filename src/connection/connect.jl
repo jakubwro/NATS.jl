@@ -192,8 +192,8 @@ end
 
 function receiver(nc::Connection, io::IO)
     # @show Threads.threadid()
-    parser_loop(io) do msg
-        process(nc, msg)
+    parser_loop(io) do ops, msgs
+        process(nc, ops, msgs)
     end
 end
 
@@ -264,6 +264,7 @@ function connect(
     options = merge(default_connect_options(), options)
     nc = Connection(;
         url,
+        status = CONNECTING,
         info = nothing,
         pong_count = 0,
         pong_received_at = 0.0,
@@ -430,7 +431,7 @@ Optional keyword arguments:
 """
 function reconnect(connection::NATS.Connection; should_wait::Bool = true)
     @lock connection.status_change_cond begin
-        current_status = connection.status
+        current_status = @atomic connection.status
         if current_status == CONNECTING
             return
         elseif current_status == DRAINING || current_status == DRAINED

@@ -1,6 +1,15 @@
 @testset "Parsing server operations." begin
 
-    unpack(msgs) = map(msgs) do msg; msg isa NATS.MsgRaw ? convert(NATS.Msg, msg) : msg end
+    # Parser passes messages separately from other operations, order is kept within each group.
+    function parse_all(io)
+        ops, msgs = NATS.ProtocolMessage[], NATS.Msg[]
+        NATS.parser_loop(io) do batch_ops, batch_msgs
+            append!(ops, batch_ops)
+            append!(msgs, convert.(NATS.Msg, batch_msgs))
+        end
+        ops, msgs
+    end
+    by_kind(expected) = (filter(m -> !(m isa NATS.Msg), expected), filter(m -> m isa NATS.Msg, expected))
 
     expected = [
         NATS.Info("NCUWF4KWI6NQR4NRT2ZWBI6WBW6V63XERJGREROVAVV6WZ4O4D7R6CVK", "my_nats_server", "2.9.21", "go1.19.12", "0.0.0.0", 4222, true, 1048576, 1, 0x000000000000003d, nothing, nothing, nothing, nothing, nothing, nothing, nothing, "b2e7725", true, nothing, "127.0.0.1", nothing, nothing, nothing),
@@ -30,11 +39,7 @@
     append!(data_to_parse, "-ERR 'Unknown Protocol Operation'\r\n")
     append!(data_to_parse, "MSG FOO.BAR 9 11\r\nHello World\r\n")
     io = IOBuffer(data_to_parse)
-    result = NATS.ProtocolMessage[]
-    NATS.parser_loop(io) do msgs
-        append!(result, unpack(msgs))
-    end
-    @test result == expected
+    @test parse_all(io) == by_kind(expected)
 
     # Test case insensitivity of the protocol parser.
     data_to_parse = UInt8[]
@@ -50,11 +55,7 @@
     append!(data_to_parse, "-err 'Unknown Protocol Operation'\r\n")
     append!(data_to_parse, "msg FOO.BAR 9 11\r\nHello World\r\n")
     io = IOBuffer(data_to_parse)
-    result = NATS.ProtocolMessage[]
-    NATS.parser_loop(io) do msgs
-        append!(result, unpack(msgs))
-    end
-    @test result == expected
+    @test parse_all(io) == by_kind(expected)
 
     # Test multiple whitespace parsing.
     data_to_parse = UInt8[]
@@ -70,17 +71,13 @@
     append!(data_to_parse, "-ERR  'Unknown Protocol Operation'\r\n")
     append!(data_to_parse, "MSG   FOO.BAR    9    11\r\nHello World\r\n")
     io = IOBuffer(data_to_parse)
-    result = NATS.ProtocolMessage[]
-    NATS.parser_loop(io) do msgs
-        append!(result, unpack(msgs))
-    end
-    @test result == expected
+    @test parse_all(io) == by_kind(expected)
 
     # Test malformed messages.
     io = IOBuffer("this is not expected\r\n")
-    @test_throws ErrorException NATS.parser_loop(io) do; end
+    @test_throws ErrorException NATS.parser_loop(io) do _, _; end
     io = IOBuffer("MSG FOO.BAR 9 test 11 11\r\nToo long payload\r\n")
-    @test_throws ErrorException NATS.parser_loop(io) do; end
+    @test_throws ErrorException NATS.parser_loop(io) do _, _; end
 end
 
 @testset "Serializing client operations." begin

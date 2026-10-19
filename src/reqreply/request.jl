@@ -80,7 +80,7 @@ function request(
     end
     nreplies < 1 && error("`nreplies` have to be greater than 0.")
     reply_to = new_inbox(connection)
-    sub = subscribe(connection, reply_to)
+    sub, _ = subscribe_sync(connection, reply_to, nothing, DEFAULT_SUBSCRIPTION_CHANNEL_SIZE)
     unsubscribe(connection, sub; max_msgs = nreplies)
     publish(connection, subject, data; reply_to)
     if timeout isa Period # TODO: get rid of if in 1.11
