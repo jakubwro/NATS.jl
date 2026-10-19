@@ -50,8 +50,6 @@ function parser_loop(f, io::IO)
         #data_read_start = time()
         buffer = _read_buffer_to_parse(io) # Sleeps when no data available.
         isempty(buffer) && break # EOF, connection is closed
-        # Parsed messages keep views into `buffer`, so `read_buffer` content is copied to a new exactly sized one.
-        #buffer = read_buffer
         #data_ready_time = time()
         parse_buffer(io, buffer, data)
         #batch_ready_time = time()
