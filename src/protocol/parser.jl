@@ -39,17 +39,22 @@ function parse_error(buffer, pos, data::ParserData)
     error("Parser error on position $pos: $buf\nBuffer length: $(length(buffer))")
 end
 
+const READ_BUFFER_SIZE = 64 * 1024
+
+_read_buffer_to_parse(io::Union{TCP.Conn, TLS.Conn}) = read(io, READ_BUFFER_SIZE; all = false)
+_read_buffer_to_parse(io::IO) = eof(io) ? UInt8[] : read(io, READ_BUFFER_SIZE)
+
 function parser_loop(f, io::IO)
     data = ParserData()
-    # TODO: ensure eof does not block for TLS connection
-    while !eof(io) # EOF indicates connection is closed, task will be stopped and reconnected.
-        data_read_start = time()
-        buffer = readavailable(io) # Sleeps when no data available.
-        data_ready_time = time()
+    while true
+        #data_read_start = time()
+        buffer = _read_buffer_to_parse(io) # Sleeps when no data available.
+        isempty(buffer) && break # EOF, connection is closed
+        #data_ready_time = time()
         parse_buffer(io, buffer, data)
-        batch_ready_time = time()
+        #batch_ready_time = time()
         f(data.results)
-        handler_call_time = time()
+        #handler_call_time = time()
         # @info "Read time $(data_ready_time - data_read_start), parser time: $(batch_ready_time - data_ready_time), handler time: $(handler_call_time - batch_ready_time)" length(buffer) length(data.results)
         empty!(data.results)
     end
