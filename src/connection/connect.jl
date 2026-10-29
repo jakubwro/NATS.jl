@@ -71,9 +71,11 @@ function validate_connect_options(server_info::Info, options)
     server_info.proto > 0 || error("Server supports too old protocol version.")
     server_info.headers   || error("Server does not support headers.") # TODO: maybe this can be relaxed.
 
+    # A server sends `tls_required` when it requires TLS and `tls_available` when it only allows it.
     # TLS-first servers may omit `tls_available` because INFO arrives over TLS.
     if get(options, :tls_required, false) && !get(options, :tls_first, false)
-        !isnothing(server_info.tls_available) && server_info.tls_available || error("Client requires TLS but it is not available for the server.")
+        something(server_info.tls_required, false) || something(server_info.tls_available, false) ||
+            error("Client requires TLS but it is not available for the server.")
     end
 end
 
@@ -139,7 +141,7 @@ function init_protocol(nc, url, options)
         info_msg = next_protocol_message(read_stream)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
-        if !tls_first && !isnothing(info_msg.tls_required) && info_msg.tls_required
+        if !tls_first && (something(info_msg.tls_required, false) || get(options, :tls_required, false))
             read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
             @debug "Socket upgraded"
         end
