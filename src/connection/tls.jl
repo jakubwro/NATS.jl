@@ -16,10 +16,14 @@
 ### Code:
 
 # Wraps an established TCP connection in TLS and performs the handshake. The server certificate is verified
-# against `ca_cert_path`, or system roots if not provided, and must be issued for `host`.
-function upgrade_to_tls(sock::TCP.Conn, host::AbstractString, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing})
+# against `ca_cert_path`, or system roots if not provided, and must be issued for `server_name`, or `host` if
+# not provided, unless `verify_peer` or `verify_hostname` turns that off.
+function upgrade_to_tls(sock::TCP.Conn, host::AbstractString, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing},
+                        server_name::Union{AbstractString, Nothing} = nothing, verify_peer::Bool = true, verify_hostname::Union{Bool, Nothing} = nothing)
     config = TLS.Config(;
-        server_name = host,
+        server_name = something(server_name, host),
+        verify_peer,
+        verify_hostname = something(verify_hostname, verify_peer),
         ca_file = ca_cert_path,
         cert_file = client_cert_path,
         key_file = client_key_path)
