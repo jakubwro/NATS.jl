@@ -156,7 +156,9 @@ NATS.status()
 
 @testset "Connect error from protocol init when options are wrong" begin
     @test_throws "invalid client protocol" NATS.connect(protocol = 100)
-    @test_throws "Client requires TLS but it is not available for the server." NATS.connect(tls_required = true)
+    if isnothing(get(ENV, "NATS_TLS_CA_PATH", nothing))
+        @test_throws "Client requires TLS but it is not available for the server." NATS.connect(tls_required = true)
+    end
 end
 
 @testset "TLS-first is a recognized client option" begin
@@ -184,6 +186,50 @@ end
         info, (tls_required = true, tls_first = true)))
     @test_throws "Client requires TLS but it is not available for the server." NATS.validate_connect_options(
         info, (tls_required = true,))
+end
+
+@testset "TLS required by the client is met by a server that requires it" begin
+    # A TLS-only server sends `tls_required` and omits `tls_available`.
+    buf() = IOBuffer("INFO {\"server_id\":\"t\",\"server_name\":\"t\"," *
+                     "\"version\":\"2.10.0\",\"go\":\"go1.21\"," *
+                     "\"host\":\"0.0.0.0\",\"port\":4222,\"headers\":true," *
+                     "\"proto\":1,\"max_payload\":1048576,\"client_id\":1,\"tls_required\":true}\r\n")
+    info = NATS.next_protocol_message(buf())
+    @test info isa NATS.Info && info.tls_required == true && isnothing(info.tls_available)
+    @test (NATS.validate_connect_options(info, (tls_required = true,)); true)
+    if !isnothing(get(ENV, "NATS_TLS_CA_PATH", nothing))
+        _, port = NATS.host_port(get(ENV, "NATS_CONNECT_URL", NATS.DEFAULT_CONNECT_URL))
+        for nc in (NATS.connect(tls_required = true), NATS.connect("tls://localhost:$port"))
+            @test NATS.status(nc) == NATS.CONNECTED
+            drain(nc)
+        end
+    end
+end
+
+@testset "TLS required by the client upgrades a server that only allows it" begin
+    # The server sends `tls_available` only; the client's first byte is a TLS record (0x16) or `CONNECT`.
+    function first_byte(; kw...)
+        server = listen(ip"127.0.0.1", 0)
+        _, port = getsockname(server)
+        got = Channel{UInt8}(1)
+        @async begin
+            sock = accept(server)
+            write(sock, "INFO {\"server_id\":\"t\",\"server_name\":\"t\",\"version\":\"2.10.0\",\"go\":\"go1.21\"," *
+                        "\"host\":\"127.0.0.1\",\"port\":$port,\"headers\":true,\"proto\":1," *
+                        "\"max_payload\":1048576,\"client_id\":1,\"tls_available\":true}\r\n")
+            put!(got, read(sock, UInt8))
+            close(sock)
+        end
+        try
+            NATS.connect("127.0.0.1:$port"; kw...)
+        catch
+        end
+        b = take!(got)
+        close(server)
+        b
+    end
+    @test first_byte(tls_required = true) == 0x16
+    @test first_byte() == UInt8('C')
 end
 
 if !isnothing(get(ENV, "NATS_TLS_CA_PATH", nothing))
