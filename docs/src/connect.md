@@ -96,6 +96,11 @@ There are several `ENV` variables defined to provide default parameters for `con
 | `tls_ca_path`      | `NATS_TLS_CA_PATH`      |                  | no
 | `tls_cert_path`    | `NATS_TLS_CERT_PATH`    |                  | no
 | `tls_key_path`     | `NATS_TLS_KEY_PATH`     |                  | no
+| `tls_server_name`  | `NATS_TLS_SERVER_NAME`  | URL host         | no
+| `tls_verify_peer`  | `NATS_TLS_VERIFY_PEER`  | `true`           | no
+| `tls_verify_hostname` | `NATS_TLS_VERIFY_HOSTNAME` | `tls_verify_peer` | no
+
+`tls_verify_peer = false` accepts any server certificate, and `tls_verify_hostname = false` accepts any certificate signed by a trusted CA. Either allows a man-in-the-middle, so `connect` logs a warning. To connect by IP address to a server whose certificate names its host, set `tls_server_name` instead.
 
 Additionally some parameters are provided to fine tune the client for a specific deployment setup.
 
