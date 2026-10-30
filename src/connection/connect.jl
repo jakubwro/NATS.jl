@@ -39,6 +39,10 @@ function default_connect_options()
         tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
         tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
         tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
+        tls_server_name = get(ENV, "NATS_TLS_SERVER_NAME", nothing),
+        tls_verify_peer = parse(Bool, get(ENV, "NATS_TLS_VERIFY_PEER", "true")),
+        # `nothing` follows `tls_verify_peer`.
+        tls_verify_hostname = haskey(ENV, "NATS_TLS_VERIFY_HOSTNAME") ? parse(Bool, ENV["NATS_TLS_VERIFY_HOSTNAME"]) : nothing,
         # TLS-first performs the handshake before reading server INFO.
         tls_first = parse(Bool, get(ENV, "NATS_TLS_FIRST", "false")),
         ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
@@ -132,7 +136,7 @@ function init_protocol(nc, url, options)
     sock = TCP.connect(join_host_port(host, port)) # add connection timeout here 5s
     read_stream = write_stream = sock
     try
-        tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path)]
+        tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path, :tls_server_name, :tls_verify_peer, :tls_verify_hostname)]
         tls_first = get(options, :tls_first, false)
         if tls_first
             read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
@@ -239,6 +243,9 @@ Options are:
 - `tls_ca_path`: CA certificate file path
 - `tls_cert_path`: client public certificate file
 - `tls_key_path`: client private certificate file
+- `tls_server_name`: name the server certificate is verified against, defaults to the URL host
+- `tls_verify_peer`: verify the server certificate. Default is `true`
+- `tls_verify_hostname`: verify the server certificate is issued for `tls_server_name`. Defaults to `tls_verify_peer`
 - `auth_token`: client authorization token
 - `user`: connection username
 - `pass`: connection password
@@ -264,6 +271,11 @@ function connect(
     options...
 )
     options = merge(default_connect_options(), options)
+    if !options.tls_verify_peer
+        @warn "TLS certificate verification is disabled (`tls_verify_peer = false`), any server certificate is accepted."
+    elseif options.tls_verify_hostname == false
+        @warn "TLS hostname verification is disabled (`tls_verify_hostname = false`), any trusted certificate is accepted."
+    end
     nc = Connection(;
         url,
         info = nothing,

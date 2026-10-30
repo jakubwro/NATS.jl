@@ -232,6 +232,24 @@ end
     @test first_byte() == UInt8('C')
 end
 
+if !isnothing(get(ENV, "NATS_TLS_CA_PATH", nothing))
+    @testset "TLS server name and verification options" begin
+        _, port = NATS.host_port(get(ENV, "NATS_CONNECT_URL", NATS.DEFAULT_CONNECT_URL))
+        url = "127.0.0.1:$port" # The test certificate is issued for `localhost`, not the IP.
+        @test_throws NATS.TLS.TLSError NATS.connect(url)
+        @test_throws NATS.TLS.TLSError NATS.connect(url; tls_server_name = "localhost", tls_ca_path = nothing)
+        nc = NATS.connect(url; tls_server_name = "localhost")
+        @test NATS.status(nc) == NATS.CONNECTED
+        drain(nc)
+        nc = @test_logs (:warn, r"tls_verify_hostname = false") match_mode = :any NATS.connect(url; tls_verify_hostname = false)
+        @test NATS.status(nc) == NATS.CONNECTED
+        drain(nc)
+        nc = @test_logs (:warn, r"tls_verify_peer = false") match_mode = :any NATS.connect(url; tls_verify_peer = false, tls_ca_path = nothing)
+        @test NATS.status(nc) == NATS.CONNECTED
+        drain(nc)
+    end
+end
+
 NATS.status()
 
 @testset "Subscription warnings" begin
