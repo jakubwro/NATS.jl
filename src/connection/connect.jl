@@ -303,10 +303,6 @@ function connect(
             rethrow()
         end
     end
-    # This task just waits for `drain_even`, to wake up `reconnect_task` that there is cleanup to do.
-    drain_await_task = Threads.@spawn :interactive disable_sigint() do
-        wait(nc.drain_event)
-    end
     # This works as a controller for connection state. It spawns another task and listens for their completion to do
     # reconnect logic.
     reconnect_task = Threads.@spawn :interactive disable_sigint() do
@@ -366,6 +362,7 @@ function connect(
             receiver_task = Threads.@spawn :interactive disable_sigint() do; receiver(nc, $read_stream) end
             sender_task = Threads.@spawn :interactive disable_sigint() do; sendloop(nc, $write_stream, $send_buffer) end
             ping_task = Threads.@spawn :interactive disable_sigint() do; ping_loop(nc, options.ping_interval, options.max_pings_out, $reconnect_count) end
+            drain_await_task = Threads.@spawn :interactive disable_sigint() do; wait(nc.drain_event) end
 
             tasks = [receiver_task, sender_task, ping_task, reconnect_await_task, drain_await_task]
             names = ["receiver", "sender", "ping", "reconnect", "drain"]
@@ -385,19 +382,38 @@ function connect(
             reason = join(names[istaskdone.(tasks)], ", ")
             @debug "Controller task woken by: $reason"
 
-            if istaskdone(drain_await_task)
+            need_drain = @lock nc.status_change_cond begin
+                if (@atomic nc.drain_event.set)
+                    true
+                else
+                    notify(nc.drain_event)
+                    try wait(drain_await_task) catch end
+                    reset(nc.drain_event)
+                    false
+                end
+            end
+
+            if need_drain
                 status(nc, DRAINING)
                 # Check if there is a chance for send buffer flush.
                 is_connected = !(istaskdone(sender_task) || istaskdone(receiver_task))
                 _do_drain(nc, is_connected)
-                status(nc, DRAINED)
                 reopen_send_buffer(nc)
-                close(write_stream)
+                try
+                    close(write_stream)
+                catch err 
+                    @debug err 
+                end
+                status(nc, DRAINED)
                 break
             end
 
             reopen_send_buffer(nc) # Finish sender_task.
-            close(write_stream) # Finish receiver_task, closing TLS closes the TCP connection as well.
+            try
+                close(write_stream)
+            catch err
+                @debug err
+            end # Finish receiver_task, closing TLS closes the TCP connection as well.
 
             #TODO: maybe in some case waiting for tasks to finish is not needed, it will shorten reconnect time 10x
             try wait(sender_task) catch end

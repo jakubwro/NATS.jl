@@ -63,12 +63,13 @@ function can_send(nc::Connection, ::Sub)
 end
 
 function try_send(nc::Connection, msgs::Vector{Pub})::Bool
-    can_send(nc, msgs) || error("Cannot send on connection with status $(status(nc))")
-    
     @lock nc.send_buffer_cond begin
+        can_send(nc, msgs) || error("Cannot send on connection with status $(status(nc))")
         if nc.send_buffer.size < nc.send_buffer_limit
-            for msg in msgs
-                show(nc.send_buffer, MIME_PROTOCOL(), msg)
+            @lock nc.status_change_cond begin
+                for msg in msgs
+                    show(nc.send_buffer, MIME_PROTOCOL(), msg)
+                end
             end
             notify(nc.send_buffer_cond)
             true
@@ -79,9 +80,8 @@ function try_send(nc::Connection, msgs::Vector{Pub})::Bool
 end
 
 function try_send(nc::Connection, msg::ProtocolMessage)
-    can_send(nc, msg) || error("Cannot send on connection with status $(status(nc))")
-
     @lock nc.send_buffer_cond begin
+        can_send(nc, msg) || error("Cannot send on connection with status $(status(nc))")
         if msg isa Pub && nc.send_buffer.size > nc.send_buffer_limit
             # Apply limits only for publications, to allow unsubs and subs to be done with higher priority.
             false

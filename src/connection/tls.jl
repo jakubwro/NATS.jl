@@ -31,7 +31,11 @@ function upgrade_to_tls(sock::TCP.Conn, host::AbstractString, ca_cert_path::Unio
     try
         TLS.handshake!(conn)
     catch
-        close(conn)
+        try
+            close(conn)
+        catch err
+            @debug err
+        end
         rethrow()
     end
     conn
