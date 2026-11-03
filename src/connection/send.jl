@@ -66,10 +66,8 @@ function try_send(nc::Connection, msgs::Vector{Pub})::Bool
     @lock nc.send_buffer_cond begin
         can_send(nc, msgs) || error("Cannot send on connection with status $(status(nc))")
         if nc.send_buffer.size < nc.send_buffer_limit
-            @lock nc.status_change_cond begin
-                for msg in msgs
-                    show(nc.send_buffer, MIME_PROTOCOL(), msg)
-                end
+            for msg in msgs
+                show(nc.send_buffer, MIME_PROTOCOL(), msg)
             end
             notify(nc.send_buffer_cond)
             true
