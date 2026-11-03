@@ -46,7 +46,17 @@ function subscribe(
     @lock connection.lock begin
         connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock())
     end
-    send(connection, sub)
+    try
+        send(connection, sub)
+    catch
+       if status(connection) in (DRAINED, DRAINING)
+            close(subscription_channel)
+            @lock connection.lock begin
+                delete!(connection.sub_data, sid)
+            end
+        end
+        rethrow()
+    end
     sub
 end
 
@@ -74,7 +84,17 @@ function subscribe(
     @lock connection.lock begin
         connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
     end
-    send(connection, sub)
+    try
+        send(connection, sub)
+    catch
+        if status(connection) in (DRAINED, DRAINING)
+            close(subscription_channel)
+            @lock connection.lock begin
+                delete!(connection.sub_data, sid)
+            end
+        end
+        rethrow()
+    end
     subscription_monitoring_task = Threads.@spawn :interactive disable_sigint() do
         while isopen(subscription_channel) || Base.n_avail(subscription_channel) > 0
             sleep(monitoring_throttle_seconds)
@@ -120,6 +140,9 @@ function next(connection::Connection, sub::Sub; no_wait = false, no_throw = fals
     msg = 
         try
             @lock sub_data.lock begin
+                if no_wait && Base.n_avail(ch) == 0
+                    return nothing
+                end
                 batch = fetch(ch)
                 result = popfirst!(batch)
                 isempty(batch) && take!(ch)
