@@ -44,6 +44,8 @@ end
     send_enqueue_when_disconnected::Bool
     reconnect_event::Threads.Event = Threads.Event()
     drain_event::Threads.Event = Threads.Event()
+    sender_started::Threads.Event = Threads.Event()
+    receiver_started::Threads.Event = Threads.Event()
     @atomic pong_count::Int64
     @atomic pong_received_at::Float64
     status_change_cond::Threads.Condition = Threads.Condition()

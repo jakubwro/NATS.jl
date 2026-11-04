@@ -22,6 +22,15 @@ end
 
 NATS.status()
 
+@testset "connect returns after the sender and receiver started" begin
+    conn = NATS.connect()
+    @test (@atomic conn.sender_started.set)
+    @test (@atomic conn.receiver_started.set)
+    drain(conn)
+end
+
+NATS.status()
+
 @testset "Publication subscription stats should be counted from nested spawned task." begin
     conn = NATS.connect()
     sub = subscribe(conn, "stats_test") do 

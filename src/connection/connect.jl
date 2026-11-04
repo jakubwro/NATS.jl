@@ -198,6 +198,7 @@ end
 
 function receiver(nc::Connection, io::IO)
     # @show Threads.threadid()
+    notify(nc.receiver_started)
     parser_loop(io) do msg
         process(nc, msg)
     end
@@ -294,10 +295,12 @@ function connect(
     write_stream = nothing
     info_msg = nothing
     send_buffer = nc.send_buffer
+    connected = false
     try
         sock, read_stream, write_stream, info_msg = init_protocol(nc, url, options)
         info(nc, info_msg)
         status(nc, CONNECTED)
+        connected = true
     catch
         if !options.retry_on_init_fail
             rethrow()
@@ -438,6 +441,11 @@ function connect(
         end
     end
     errormonitor(reconnect_task)
+    # Return once the I/O tasks run, so their first-run compile is not charged to the first request's timeout.
+    if connected
+        wait(nc.sender_started)
+        wait(nc.receiver_started)
+    end
 
     @lock state.lock push!(state.connections, nc)
     nc

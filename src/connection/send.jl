@@ -168,6 +168,7 @@ end
 
 function sendloop(nc::Connection, io::IO, send_buffer::IO)
     # @show Threads.threadid()
+    notify(nc.sender_started)
     buf = UInt8[]
     while isopen(send_buffer) # @show !eof(io) && !isdrained(nc)
         taken = @lock nc.send_buffer_cond begin
