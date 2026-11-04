@@ -55,11 +55,12 @@ end
 """
 $(SIGNATURES)
 
-Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies or the timer expired.
+Requests for multiple replies. Vector of messages is returned after receiving `nreplies` replies, a reply with one of `stop_on_status` codes or the timer expired.
 Can return less messages than specified (also an empty array if a timeout occurs), errors are not filtered.
 
 Optional keyword arguments are:
 - `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds
+- `stop_on_status`: a collection of status codes, a reply with one of them is the last collected and the remaining replies are not waited for. By default it is every error status (`$DEFAULT_REQUEST_STOP_ON_STATUS`), what includes `503` sent by the server when there are no responders. Replies with other statuses are collected as any other reply, pass an empty collection to always wait for `nreplies` replies or the `timeout`.
 
 # Examples
 ```julia-repl
@@ -72,7 +73,8 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))),
+    stop_on_status = DEFAULT_REQUEST_STOP_ON_STATUS
 )
     find_data_conversion_or_throw(typeof(data))
     if NATS.status(connection) in [NATS.DRAINED, NATS.DRAINING]
@@ -86,16 +88,20 @@ function request(
     if timeout isa Period # TODO: get rid of if in 1.11
         timeout = Nanosecond(timeout) / Nanosecond(Second(1))
     end
-    timer = Timer(timeout) do _; drain(connection, sub) end
+    # Do not `drain` here, it would wait `drain_poll` before closing the channel that `next` is blocked on.
+    timer = Timer(timeout) do _; unsubscribe(connection, sub) end
     result = Msg[]
     for _ in 1:nreplies
         msg = next(connection, sub; no_throw = true)
         isnothing(msg) && break # Do not throw when unsubscribed.
         push!(result, msg)
-        has_error_status(msg) && break
+        if statuscode(msg) in stop_on_status
+            # The auto unsubscribe waits for all `nreplies` messages, what will not happen after stopping.
+            length(result) < nreplies && unsubscribe(connection, sub)
+            break
+        end
     end
     close(timer)
-    drain(connection, sub)
     result
 end
 

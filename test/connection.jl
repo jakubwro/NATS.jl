@@ -379,3 +379,23 @@ NATS.status()
 end
 
 NATS.status()
+
+@testset "Draining does not leave timers behind" begin
+    sub = subscribe(nc, randstring(10)) do msg end
+    drain(nc, sub)
+    growth = active_handles_growth() do
+        for _ in 1:100
+            drain(nc, sub) # Already drained, returns early.
+        end
+    end
+    @test growth < 20
+
+    connections = [NATS.connect(; drain_timeout = 30.0, drain_poll = 0.01) for _ in 1:20]
+    foreach(c -> NATS.ping(c; timeout = 10.0, measure = false), connections)
+    growth = active_handles_growth() do
+        foreach(drain, connections)
+    end
+    @test growth < 10
+end
+
+NATS.status()

@@ -125,9 +125,10 @@ function request(
     nreplies::Integer,
     subject::String,
     data = nothing;
-    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS)))
+    timeout::Union{Real, Period} = parse(Float64, get(ENV, "NATS_REQUEST_TIMEOUT_SECONDS", string(DEFAULT_REQUEST_TIMEOUT_SECONDS))),
+    stop_on_status = DEFAULT_REQUEST_STOP_ON_STATUS
 )
-    request(scoped_connection(), nreplies, subject, data; timeout)
+    request(scoped_connection(), nreplies, subject, data; timeout, stop_on_status)
 end
 
 function request(

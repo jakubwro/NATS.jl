@@ -149,3 +149,85 @@ NATS.status()
 end
 
 NATS.status()
+
+@testset "Request timeout is not delayed by draining" begin
+    subject = randstring(10)
+    connection = NATS.connect(; drain_poll = 1.0)
+    sub = subscribe(connection, subject) do msg end # Nobody replies.
+    # Draining the reply subscription on timeout would delay returning by `drain_poll`.
+    elapsed = @elapsed @test_throws NATSError request(connection, subject; timeout = 0.3)
+    @test elapsed < 0.3 + 0.6
+    @test length(connection.sub_data) == 1 # Only the `sub`, reply subscription is cleaned up.
+    @test isempty(connection.unsubs)
+    drain(connection)
+end
+
+NATS.status()
+
+@testset "Request ending early on an error status frees its subscription at once" begin
+    connection = NATS.connect(; drain_poll = 1.0)
+    # Nobody listens on the subject, so the server replies with the 503 status instead of the 3 expected replies.
+    elapsed = @elapsed replies = request(connection, 3, randstring(10))
+    @test length(replies) == 1
+    @test NATS.statuscode(only(replies)) == 503
+    @test elapsed < 0.5 # Draining the subscription would take `drain_poll`.
+    @test isempty(connection.sub_data)
+    @test isempty(connection.unsubs)
+    drain(connection)
+end
+
+NATS.status()
+
+@testset "Request stops on specified status codes" begin
+    connection = NATS.connect()
+    codes(replies) = NATS.statuscode.(replies)
+
+    # By default every error status ends the request. The late reply is released after the request finished,
+    # so it is not waiting in the subscription buffer when the request unsubscribes.
+    subject = randstring(10)
+    release = Channel(1)
+    subscribe(connection, subject) do msg
+        reply_with_status(connection, msg, 500)
+    end
+    subscribe(connection, subject) do msg
+        take!(release)
+        publish(connection, msg.reply_to, "Late reply.")
+    end
+    replies = request(connection, 2, subject)
+    @test codes(replies) == [500]
+    put!(release, true)
+
+    # Only 503 ends the request here, so the 500 status is collected as any other reply.
+    subject = randstring(10)
+    subscribe(connection, subject) do msg
+        reply_with_status(connection, msg, 500)
+    end
+    subscribe(connection, subject) do msg
+        publish(connection, msg.reply_to, "Another reply.")
+    end
+    replies = request(connection, 2, subject; stop_on_status = [503])
+    @test sort(codes(replies)) == [200, 500]
+
+    # A status that is not an error can end the request too.
+    subject = randstring(10)
+    release = Channel(1)
+    subscribe(connection, subject) do msg
+        publish(connection, msg.reply_to, "First reply.")
+        reply_with_status(connection, msg, 204)
+        take!(release)
+        publish(connection, msg.reply_to, "Dropped reply.")
+    end
+    replies = request(connection, 3, subject; stop_on_status = [204])
+    @test codes(replies) == [200, 204]
+    put!(release, true)
+
+    # With an empty collection nothing stops the request early. The 503 sent when there are no responders
+    # is collected and the request lasts until the timeout.
+    elapsed = @elapsed replies = request(connection, 2, randstring(10); timeout = 0.3, stop_on_status = Int[])
+    @test codes(replies) == [503]
+    @test elapsed >= 0.3
+
+    drain(connection)
+end
+
+NATS.status()

@@ -29,6 +29,10 @@ using JSON3
         end
         answers = request(2, "service_1", nothing)
         @test length(answers) == 2
+        # `stop_on_status` is passed through, the 503 sent for a subject without responders does not end the request.
+        elapsed = @elapsed answers = request(2, "no_responders_here", nothing; timeout = 0.3, stop_on_status = Int[])
+        @test length(answers) == 1
+        @test elapsed >= 0.3
         drain(sub)
         drain(sub2)
     end
