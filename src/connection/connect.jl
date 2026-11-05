@@ -15,49 +15,50 @@
 #
 ### Code:
 
-function default_connect_options()
-    (
-        # Options that are defined in the protocol, see Connect struct.
-        verbose= parse(Bool, get(ENV, "NATS_VERBOSE", "false")),
-        pedantic = parse(Bool, get(ENV, "NATS_PEDANTIC", "false")),
-        tls_required = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false")),
-        auth_token = get(ENV, "NATS_AUTH_TOKEN", nothing),
-        user = get(ENV, "NATS_USER", nothing),
-        pass = get(ENV, "NATS_PASS", nothing),
-        name = nothing,
-        lang = CLIENT_LANG,
-        version = CLIENT_VERSION,
-        protocol = 1,
-        echo = nothing,
-        sig = nothing,
-        jwt = get(ENV, "NATS_JWT", nothing),
-        no_responders = true,
-        headers = true,
-        nkey = get(ENV, "NATS_NKEY", nothing),
-        # Options used only on client side, never sent to server.
-        nkey_seed = get(ENV, "NATS_NKEY_SEED", nothing),
-        tls_ca_path = get(ENV, "NATS_TLS_CA_PATH", nothing),
-        tls_cert_path = get(ENV, "NATS_TLS_CERT_PATH", nothing),
-        tls_key_path = get(ENV, "NATS_TLS_KEY_PATH", nothing),
-        tls_server_name = get(ENV, "NATS_TLS_SERVER_NAME", nothing),
-        tls_verify_peer = parse(Bool, get(ENV, "NATS_TLS_VERIFY_PEER", "true")),
-        # `nothing` follows `tls_verify_peer`.
-        tls_verify_hostname = haskey(ENV, "NATS_TLS_VERIFY_HOSTNAME") ? parse(Bool, ENV["NATS_TLS_VERIFY_HOSTNAME"]) : nothing,
-        # TLS-first performs the handshake before reading server INFO.
-        tls_first = parse(Bool, get(ENV, "NATS_TLS_FIRST", "false")),
-        ping_interval = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS))),
-        max_pings_out = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT))),
-        retry_on_init_fail = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL))),
-        ignore_advertised_servers = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS))),
-        retain_servers_order = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER))),
-        send_enqueue_when_disconnected = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED))),
-        reconnect_delays = default_reconnect_delays(),
-        send_buffer_limit = parse(Int, get(ENV, "NATS_SEND_BUFFER_LIMIT_BYTES", string(DEFAULT_SEND_BUFFER_LIMIT_BYTES))),
-        send_retry_delays = SEND_RETRY_DELAYS,
-        drain_timeout = parse(Float64, get(ENV, "NATS_DRAIN_TIMEOUT_SECONDS", string(DEFAULT_DRAIN_TIMEOUT_SECONDS))),
-        drain_poll = parse(Float64, get(ENV, "NATS_DRAIN_POLL_INTERVAL_SECONDS", string(DEFAULT_DRAIN_POLL_INTERVAL_SECONDS))),
-    )
+# Delays are an iterator of seconds. Only these two types are possible, so the code that uses them is compiled for both.
+const ReconnectDelays = Union{ExponentialBackOff, Vector{Float64}}
+
+Base.@kwdef mutable struct ConnectOptions
+    # Options that are defined in the protocol, see Connect struct.
+    verbose::Bool = parse(Bool, get(ENV, "NATS_VERBOSE", "false"))
+    pedantic::Bool = parse(Bool, get(ENV, "NATS_PEDANTIC", "false"))
+    tls_required::Bool = parse(Bool, get(ENV, "NATS_TLS_REQUIRED", "false"))
+    auth_token::Union{String, Nothing} = get(ENV, "NATS_AUTH_TOKEN", nothing)
+    user::Union{String, Nothing} = get(ENV, "NATS_USER", nothing)
+    pass::Union{String, Nothing} = get(ENV, "NATS_PASS", nothing)
+    name::Union{String, Nothing} = nothing
+    lang::String = CLIENT_LANG
+    version::String = CLIENT_VERSION
+    protocol::Union{Int64, Nothing} = 1
+    echo::Union{Bool, Nothing} = nothing
+    sig::Union{String, Nothing} = nothing
+    jwt::Union{String, Nothing} = get(ENV, "NATS_JWT", nothing)
+    no_responders::Union{Bool, Nothing} = true
+    headers::Union{Bool, Nothing} = true
+    nkey::Union{String, Nothing} = get(ENV, "NATS_NKEY", nothing)
+    # Options used only on client side, never sent to server.
+    nkey_seed::Union{String, Nothing} = get(ENV, "NATS_NKEY_SEED", nothing)
+    tls_ca_path::Union{String, Nothing} = get(ENV, "NATS_TLS_CA_PATH", nothing)
+    tls_cert_path::Union{String, Nothing} = get(ENV, "NATS_TLS_CERT_PATH", nothing)
+    tls_key_path::Union{String, Nothing} = get(ENV, "NATS_TLS_KEY_PATH", nothing)
+    tls_server_name::Union{String, Nothing} = get(ENV, "NATS_TLS_SERVER_NAME", nothing)
+    tls_verify_peer::Bool = parse(Bool, get(ENV, "NATS_TLS_VERIFY_PEER", "true"))
+    tls_verify_hostname::Union{Bool, Nothing} = haskey(ENV, "NATS_TLS_VERIFY_HOSTNAME") ? parse(Bool, ENV["NATS_TLS_VERIFY_HOSTNAME"]) : nothing
+    tls_first::Bool = parse(Bool, get(ENV, "NATS_TLS_FIRST", "false"))
+    ping_interval::Float64 = parse(Float64, get(ENV, "NATS_PING_INTERVAL", string(DEFAULT_PING_INTERVAL_SECONDS)))
+    max_pings_out::Int64 = parse(Int64, get(ENV, "NATS_MAX_PINGS_OUT", string(DEFAULT_MAX_PINGS_OUT)))
+    retry_on_init_fail::Bool = parse(Bool, get(ENV, "NATS_RETRY_ON_INIT_FAIL", string(DEFAULT_RETRY_ON_INIT_FAIL)))
+    ignore_advertised_servers::Bool = parse(Bool, get(ENV, "NATS_IGNORE_ADVERTISED_SERVERS", string(DEFAULT_IGNORE_ADVERTISED_SERVERS)))
+    retain_servers_order::Bool = parse(Bool, get(ENV, "NATS_RETAIN_SERVERS_ORDER", string(DEFAULT_RETAIN_SERVERS_ORDER)))
+    send_enqueue_when_disconnected::Bool = parse(Bool, get(ENV, "NATS_ENQUEUE_WHEN_DISCONNECTED", string(DEFAULT_ENQUEUE_WHEN_DISCONNECTED)))
+    reconnect_delays::ReconnectDelays = default_reconnect_delays()
+    send_buffer_limit::Int64 = parse(Int, get(ENV, "NATS_SEND_BUFFER_LIMIT_BYTES", string(DEFAULT_SEND_BUFFER_LIMIT_BYTES)))
+    send_retry_delays::Any = SEND_RETRY_DELAYS
+    drain_timeout::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_TIMEOUT_SECONDS", string(DEFAULT_DRAIN_TIMEOUT_SECONDS)))
+    drain_poll::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_POLL_INTERVAL_SECONDS", string(DEFAULT_DRAIN_POLL_INTERVAL_SECONDS)))
 end
+
+StructTypes.StructType(::Type{ConnectOptions}) = StructTypes.Struct()
 
 function default_reconnect_delays()
     ExponentialBackOff(
@@ -68,7 +69,31 @@ function default_reconnect_delays()
         jitter = parse(Float64, get(ENV, "NATS_RECONNECT_JITTER", string(DEFAULT_RECONNECT_JITTER))))
 end
 
-function validate_connect_options(server_info::Info, options)
+function connect_options(@nospecialize(provided))
+    given = getfield(provided, :data) # `Base.Pairs` of keyword arguments wraps a `NamedTuple`.
+    options = ConnectOptions()
+    unknown = Symbol[]
+    for name in fieldnames(typeof(given))
+        value = getfield(given, name)
+        if hasfield(ConnectOptions, name)
+            T = fieldtype(ConnectOptions, name)
+            setfield!(options, name, value isa T ? value : as_option(T, value))
+        else
+            push!(unknown, name)
+        end
+    end
+    isempty(unknown) || error("Unknown `connect` options: $(join(unknown, ", "))")
+    options
+end
+
+# Converts a value passed to `connect` to the type of its option.
+as_option(::Type{T}, value) where T = convert(T, value)
+# Durations are in seconds, but a `Period` is accepted too.
+as_option(::Type{Float64}, value::Period) = Nanosecond(value) / Nanosecond(Second(1))
+# Delays are a vector of seconds of any numeric type or an `ExponentialBackOff`.
+as_option(::Type{ReconnectDelays}, value::AbstractVector) = Vector{Float64}(value)
+
+function validate_connect_options(server_info::Info, options::ConnectOptions)
     # TODO: check if proto is 1 when `echo` flag is set
 
     # TODO: maybe better to rely on server side validation. Grab Err messages and decide if conn should be terminated.
@@ -77,7 +102,7 @@ function validate_connect_options(server_info::Info, options)
 
     # A server sends `tls_required` when it requires TLS and `tls_available` when it only allows it.
     # TLS-first servers may omit `tls_available` because INFO arrives over TLS.
-    if get(options, :tls_required, false) && !get(options, :tls_first, false)
+    if options.tls_required && !options.tls_first
         something(server_info.tls_required, false) || something(server_info.tls_available, false) ||
             error("Client requires TLS but it is not available for the server.")
     end
@@ -110,7 +135,7 @@ function connect_urls(nc::Connection, url; ignore_advertised_servers::Bool)
     end
 end
 
-function init_protocol(nc, url, options)
+function init_protocol(nc, url, options::ConnectOptions)
     @atomic nc.connect_init_count += 1
     urls = connect_urls(nc, url; options.ignore_advertised_servers)
     if options.retain_servers_order
@@ -120,33 +145,33 @@ function init_protocol(nc, url, options)
         url = rand(urls)
     end
     host, port, scheme, userinfo = host_port(url)
+    options = deepcopy(options) # It is modified below for this attempt only.
     if scheme == "tls"
         # Due to ADR-40 a URL scheme can enforce TLS.
-        options = merge(options, (tls_required = true,))
+        options.tls_required = true
     end
     if !isnothing(userinfo) && !isempty(userinfo)
         user, pass = split(userinfo, ":"; limit = 2)
-        if !haskey(options, :user) || isnothing(options.user)
-            options = merge(options, (user = user,))
+        if isnothing(options.user)
+            options.user = user
         end
-        if !haskey(options, :pass) || isnothing(options.pass)
-            options = merge(options, (pass = pass,))
+        if isnothing(options.pass)
+            options.pass = pass
         end
     end
     sock = TCP.connect(join_host_port(host, port)) # add connection timeout here 5s
     read_stream = write_stream = sock
     try
-        tls_options = options[(:tls_ca_path, :tls_cert_path, :tls_key_path, :tls_server_name, :tls_verify_peer, :tls_verify_hostname)]
-        tls_first = get(options, :tls_first, false)
+        tls_first = options.tls_first
         if tls_first
-            read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
+            read_stream = write_stream = upgrade_to_tls(sock, host, options)
             @debug "Socket upgraded (TLS-first)"
         end
         info_msg = next_protocol_message(read_stream)
         info_msg isa Info || error("Expected INFO, received $info_msg")
         validate_connect_options(info_msg, options)
-        if !tls_first && (something(info_msg.tls_required, false) || get(options, :tls_required, false))
-            read_stream = write_stream = upgrade_to_tls(sock, host, tls_options...)
+        if !tls_first && (something(info_msg.tls_required, false) || options.tls_required)
+            read_stream = write_stream = upgrade_to_tls(sock, host, options)
             @debug "Socket upgraded"
         end
 
@@ -154,14 +179,9 @@ function init_protocol(nc, url, options)
             isnothing(options.nkey_seed) && error("Server requires signature but no `nkey_seed` provided.")
             isnothing(options.nkey) && error("Missing `nkey` parameter.")
             sig = sign(info_msg.nonce, options.nkey_seed)
-            options = merge(options, (sig = sig,))
+            options.sig = sig
         end
 
-        defaults = default_connect_options()
-        known_options = keys(defaults)
-        provided_keys = keys(options)
-        keys_df = setdiff(provided_keys, known_options)
-        !isempty(keys_df) && error("Unknown `connect` options: $(join(keys_df, ", "))")
         connect_msg = StructTypes.constructfrom(Connect, options)
         show(write_stream, MIME_PROTOCOL(), connect_msg)
         flush(write_stream)
@@ -189,7 +209,7 @@ function init_protocol(nc, url, options)
         if !isnothing(nc)
             nc.url = url
         end
-        sock, read_stream, write_stream, info_msg
+        read_stream, write_stream, info_msg
     catch err
         close(write_stream) # Closing TLS closes the TCP connection as well.
         rethrow()
@@ -270,7 +290,7 @@ Options are:
 - `ignore_advertised_servers`: ignores other cluster servers returned by the server. Default is `$DEFAULT_IGNORE_ADVERTISED_SERVERS`
 - `retain_servers_order`: try to connect to the server in the order specified in `url` or the list returned by the server. Default is `$DEFAULT_RETAIN_SERVERS_ORDER`
 - `send_enqueue_when_disconnected`: allows buffering outgoing messages during disconnection. Default is `$DEFAULT_ENQUEUE_WHEN_DISCONNECTED`
-- `reconnect_delays`: vector of delays that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
+- `reconnect_delays`: vector of delays in seconds (or an `ExponentialBackOff`) that reconnect is performed until connected again, by default it will try to reconnect every second without time limit.
 - `send_buffer_limit`: soft limit for the buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to the server (e.g. `publish`) may throw an exception
 - `drain_timeout`: Timeout for the drain process. After the timeout in case of not everything is processed drain will stop and an error will be reported.
 - `drain_poll`: Interval for `drain` to check if all messages in buffers are processed.
@@ -279,7 +299,11 @@ function connect(
     url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
     options...
 )
-    options = merge(default_connect_options(), options)
+    # `connect_options` does not specialize on its argument, but inference would still run for its type without the barrier.
+    connect_with_options(url, connect_options(Base.inferencebarrier(options)))
+end
+
+function connect_with_options(url::String, options::ConnectOptions)
     if !options.tls_verify_peer
         @warn "TLS certificate verification is disabled (`tls_verify_peer = false`), any server certificate is accepted."
     elseif options.tls_verify_hostname == false
@@ -294,17 +318,17 @@ function connect(
         connect_init_count = 0,
         send_buffer_flushed = true,
         options.send_buffer_limit,
-        options.send_retry_delays,
         options.send_enqueue_when_disconnected,
         options.drain_timeout,
         options.drain_poll)
-    sock = nothing
+    # Delays can be of any type, passed as a keyword argument they would compile the constructor for that type.
+    nc.send_retry_delays = options.send_retry_delays
     read_stream = nothing
     write_stream = nothing
     info_msg = nothing
     send_buffer = nc.send_buffer
     try
-        sock, read_stream, write_stream, info_msg = init_protocol(nc, url, options)
+        read_stream, write_stream, info_msg = init_protocol(nc, url, options)
         info(nc, info_msg)
         status(nc, CONNECTED)
     catch
@@ -314,15 +338,18 @@ function connect(
     end
     # This works as a controller for connection state. It spawns another task and listens for their completion to do
     # reconnect logic.
-    reconnect_task = spawn_task(reconnect_controller, nc, send_buffer, sock, read_stream, write_stream, options)
+    reconnect_task = spawn_task(reconnect_controller, nc, send_buffer, read_stream, write_stream, options)
     errormonitor(reconnect_task)
 
     @lock state.lock push!(state.connections, nc)
     nc
 end
 
+# Delays are a positional argument, because only then the compiler splits their `Union` type to compile both cases.
+init_protocol_with_retries(delays, check) = retry(init_protocol; delays, check)
+
 # The streams are `nothing` if the initial connect failed with `retry_on_init_fail`, the first iteration reconnects then.
-function reconnect_controller(nc::NATS.Connection, send_buffer::IOBuffer, sock::Union{TCP.Conn, Nothing}, read_stream::Union{TCP.Conn, TLS.Conn, Nothing}, write_stream::Union{TCP.Conn, TLS.Conn, Nothing}, options)
+function reconnect_controller(nc::NATS.Connection, send_buffer::IOBuffer, read_stream::Union{TCP.Conn, TLS.Conn, Nothing}, write_stream::Union{TCP.Conn, TLS.Conn, Nothing}, options::ConnectOptions)
 # @show Threads.threadid()
     while true
         if status(nc) == CONNECTING
@@ -336,9 +363,9 @@ function reconnect_controller(nc::NATS.Connection, send_buffer::IOBuffer, sock::
                 mod(current_retries, 10) == 0 && @warn "Reconnect to $(clustername(nc)) cluster failed $current_retries times in $current_time seconds." e
                 (@atomic nc.drain_event.set) == false # Stop on drain
             end
-            retry_init_protocol = retry(init_protocol, delays=options.reconnect_delays, check = check_errors)
+            retry_init_protocol = init_protocol_with_retries(options.reconnect_delays, check_errors)
             try
-                sock, read_stream, write_stream, info_msg = retry_init_protocol(nc, nc.url, options)
+                read_stream, write_stream, info_msg = retry_init_protocol(nc, nc.url, options)
                 info(nc, info_msg)
                 send_buffer = nc.send_buffer
                 @atomic nc.reconnect_count += 1

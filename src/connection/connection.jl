@@ -91,11 +91,11 @@ end
 
 include("state.jl")
 include("utils.jl")
-include("tls.jl")
 include("send.jl")
 include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
+include("tls.jl")
 
 function status()
     println("=== Connection status ====================")
