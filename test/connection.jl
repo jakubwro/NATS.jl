@@ -1,6 +1,7 @@
 
 using Test
 using NATS
+using Dates
 using Random
 using ScopedValues
 using StructTypes
@@ -110,7 +111,7 @@ end
 NATS.status()
 
 @testset "Should reconnect on malformed msg" begin
-    options = merge(NATS.default_connect_options(), (protocol=100,) )
+    options = NATS.ConnectOptions(protocol = 100)
     con_msg = StructTypes.constructfrom(Connect, options)
     reconnects = @atomic nc.reconnect_count
     NATS.send(nc, con_msg)
@@ -161,6 +162,56 @@ NATS.status()
     end
 end
 
+@testset "Connect options always have the same type" begin
+    # Code of a connection is compiled for the type of its options, so it has to be one type for any set of them.
+    @test issubset(fieldnames(NATS.Connect), fieldnames(NATS.ConnectOptions))
+    @test typeof(NATS.connect_options(pairs(NamedTuple()))) === NATS.ConnectOptions
+    options = NATS.connect_options(pairs((
+        name = "client", user = SubString("username", 1, 4), echo = false, ping_interval = 10, max_pings_out = 3,
+        reconnect_delays = [], drain_timeout = Second(7), tls_required = true)))
+    @test typeof(options) === NATS.ConnectOptions
+    @test options.name === "client"
+    @test options.user === "user"
+    @test options.echo === false
+    @test options.ping_interval === 10.0
+    @test options.max_pings_out === 3
+    @test options.reconnect_delays == Float64[]
+    @test options.reconnect_delays isa Vector{Float64}
+    @test options.drain_timeout === 7.0
+    @test options.tls_required === true
+    @test options.drain_poll === NATS.ConnectOptions().drain_poll
+    @test NATS.connect_options(pairs((reconnect_delays = [1, 2],))).reconnect_delays == [1.0, 2.0]
+    delays = Base.ExponentialBackOff(n = 3)
+    @test NATS.connect_options(pairs((reconnect_delays = delays,))).reconnect_delays === delays
+    @test_throws "Unknown `connect` options: foo, bar" NATS.connect(foo = 1, bar = 2)
+    @test_throws "Unknown `connect` options: foo" NATS.connect(foo = 1, retry_on_init_fail = true)
+    @test_throws MethodError NATS.connect(ping_interval = "fast")
+end
+
+@testset "TLS connect options" begin
+    options = NATS.connect_options(pairs((tls_ca_path = "ca.crt", tls_server_name = SubString("localhost1", 1, 9), tls_verify_peer = false, tls_first = true)))
+    @test options.tls_ca_path === "ca.crt"
+    @test options.tls_server_name === "localhost"
+    @test options.tls_verify_peer === false
+    @test options.tls_first === true
+    @test NATS.connect_options(pairs((tls_verify_hostname = false,))).tls_verify_hostname === false
+    @test_throws "Unknown `connect` options: tls_foo, ca_path" NATS.connect(tls_foo = 1, ca_path = "ca.crt")
+    copied = deepcopy(options)
+    @test copied !== options
+    @test copied.tls_ca_path === "ca.crt"
+    copied.user = "changed"
+    @test options.user === NATS.ConnectOptions().user
+end
+
+@testset "Connect with options of various types" begin
+    connection = NATS.connect(name = "options test", ping_interval = 30, drain_timeout = 10, drain_poll = 0.1, echo = false)
+    @test NATS.status(connection) == NATS.CONNECTED
+    @test connection.drain_timeout === 10.0
+    @test connection.drain_poll === 0.1
+    NATS.ping(connection; measure = false)
+    drain(connection)
+end
+
 @testset "TLS-first is a recognized client option" begin
     err = try
         NATS.connect("tls://localhost:4321"; tls_first = true)
@@ -183,9 +234,9 @@ end
     info = NATS.next_protocol_message(buf())
     @test info isa NATS.Info && isnothing(info.tls_available)
     @test isnothing(NATS.validate_connect_options(
-        info, (tls_required = true, tls_first = true)))
+        info, NATS.ConnectOptions(tls_required = true, tls_first = true)))
     @test_throws "Client requires TLS but it is not available for the server." NATS.validate_connect_options(
-        info, (tls_required = true,))
+        info, NATS.ConnectOptions(tls_required = true, tls_first = false))
 end
 
 @testset "TLS required by the client is met by a server that requires it" begin
@@ -196,7 +247,7 @@ end
                      "\"proto\":1,\"max_payload\":1048576,\"client_id\":1,\"tls_required\":true}\r\n")
     info = NATS.next_protocol_message(buf())
     @test info isa NATS.Info && info.tls_required == true && isnothing(info.tls_available)
-    @test (NATS.validate_connect_options(info, (tls_required = true,)); true)
+    @test (NATS.validate_connect_options(info, NATS.ConnectOptions(tls_required = true, tls_first = false)); true)
     if !isnothing(get(ENV, "NATS_TLS_CA_PATH", nothing))
         _, port = NATS.host_port(get(ENV, "NATS_CONNECT_URL", NATS.DEFAULT_CONNECT_URL))
         for nc in (NATS.connect(tls_required = true), NATS.connect("tls://localhost:$port"))

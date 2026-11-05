@@ -16,17 +16,16 @@
 ### Code:
 
 # Wraps an established TCP connection in TLS and performs the handshake. The server certificate is verified
-# against `ca_cert_path`, or system roots if not provided, and must be issued for `server_name`, or `host` if
-# not provided, unless `verify_peer` or `verify_hostname` turns that off.
-function upgrade_to_tls(sock::TCP.Conn, host::AbstractString, ca_cert_path::Union{String, Nothing}, client_cert_path::Union{String, Nothing}, client_key_path::Union{String, Nothing},
-                        server_name::Union{AbstractString, Nothing} = nothing, verify_peer::Bool = true, verify_hostname::Union{Bool, Nothing} = nothing)
+# against `options.tls_ca_path`, or system roots if not provided, and must be issued for `options.tls_server_name`, or
+# `host` if not provided, unless `tls_verify_peer` or `tls_verify_hostname` turns that off.
+function upgrade_to_tls(sock::TCP.Conn, host::AbstractString, options::ConnectOptions)
     config = TLS.Config(;
-        server_name = something(server_name, host),
-        verify_peer,
-        verify_hostname = something(verify_hostname, verify_peer),
-        ca_file = ca_cert_path,
-        cert_file = client_cert_path,
-        key_file = client_key_path)
+        server_name = something(options.tls_server_name, host),
+        verify_peer = options.tls_verify_peer,
+        verify_hostname = something(options.tls_verify_hostname, options.tls_verify_peer),
+        ca_file = options.tls_ca_path,
+        cert_file = options.tls_cert_path,
+        key_file = options.tls_key_path)
     conn = TLS.client(sock, config)
     try
         TLS.handshake!(conn)
