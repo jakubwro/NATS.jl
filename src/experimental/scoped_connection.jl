@@ -61,10 +61,9 @@ end
 function subscribe(
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
-    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
-    monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
+    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE)))
 )
-    subscribe(scoped_connection(), subject; queue_group, channel_size, monitoring_throttle_seconds)
+    subscribe(scoped_connection(), subject; queue_group, channel_size)
 end
 
 function subscribe(
@@ -72,10 +71,9 @@ function subscribe(
     subject::String;
     queue_group::Union{String, Nothing} = nothing,
     spawn = false,
-    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE))),
-    monitoring_throttle_seconds = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
+    channel_size = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_SIZE", string(DEFAULT_SUBSCRIPTION_CHANNEL_SIZE)))
 )
-    subscribe(f, scoped_connection(), subject; queue_group, spawn, channel_size, monitoring_throttle_seconds)
+    subscribe(f, scoped_connection(), subject; queue_group, spawn, channel_size)
 end
 
 function unsubscribe(

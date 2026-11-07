@@ -95,6 +95,7 @@ include("send.jl")
 include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
+include("monitoring.jl")
 include("tls.jl")
 
 function status()

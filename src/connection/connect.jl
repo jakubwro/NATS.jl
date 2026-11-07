@@ -56,6 +56,9 @@ Base.@kwdef mutable struct ConnectOptions
     send_retry_delays::Any = SEND_RETRY_DELAYS
     drain_timeout::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_TIMEOUT_SECONDS", string(DEFAULT_DRAIN_TIMEOUT_SECONDS)))
     drain_poll::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_POLL_INTERVAL_SECONDS", string(DEFAULT_DRAIN_POLL_INTERVAL_SECONDS)))
+    monitoring_throttle_seconds::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
+    monitoring_handlers_limit::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_HANDLERS_LIMIT", string(DEFAULT_SUBSCRIPTION_HANDLERS_LIMIT)))
+    monitoring_channel_level::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_LEVEL", string(DEFAULT_SUBSCRIPTION_CHANNEL_LEVEL)))
 end
 
 StructTypes.StructType(::Type{ConnectOptions}) = StructTypes.Struct()
@@ -294,6 +297,9 @@ Options are:
 - `send_buffer_limit`: soft limit for the buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to the server (e.g. `publish`) may throw an exception
 - `drain_timeout`: Timeout for the drain process. After the timeout in case of not everything is processed drain will stop and an error will be reported.
 - `drain_poll`: Interval for `drain` to check if all messages in buffers are processed.
+- `monitoring_throttle_seconds`: How often problems of subscriptions (handler errors, full channel, too many handlers) are reported in logs. Default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
+- `monitoring_handlers_limit`: How many handlers of a subscription can run at once before a warning is reported in logs. Default is `$DEFAULT_SUBSCRIPTION_HANDLERS_LIMIT`
+- `monitoring_channel_level`: Fraction of the subscription channel in use above which a warning is reported in logs. Default is `$DEFAULT_SUBSCRIPTION_CHANNEL_LEVEL`
 """
 function connect(
     url::String = get(ENV, "NATS_CONNECT_URL", DEFAULT_CONNECT_URL);
@@ -340,6 +346,9 @@ function connect_with_options(url::String, options::ConnectOptions)
     # reconnect logic.
     reconnect_task = spawn_task(reconnect_controller, nc, send_buffer, read_stream, write_stream, options)
     errormonitor(reconnect_task)
+    # Reports problems of all subscriptions of the connection, see `monitor_subscriptions`.
+    monitoring_task = spawn_task(monitor_subscriptions, nc, options)
+    errormonitor(monitoring_task)
 
     @lock state.lock push!(state.connections, nc)
     nc

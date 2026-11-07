@@ -15,7 +15,6 @@
 #
 ### Code:
 
-const NATS_STATS_MAX_RECENT_ERRORS = 100
 mutable struct Stats
     "Count of msgs received but maybe not yet handled by the subscription."
     @atomic msgs_received::Int64
@@ -31,10 +30,12 @@ mutable struct Stats
     @atomic msgs_published::Int64
     "Subscription handlers running at the moment count."
     @atomic handlers_running::Int64
-    "Recent errors."
-    errors::Channel{Exception}
+    "Count of handler errors that were not reported in logs yet."
+    @atomic errors_unreported::Int64
+    "The latest error thrown by a subscription handler and the message that caused it. It is set before the error is counted in `errors_unreported`, so whoever sees the count finds the error."
+    @atomic last_error::Tuple{Any, Any}
     function Stats()
-        new(0, 0, 0, 0, 0, 0, 0, Channel{Exception}(NATS_STATS_MAX_RECENT_ERRORS))
+        new(0, 0, 0, 0, 0, 0, 0, 0, (nothing, nothing))
     end
 end
 
