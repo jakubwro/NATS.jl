@@ -193,6 +193,7 @@ NATS.status()
     @test length(connection.request_deadlines) == 1
     # Timers armed for requests with a shorter timeout do not stay behind while the long one is waiting.
     echo = reply(connection, randstring(10)) do msg "OK" end
+    request(connection, echo.subject) # Compiles the handler, the first reply can take longer than 50 ms.
     growth = active_handles_growth() do
         for _ in 1:20
             request(connection, echo.subject; timeout = 0.05)
