@@ -85,9 +85,7 @@ function request(
     sub = subscribe(connection, reply_to)
     unsubscribe(connection, sub; max_msgs = nreplies)
     publish(connection, subject, data; reply_to)
-    if timeout isa Period # TODO: get rid of if in 1.11
-        timeout = Nanosecond(timeout) / Nanosecond(Second(1))
-    end
+    timeout = timeout isa Period ? Nanosecond(timeout) : Nanosecond(round(Int64, 1e9 * timeout))
     add_request_deadline(connection, sub.sid, timeout)
     result = Msg[]
     for _ in 1:nreplies
@@ -108,8 +106,8 @@ end
 # connection are kept in a table and served by a single `Timer`, armed for the earliest one. A timer for every request
 # was ~10% of its time, closing a `Timer` waits for the event loop. Requests with the same timeout have growing deadlines,
 # so the timer is replaced only when a request with a shorter timeout arrives.
-function add_request_deadline(nc::Connection, sid::Int64, timeout::Real)
-    deadline = Int64(time_ns()) + round(Int64, 1e9 * timeout)
+function add_request_deadline(nc::Connection, sid::Int64, timeout::Nanosecond)
+    deadline = Nanosecond(time_ns()) + timeout
     replaced = @lock nc.request_lock begin
         nc.request_deadlines[sid] = deadline
         deadline < nc.request_timer_at ? arm_request_timer(nc, deadline) : nothing
@@ -117,12 +115,17 @@ function add_request_deadline(nc::Connection, sid::Int64, timeout::Real)
     isnothing(replaced) || close(replaced)
 end
 
-remove_request_deadline(nc::Connection, sid::Int64) = @lock nc.request_lock delete!(nc.request_deadlines, sid)
+function remove_request_deadline(nc::Connection, sid::Int64)
+    @lock nc.request_lock begin
+        delete!(nc.request_deadlines, sid)
+    end
+end
 
 # Needs `nc.request_lock`, returns the timer that is replaced to close it after the lock is released.
-function arm_request_timer(nc::Connection, deadline::Int64)
+function arm_request_timer(nc::Connection, deadline::Nanosecond)
     replaced = nc.request_timer
-    nc.request_timer = Timer(max(deadline - Int64(time_ns()), 0) / 1e9) do timer
+    # TODO: pass the period in 1.11, in 1.10 `Timer` with a callback takes only seconds.
+    nc.request_timer = Timer(max(deadline - Nanosecond(time_ns()), Nanosecond(0)) / Second(1)) do timer
         expire_requests(nc, timer)
     end
     nc.request_timer_at = deadline
@@ -130,22 +133,20 @@ function arm_request_timer(nc::Connection, deadline::Int64)
 end
 
 function expire_requests(nc::Connection, timer::Timer)
-    now = Int64(time_ns())
+    now = Nanosecond(time_ns())
     expired = Int64[]
     @lock nc.request_lock begin
-        next_deadline = typemax(Int64)
+        next_deadline = typemax(Nanosecond)
         for (sid, deadline) in nc.request_deadlines
             if deadline <= now
                 push!(expired, sid)
+                delete!(nc.request_deadlines, sid)
             else
                 next_deadline = min(next_deadline, deadline)
             end
         end
-        for sid in expired
-            delete!(nc.request_deadlines, sid)
-        end
         if nc.request_timer === timer
-            if next_deadline == typemax(Int64)
+            if next_deadline == typemax(Nanosecond)
                 nc.request_timer = nothing
                 nc.request_timer_at = next_deadline
             else
