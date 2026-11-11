@@ -164,6 +164,49 @@ end
 
 NATS.status()
 
+@testset "Requests do not leave timers behind" begin
+    connection = NATS.connect()
+    sub = reply(connection, randstring(10)) do msg "OK" end
+    growth = active_handles_growth() do
+        for _ in 1:100
+            request(connection, sub.subject)
+        end
+    end
+    @test growth < 20 # A single timer serves all the requests.
+    @test isempty(connection.request_deadlines)
+    drain(connection)
+end
+
+NATS.status()
+
+@testset "Requests time out each at its own deadline" begin
+    connection = NATS.connect()
+    subject = randstring(10)
+    subscribe(connection, subject) do msg end # Nobody replies.
+    # The timer is armed for the request that has the longest timeout, shorter ones have to arm it for earlier deadlines.
+    long = Threads.@spawn request(connection, 1, subject; timeout = 30, stop_on_status = Int[])
+    @test timedwait(() -> length(connection.request_deadlines) == 1, 10.0) == :ok
+    timeouts = [0.6, 0.2, 0.4]
+    durations = fetch.([Threads.@spawn(@elapsed request(connection, 1, subject; timeout, stop_on_status = Int[])) for timeout in timeouts])
+    @test all(i -> timeouts[i] - 0.001 <= durations[i] < timeouts[i] + 0.6, eachindex(timeouts))
+    @test !istaskdone(long)
+    @test length(connection.request_deadlines) == 1
+    # Timers armed for requests with a shorter timeout do not stay behind while the long one is waiting.
+    echo = reply(connection, randstring(10)) do msg "OK" end
+    growth = active_handles_growth() do
+        for _ in 1:20
+            request(connection, echo.subject; timeout = 0.05)
+            sleep(0.06) # Until the timer armed for the request fires.
+        end
+    end
+    @test growth < 10
+    drain(connection) # Ends the request that is still waiting.
+    @test isempty(fetch(long))
+    @test isempty(connection.request_deadlines)
+end
+
+NATS.status()
+
 @testset "Request ending early on an error status frees its subscription at once" begin
     connection = NATS.connect(; drain_poll = 1.0)
     # Nobody listens on the subject, so the server replies with the 503 status instead of the 3 expected replies.

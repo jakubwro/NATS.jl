@@ -56,6 +56,10 @@ end
     allow_direct_lock = ReentrantLock()
     "Handles messages for which a handler was not found."
     fallback_handlers::Vector{Function} = Function[]
+    request_lock::ReentrantLock = ReentrantLock()
+    request_deadlines::Dict{Int64, Int64} = Dict{Int64, Int64}()
+    request_timer::Union{Timer, Nothing} = nothing
+    request_timer_at::Int64 = typemax(Int64)
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
