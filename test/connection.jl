@@ -303,37 +303,94 @@ end
 
 NATS.status()
 
-@testset "Subscription warnings" begin
-    NATS.status()
-    sub1 = subscribe(nc, "too_many_handlers", spawn = true, monitoring_throttle_seconds = 15.0) do msg
-        sleep(21)
+@testset "Subscription monitoring" begin
+    # One task of the connection watches all its subscriptions, a subscription does not leave a task or a timer behind.
+    growth = active_handles_growth() do
+        subs = [subscribe(nc, randstring(10)) for _ in 1:100]
+        sleep(0.1) # Tasks spawned meanwhile can start only now if there is a single interactive thread.
+        foreach(sub -> unsubscribe(nc, sub), subs)
     end
-    for _ in 1:1001
-        publish(nc, "too_many_handlers")
-    end
+    @test growth < 20
 
-    sub2 = subscribe(nc, "overload_channel", spawn = false, channel_size = 100, monitoring_throttle_seconds = 15.0) do msg
-        sleep(21)
+    # The monitoring task logs to the logger that was set when `connect` was called.
+    logger = Test.TestLogger()
+    logged(level, pattern) = lock(logger.lock) do
+        filter(r -> r.level == level && occursin(pattern, r.message), logger.logs)
     end
-    for _ in 1:82
-        publish(nc, "overload_channel")
-        sleep(0.01) # Sleep causes that msgs are not batched.
-    end
-    sleep(21)
-    unsubscribe(nc, sub1)
-    unsubscribe(nc, sub2)
+    Base.CoreLogging.with_logger(logger) do
+        # Warnings are limited by values taken from the environment, lower than the defaults.
+        connection = withenv(
+            "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS" => "0.1",
+            "NATS_SUBSCRIPTION_HANDLERS_LIMIT" => "10",
+            "NATS_SUBSCRIPTION_CHANNEL_LEVEL" => "0.5"
+        ) do
+            NATS.connect()
+        end
+        release = Base.Event()
+        subscribe(connection, "monitoring.handlers"; spawn = true) do msg
+            wait(release)
+        end
+        subscribe(connection, "monitoring.overloaded"; channel_size = 100) do msg
+            wait(release)
+        end
+        subscribe(connection, "monitoring.failing") do msg
+            error("Handler failed.")
+        end
+        NATS.ping(connection; timeout = 10.0, measure = false)
+        for _ in 1:11
+            publish(connection, "monitoring.handlers")
+        end
+        # A burst is received in a few batches, but every message of it is pending until the handler takes it.
+        # The channel is filled in 60 %, that is below the default level, nothing is dropped.
+        for _ in 1:60
+            publish(connection, "monitoring.overloaded")
+        end
+        publish(connection, "monitoring.failing", "payload")
+        @test timedwait(() -> !isempty(logged(Base.CoreLogging.Warn, r"11 handlers running for subscription on monitoring.handlers")), 10.0) == :ok
+        @test timedwait(() -> !isempty(logged(Base.CoreLogging.Warn, r"monitoring.overloaded channel is full in [56]\d\.\d+ %, dropped messages: 0")), 10.0) == :ok
+        @test timedwait(() -> !isempty(logged(Base.CoreLogging.Error, r"1 handler errors on \"monitoring.failing\"")), 10.0) == :ok
+        error_record = first(logged(Base.CoreLogging.Error, r"handler errors"))
+        @test error_record.kwargs[:err] == ErrorException("Handler failed.")
+        @test error_record.kwargs[:msg] isa NATS.Msg
+        notify(release)
+        drain(connection)
 
-    NATS.status()
-    sub3 = subscribe(nc, "overload_channel", spawn = false, channel_size = 10) do msg
-        sleep(5)
+        # Errors are reported also when the subscription ends long before the next monitoring period.
+        connection = NATS.connect(monitoring_throttle_seconds = 3600.0)
+        sub = subscribe(connection, "monitoring.ended") do msg
+            error("Handler failed.")
+        end
+        NATS.ping(connection; timeout = 10.0, measure = false)
+        for _ in 1:3
+            publish(connection, "monitoring.ended", "payload")
+        end
+        sub_stats = NATS.stats(connection, sub)
+        @test timedwait(() -> (@atomic sub_stats.msgs_errored) == 3, 10.0) == :ok
+        unsubscribe(connection, sub)
+        @test timedwait(() -> !isempty(logged(Base.CoreLogging.Error, r"3 handler errors on \"monitoring.ended\"")), 10.0) == :ok
+        drain(connection)
     end
-    for _ in 1:15
-        publish(nc, "overload_channel")
-        sleep(0.01) # Sleep causes that msgs are not batched.
+end
+
+NATS.status()
+
+@testset "Monitoring of many subscriptions" begin
+    logger = Test.TestLogger(min_level = Base.CoreLogging.Debug)
+    Base.CoreLogging.with_logger(logger) do
+        connection = NATS.connect(monitoring_throttle_seconds = 0.5)
+        foreach(i -> subscribe(connection, "monitoring.many.$i"), 1:10_000)
+        NATS.ping(connection; timeout = 30.0, measure = false)
+        pattern = r"Monitored 10000 subscriptions in (\d+\.\d+) ms"
+        passes() = lock(logger.lock) do
+            filter(r -> occursin(pattern, r.message), logger.logs)
+        end
+        # The debug message tells how long the monitoring of all subscriptions took.
+        @test timedwait(() -> !isempty(passes()), 30.0) == :ok
+        milliseconds = parse(Float64, only(match(pattern, first(passes()).message).captures))
+        println("Monitoring of 10000 subscriptions took $milliseconds ms.")
+        @test milliseconds < 500
+        drain(connection)
     end
-    sleep(5)
-    unsubscribe(nc, sub3)
-    NATS.status()
 end
 
 NATS.status()

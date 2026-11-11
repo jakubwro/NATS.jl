@@ -56,6 +56,10 @@ end
     allow_direct_lock = ReentrantLock()
     "Handles messages for which a handler was not found."
     fallback_handlers::Vector{Function} = Function[]
+    request_lock::ReentrantLock = ReentrantLock()
+    request_deadlines::Dict{Int64, Nanosecond} = Dict{Int64, Nanosecond}()
+    request_timer::Union{Timer, Nothing} = nothing
+    request_timer_at::Nanosecond = typemax(Nanosecond)
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
@@ -95,6 +99,7 @@ include("send.jl")
 include("handlers.jl")
 include("drain.jl")
 include("connect.jl")
+include("monitoring.jl")
 include("tls.jl")
 
 function status()

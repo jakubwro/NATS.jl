@@ -41,14 +41,21 @@ end
 
 const READ_BUFFER_SIZE = 64 * 1024
 
-_read_buffer_to_parse(io::Union{TCP.Conn, TLS.Conn}) = read(io, READ_BUFFER_SIZE; all = false)
-_read_buffer_to_parse(io::IO) = eof(io) ? UInt8[] : read(io, READ_BUFFER_SIZE)
+# Messages keep the buffer they were parsed from alive. Reading into a new buffer would allocate `READ_BUFFER_SIZE` bytes
+# on every read and a reply of 100 bytes would hold on to all of them, so `read_buffer` is reused and the bytes are copied out.
+function _read_buffer_to_parse(io::Union{TCP.Conn, TLS.Conn}, read_buffer::Vector{UInt8})
+    n = readbytes!(io, read_buffer, READ_BUFFER_SIZE; all = false)
+    read_buffer[1:n]
+end
+
+_read_buffer_to_parse(io::IO, ::Vector{UInt8}) = eof(io) ? UInt8[] : read(io, READ_BUFFER_SIZE)
 
 function parser_loop(f, io::IO)
     data = ParserData()
+    read_buffer = Vector{UInt8}(undef, READ_BUFFER_SIZE)
     while true
         #data_read_start = time()
-        buffer = _read_buffer_to_parse(io) # Sleeps when no data available.
+        buffer = _read_buffer_to_parse(io, read_buffer) # Sleeps when no data available.
         isempty(buffer) && break # EOF, connection is closed
         #data_ready_time = time()
         parse_buffer(io, buffer, data)

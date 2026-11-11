@@ -62,8 +62,10 @@ The current `NATS.jl` approach to handling signals is based on code and discussi
 | `NATS_RETAIN_SERVERS_ORDER`                   | `connect`    | `false`            | Changes connection url selection policy from random to sequence they were provided.
 | `NATS_RETRY_ON_INIT_FAIL`                     | `connect`    | `false`            | If set to true `connect` will not throw an error if connection init fails, but will continue retrying in the background returning immediately a connection in `CONNECTING` state.
 | `NATS_SEND_BUFFER_LIMIT_BYTES`                | `connect`    | `2097152`          | Soft limit for the buffer of messages pending. If too small operations that send messages to the server (e.g. `publish`) may throw an exception
+| `NATS_SUBSCRIPTION_CHANNEL_LEVEL`             | `connect`    | `0.8`              | Fraction of the subscription channel in use above which a warning is reported in logs
 | `NATS_SUBSCRIPTION_CHANNEL_SIZE`              | `subscribe`  | `524288`           | How many messages waiting for processing the subscription buffer can hold, if it gets full messages will be dropped.
-| `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS`  | `subscribe`  | `5.0`              | How often subscription handler exceptions are reported in logs
+| `NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS`  | `connect`    | `5.0`              | How often problems of subscriptions (handler exceptions, full channel, too many handlers) are reported in logs
+| `NATS_SUBSCRIPTION_HANDLERS_LIMIT`            | `connect`    | `1000`             | How many handlers of a subscription can run at once before a warning is reported in logs
 | `NATS_TLS_CA_PATH`                            | `connect`    | `nothing`          | Path to CA certificate file if TLS is used
 | `NATS_TLS_CERT_PATH`                          | `connect`    | `nothing`          | Path to client certificate file if TLS is used
 | `NATS_TLS_KEY_PATH`                           | `connect`    | `nothing`          | Path to client private certificate file if TLS is used 
