@@ -113,6 +113,7 @@ Additionally some parameters are provided to fine tune the client for a specific
 | `retain_servers_order`      | `NATS_RETAIN_SERVERS_ORDER `        | `false`          | no
 | `drain_timeout`             | `NATS_DRAIN_TIMEOUT_SECONDS`        | `5.0`            | no
 | `drain_poll`                | `NATS_DRAIN_POLL_INTERVAL_SECONDS`  | `0.2`            | no
+| `inbox_prefix`              | `NATS_INBOX_PREFIX`                 | `_INBOX`         | no
 | `send_buffer_limit`         | `NATS_SEND_BUFFER_LIMIT_BYTES`      | `2097152`        | no
 
 Reconnect `reconnect_delays` default `ExponentialBackOff` also can be configured from `ENV` variables. This is recommended to configure it with them rather than pass delays as an argument.

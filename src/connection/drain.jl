@@ -23,6 +23,10 @@ function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, Peri
     for sid in sids
         send(nc, Unsub(sid, 0))
     end
+    request_subscription = @lock nc.request_lock (@atomic nc.request_subscription)
+    if !isnothing(request_subscription)
+        send(nc, Unsub(request_subscription.sid, 0))
+    end
     sleep(nc.drain_poll)
     conn_stats = stats(nc)
     while !is_every_message_handled(conn_stats)
@@ -35,6 +39,13 @@ function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, Peri
     end
     for sid in sids
         cleanup_sub_resources(nc, sid)
+    end
+    # Replies do not come after the unsubscribe, so requests still waiting for them end.
+    @lock nc.request_lock begin
+        @atomic nc.request_subscription = nothing
+        foreach(close, values(nc.request_channels))
+        empty!(nc.request_channels)
+        empty!(nc.request_deadlines)
     end
     # At this point no more publications can be done. Wait for the `send_buffer` flush.
     while !is_send_buffer_flushed(nc)

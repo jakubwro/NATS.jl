@@ -69,10 +69,13 @@ const DEFAULT_SUBSCRIPTION_HANDLERS_LIMIT = 1000 # A warning is reported when a 
 const DEFAULT_SUBSCRIPTION_CHANNEL_LEVEL = 0.8 # A warning is reported when a subscription channel is filled above this fraction.
 const DEFAULT_REQUEST_TIMEOUT_SECONDS = 5.0
 const DEFAULT_REQUEST_STOP_ON_STATUS = 400:599 # Every error status, includes 503 sent by the server when there are no responders.
+const DEFAULT_INBOX_PREFIX = "_INBOX" # The same as other NATS clients use, server permissions are often set up for it.
 const DEFAULT_DRAIN_TIMEOUT_SECONDS = 5.0
 const DEFAULT_DRAIN_POLL_INTERVAL_SECONDS = 0.2
 
 const INVOKE_LATEST_CONVERSIONS = false # TODO: use this in code
+
+const REQUEST_SUBSCRIPTION_SID = 0
 
 include("protocol/protocol.jl")
 include("connection/connection.jl")
@@ -106,11 +109,15 @@ precompile(Tuple{typeof(NATS.sendloop), NATS.Connection, TCP.Conn, IOBuffer})
 precompile(Tuple{typeof(NATS.spawn_task), typeof(NATS.sendloop), NATS.Connection, TCP.Conn, IOBuffer})
 precompile(Tuple{typeof(NATS.ping_loop), NATS.Connection, Float64, Int64, Int64})
 precompile(Tuple{typeof(NATS.spawn_task), typeof(NATS.ping_loop), NATS.Connection, Float64, Int64, Int64})
+# Spawned from `connect_with_options`, but task bodies are compiled at runtime before 1.13, so the callee needs a statement.
+precompile(Tuple{typeof(NATS.monitor_subscriptions), NATS.Connection, NATS.ConnectOptions})
 precompile(Tuple{Type{NamedTuple{(:timeout,), T} where T<:Tuple}, Tuple{Int64}})
 precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:timeout,), Tuple{Int64}}, typeof(NATS.request), NATS.Connection, String})
-precompile(Tuple{typeof(Random.randstring), Random.MersenneTwister, Int64})
+precompile(Tuple{typeof(Random.randstring), Random.Xoshiro, Int64})
 precompile(Tuple{Type{NamedTuple{(:should_wait,), T} where T<:Tuple}, Tuple{Bool}})
 precompile(Tuple{typeof(NATS.process), NATS.Connection, NATS.Info})
+precompile(Tuple{typeof(NATS.process), NATS.Connection, NATS.Ping})
+precompile(Tuple{typeof(NATS.process), NATS.Connection, NATS.Pong})
 # The initial connect failed with `retry_on_init_fail`, so there are no streams yet.
 precompile(Tuple{typeof(Core.kwcall), NamedTuple{(:retry_on_init_fail,), Tuple{Bool}}, typeof(NATS.connect), String})
 precompile(Tuple{typeof(NATS.reconnect_controller), NATS.Connection, IOBuffer, Nothing, Nothing, ConnectOptions})
@@ -130,6 +137,9 @@ precompile(Tuple{typeof(StructTypes.constructfrom), StructTypes.UnorderedStruct,
 precompile(Tuple{Type{NATS.Connect}, Bool, Bool, Bool, Nothing, Nothing, Nothing, Nothing, String, String, Int64, Nothing, Nothing, Nothing, Bool, Bool, Nothing})
 precompile(Tuple{typeof(StructTypes.constructfrom), Type{Union{Nothing, Bool}}, Bool})
 precompile(Tuple{typeof(StructTypes.constructfrom), Type{Union{Nothing, Int64}}, Int64})
+precompile(Tuple{typeof(StructTypes.constructfrom), StructTypes.UnorderedStruct, Union, Bool})
+precompile(Tuple{typeof(StructTypes.constructfrom), StructTypes.UnorderedStruct, Union, Int64})
+precompile(Tuple{typeof(StructTypes.isempty), Type{NATS.Connect}, String})
 # Publish, subscribe, request and drain.
 precompile(Tuple{typeof(NATS.publish), NATS.Connection, String})
 precompile(Tuple{typeof(NATS.publish), NATS.Connection, String, String})

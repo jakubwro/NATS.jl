@@ -54,6 +54,14 @@ function process(nc::Connection, batch::Vector{ProtocolMessage})
     end
 
     fallbacks = nothing
+    request_subscription = @atomic nc.request_subscription
+
+    if !isnothing(request_subscription) && haskey(groups, request_subscription.sid)
+        # Replies go to the requests waiting for them, the request subscription is not in `sub_data`.
+        msgs = pop!(groups, request_subscription.sid)
+        deliver_replies(nc, request_subscription, msgs)
+    end
+
     for (sid, msgs) in groups
         n_received = length(msgs)
         n = n_received

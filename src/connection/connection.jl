@@ -35,7 +35,7 @@ end
     sub_data::Dict{Int64, SubscriptionData} = Dict{Int64, SubscriptionData}()
     unsubs::Dict{Int64, Int64} = Dict{Int64, Int64}()
     lock::ReentrantLock = ReentrantLock()
-    rng::AbstractRNG = MersenneTwister()
+    rng::AbstractRNG = Xoshiro()
     last_sid::Int64 = 0
     send_buffer::IOBuffer = IOBuffer()
     send_buffer_cond::Threads.Condition = Threads.Condition()
@@ -60,6 +60,10 @@ end
     request_deadlines::Dict{Int64, Nanosecond} = Dict{Int64, Nanosecond}()
     request_timer::Union{Timer, Nothing} = nothing
     request_timer_at::Nanosecond = typemax(Nanosecond)
+    request_channels::Dict{Int64, Channel{MsgRaw}} = Dict{Int64, Channel{MsgRaw}}()
+    @atomic request_subscription::Union{Sub, Nothing}
+    @atomic request_counter::Int64
+    inbox_prefix::String = DEFAULT_INBOX_PREFIX # Of reply subjects of requests and JetStream pulls.
 end
 
 info(c::Connection)::Union{Info, Nothing} = @lock c.lock c.info
@@ -79,11 +83,6 @@ function clustername(c::Connection)
     else
         @something info(c).cluster "unnamed"
     end
-end
-
-function new_inbox(connection::Connection, prefix::String = "inbox.")
-    random_suffix = @lock connection.lock randstring(connection.rng, 10)
-    "inbox.$random_suffix"
 end
 
 function new_sid(connection::Connection)

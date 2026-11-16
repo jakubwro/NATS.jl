@@ -17,6 +17,16 @@
 
 const SEND_RETRY_DELAYS = Base.ExponentialBackOff(n=53, first_delay=0.01, max_delay=0.1)
 
+struct SendDeadlineExceeded <: Exception end
+
+Base.showerror(io::IO, ::SendDeadlineExceeded) = print(io, "Send deadline exceeded.")
+
+function check_send_deadline(deadline::Nanosecond)
+    if deadline != typemax(Nanosecond) && Nanosecond(time_ns()) >= deadline
+        throw(SendDeadlineExceeded())
+    end
+end
+
 function can_send(nc::Connection, ::ProtocolMessage)
     # A drained connection is not usable, otherwise allow ping and pong and unsubs.
     status(nc) != DRAINED
@@ -62,9 +72,10 @@ function can_send(nc::Connection, ::Sub)
     end
 end
 
-function try_send(nc::Connection, msgs::Vector{Pub})::Bool
+function try_send(nc::Connection, msgs::Vector{Pub}; deadline::Nanosecond = typemax(Nanosecond))::Bool
     @lock nc.send_buffer_cond begin
         can_send(nc, msgs) || error("Cannot send on connection with status $(status(nc))")
+        check_send_deadline(deadline)
         if nc.send_buffer.size < nc.send_buffer_limit
             for msg in msgs
                 show(nc.send_buffer, MIME_PROTOCOL(), msg)
@@ -77,9 +88,10 @@ function try_send(nc::Connection, msgs::Vector{Pub})::Bool
     end
 end
 
-function try_send(nc::Connection, msg::ProtocolMessage)
+function try_send(nc::Connection, msg::ProtocolMessage; deadline::Nanosecond = typemax(Nanosecond))
     @lock nc.send_buffer_cond begin
         can_send(nc, msg) || error("Cannot send on connection with status $(status(nc))")
+        check_send_deadline(deadline)
         if msg isa Pub && nc.send_buffer.size > nc.send_buffer_limit
             # Apply limits only for publications, to allow unsubs and subs to be done with higher priority.
             false
@@ -91,13 +103,20 @@ function try_send(nc::Connection, msg::ProtocolMessage)
     end
 end
 
-function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}})
-    if try_send(nc, message)
+function send(nc::Connection, message::Union{ProtocolMessage, Vector{Pub}}; deadline::Nanosecond = typemax(Nanosecond))
+    if try_send(nc, message; deadline)
         return
     end
     for d in nc.send_retry_delays
-        wait_for_send_buffer_space(nc, d)
-        if try_send(nc, message)
+        delay_with_deadline = if deadline == typemax(Nanosecond)
+            d
+        else
+            remaining = (deadline - Nanosecond(time_ns())) / Second(1)
+            remaining <= 0 && throw(SendDeadlineExceeded())
+            min(d, remaining)
+        end
+        wait_for_send_buffer_space(nc, delay_with_deadline)
+        if try_send(nc, message; deadline)
             return
         end
     end
@@ -130,6 +149,10 @@ function reopen_send_buffer(nc::Connection)
         new_send_buffer = IOBuffer()
         data = take!(nc.send_buffer)
         @lock nc.lock begin
+            request_subscription = @atomic nc.request_subscription
+            if !isnothing(request_subscription)
+                show(new_send_buffer, MIME_PROTOCOL(), request_subscription)
+            end
             for (sid, sub_data) in pairs(nc.sub_data)
                 show(new_send_buffer, MIME_PROTOCOL(), sub_data.sub)
                 unsub_max_msgs = get(nc.unsubs, sid, nothing)

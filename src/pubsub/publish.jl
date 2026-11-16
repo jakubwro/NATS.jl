@@ -27,6 +27,7 @@ There are predefined conversions defined for the `String` type. To publish heade
 
 Optional parameters:
 - `reply_to`: subject to which a result should be published
+- `deadline`: absolute enqueue deadline as a `Nanosecond` value on the `time_ns()` clock; defaults to no deadline. Expiry throws `NATS.SendDeadlineExceeded`. Messages already queued are not cancelled.
 
 Examples:
 ```
@@ -39,7 +40,8 @@ function publish(
     connection::Connection,
     subject::String,
     data = nothing;
-    reply_to::Union{String, Nothing} = nothing
+    reply_to::Union{String, Nothing} = nothing,
+    deadline::Nanosecond = typemax(Nanosecond)
 )
     headers_length, payload_bytes = if data isa String
         # Fast path for string just to beat benchmarks
@@ -53,7 +55,7 @@ function publish(
     end
     pub = Pub(subject, reply_to, headers_length, payload_bytes)
     validate(pub)
-    send(connection, pub)
+    send(connection, pub; deadline)
     inc_stats(:msgs_published, 1, connection.stats, state.stats)
     sub_stats = ScopedValues.get(scoped_subscription_stats)
     if !isnothing(sub_stats)
