@@ -167,6 +167,23 @@ end
         ack_wait = 5 * 10^9
     )
     consumer = JetStream.consumer_create(connection, consumer_config, stream_info)
+
+    @testset "Invalid pull batches have no side effects" begin
+        last_sid, subs, unsubs = lock(connection.lock) do
+            connection.last_sid, copy(connection.sub_data), copy(connection.unsubs)
+        end
+        published = @atomic connection.stats.msgs_published
+        for batch in (0, -1)
+            @test_throws ArgumentError JetStream.consumer_next(connection, consumer, batch; no_wait = true)
+            lock(connection.lock) do
+                @test connection.last_sid == last_sid
+                @test connection.sub_data == subs
+                @test connection.unsubs == unsubs
+            end
+            @test (@atomic connection.stats.msgs_published) == published
+        end
+    end
+
     for i in 1:3
         msg = JetStream.consumer_next(connection, consumer, no_wait = true)
         consumer_ack(connection, msg)

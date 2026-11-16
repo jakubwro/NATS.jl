@@ -154,12 +154,16 @@ NATS.status()
     subject = randstring(10)
     connection = NATS.connect(; drain_poll = 1.0)
     sub = subscribe(connection, subject) do msg end # Nobody replies.
-    # Draining the reply subscription on timeout would delay returning by `drain_poll`.
+    # A timeout drains nothing, so it is not delayed by `drain_poll`.
     elapsed = @elapsed @test_throws NATSError request(connection, subject; timeout = 0.3)
     @test elapsed < 0.3 + 0.6
-    @test length(connection.sub_data) == 1 # Only the `sub`, reply subscription is cleaned up.
-    @test isempty(connection.unsubs)
+    @test length(connection.sub_data) == 1 # Only the `sub`, the request subscription is not in `sub_data`.
+    @test length(connection.request_channels) == 0
+    @test length(connection.request_deadlines) == 0
+    drain(connection, sub)
+    @test length(connection.sub_data) == 0
     drain(connection)
+    @test length(connection.sub_data) == 0
 end
 
 NATS.status()
@@ -186,6 +190,7 @@ NATS.status()
     # The timer is armed for the request that has the longest timeout, shorter ones have to arm it for earlier deadlines.
     long = Threads.@spawn request(connection, 1, subject; timeout = 30, stop_on_status = Int[])
     @test timedwait(() -> length(connection.request_deadlines) == 1, 10.0) == :ok
+    @test isempty(connection.unsubs)
     timeouts = [0.6, 0.2, 0.4]
     durations = fetch.([Threads.@spawn(@elapsed request(connection, 1, subject; timeout, stop_on_status = Int[])) for timeout in timeouts])
     @test all(i -> timeouts[i] - 0.001 <= durations[i] < timeouts[i] + 0.6, eachindex(timeouts))
@@ -208,15 +213,15 @@ end
 
 NATS.status()
 
-@testset "Request ending early on an error status frees its subscription at once" begin
+@testset "Request ending early on an error status frees its channel and deadline at once" begin
     connection = NATS.connect(; drain_poll = 1.0)
     # Nobody listens on the subject, so the server replies with the 503 status instead of the 3 expected replies.
     elapsed = @elapsed replies = request(connection, 3, randstring(10))
     @test length(replies) == 1
     @test NATS.statuscode(only(replies)) == 503
-    @test elapsed < 0.5 # Draining the subscription would take `drain_poll`.
-    @test isempty(connection.sub_data)
-    @test isempty(connection.unsubs)
+    @test elapsed < 0.5 # Stops at the status instead of waiting for the other replies until the timeout.
+    @test isempty(connection.request_channels)
+    @test isempty(connection.request_deadlines)
     drain(connection)
 end
 
@@ -272,6 +277,100 @@ NATS.status()
     @test elapsed >= 0.3
 
     drain(connection)
+end
+
+NATS.status()
+
+@testset "Requests with a custom inbox prefix" begin
+    connection = NATS.connect(inbox_prefix = "_MY_INBOX")
+    subject = randstring(10)
+    reply(connection, subject) do msg
+        msg.reply_to
+    end
+    @test startswith(payload(request(connection, subject)), "_MY_INBOX.")
+    drain(connection)
+    @test_throws "Invalid `inbox_prefix`" NATS.connect(inbox_prefix = "_MY_INBOX.")
+    @test_throws "Invalid `inbox_prefix`" NATS.connect(inbox_prefix = "my.*")
+end
+
+NATS.status()
+
+@testset "Request replies contribute to requester statistics" begin
+    service = NATS.connect()
+    connection = NATS.connect()
+    try
+        sub = reply(service, randstring(10)) do _
+            "OK"
+        end
+        NATS.ping(service; measure = false) # The responder is subscribed before the other connection publishes.
+        @test payload(request(connection, sub.subject)) == "OK"
+        @test (@atomic connection.stats.msgs_received) == 1
+        @test (@atomic connection.stats.msgs_handled) == 1
+        @test (@atomic connection.stats.msgs_pending) == 0
+        @test (@atomic connection.stats.msgs_dropped) == 0
+    finally
+        drain(connection)
+        drain(service)
+    end
+end
+
+@testset "Request replies require their exact subject" begin
+    service = NATS.connect()
+    connection = NATS.connect()
+    try
+        # The unchecked integer parser maps A, the overflowing decimal, and 017 to request 17.
+        @atomic connection.request_counter = 16
+        sub = subscribe(service, randstring(10)) do msg
+            prefix = msg.reply_to[begin:end-2]
+            for suffix in ("18", "18446744073709551633", "A", "017")
+                publish(service, "$prefix$suffix", "Wrong subject: $suffix")
+            end
+            publish(service, msg.reply_to, "OK")
+        end
+        NATS.ping(service; measure = false)
+        @test payload(request(connection, sub.subject)) == "OK"
+        @test (@atomic connection.stats.msgs_received) == 1
+        @test (@atomic connection.stats.msgs_handled) == 1
+        @test (@atomic connection.stats.msgs_pending) == 0
+        @test timedwait(() -> (@atomic connection.stats.msgs_dropped) == 4, 5.0) == :ok
+    finally
+        drain(connection)
+        drain(service)
+    end
+end
+
+@testset "Stopping a request accounts for buffered surplus replies" begin
+    connection = NATS.connect(no_responders = false)
+    try
+        # Pin the requester to this task's thread, so it cannot consume replies during process below.
+        requester = @async request(connection, 3, randstring(10); timeout = 5)
+        ready = timedwait(5.0) do
+            @lock connection.request_lock length(connection.request_channels) == 1
+        end
+        @test ready == :ok
+        if ready == :ok
+            request_subscription = @atomic connection.request_subscription
+            subject = chop(request_subscription.subject) * "1"
+            sid = request_subscription.sid
+            headers = "NATS/1.0 500\r\n\r\n"
+            wire = "HMSG $subject $sid $(ncodeunits(headers)) $(ncodeunits(headers))\r\n$headers\r\n" *
+                "MSG $subject $sid 5\r\nExtra\r\n" *
+                "MSG $subject $sid 5\r\nExtra\r\n"
+            parser = NATS.ParserData()
+            NATS.parse_buffer(IOBuffer(), Vector{UInt8}(wire), parser)
+            NATS.process(connection, parser.results)
+            @test (@atomic connection.stats.msgs_pending) == 3
+            replies = fetch(requester)
+            @test NATS.statuscode.(replies) == [500]
+            @test (@atomic connection.stats.msgs_received) == 1
+            @test (@atomic connection.stats.msgs_handled) == 1
+            @test (@atomic connection.stats.msgs_pending) == 0
+            @test (@atomic connection.stats.msgs_dropped) == 2
+            @test NATS.is_every_message_handled(connection.stats)
+        end
+    finally
+        drain(connection)
+    end
 end
 
 NATS.status()

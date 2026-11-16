@@ -46,6 +46,7 @@ The current `NATS.jl` approach to handling signals is based on code and discussi
 | `NATS_DRAIN_TIMEOUT_SECONDS`                  | `connect`    | `5.0`              | Maximum time (in seconds) `drain` will block before returning an error
 | `NATS_ENQUEUE_WHEN_DISCONNECTED`              | `connect`    | `true`             | Allows buffering outgoing messages during disconnection
 | `NATS_IGNORE_ADVERTISED_SERVERS`              | `connect`    | `false`            | Ignores other cluster servers returned by the server
+| `NATS_INBOX_PREFIX`                           | `connect`    | `_INBOX`           | Prefix of the subjects replies to requests come on, change it when server permissions allow replies only under another prefix
 | `NATS_JWT`                                    | `connect`    | `nothing`          | The JWT that identifies a user's permissions and account
 | `NATS_MAX_PINGS_OUT`                          | `connect`    | `3`                | How many pings in a row might fail before the connection will be restarted
 | `NATS_NKEY`                                   | `connect`    | `nothing`          | The public NKey to authenticate the client

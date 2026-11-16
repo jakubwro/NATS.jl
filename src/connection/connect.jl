@@ -56,6 +56,7 @@ Base.@kwdef mutable struct ConnectOptions
     send_retry_delays::Any = SEND_RETRY_DELAYS
     drain_timeout::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_TIMEOUT_SECONDS", string(DEFAULT_DRAIN_TIMEOUT_SECONDS)))
     drain_poll::Float64 = parse(Float64, get(ENV, "NATS_DRAIN_POLL_INTERVAL_SECONDS", string(DEFAULT_DRAIN_POLL_INTERVAL_SECONDS)))
+    inbox_prefix::String = get(ENV, "NATS_INBOX_PREFIX", DEFAULT_INBOX_PREFIX)
     monitoring_throttle_seconds::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_ERROR_THROTTLING_SECONDS", string(DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS)))
     monitoring_handlers_limit::Int64 = parse(Int64, get(ENV, "NATS_SUBSCRIPTION_HANDLERS_LIMIT", string(DEFAULT_SUBSCRIPTION_HANDLERS_LIMIT)))
     monitoring_channel_level::Float64 = parse(Float64, get(ENV, "NATS_SUBSCRIPTION_CHANNEL_LEVEL", string(DEFAULT_SUBSCRIPTION_CHANNEL_LEVEL)))
@@ -297,6 +298,7 @@ Options are:
 - `send_buffer_limit`: soft limit for the buffer of messages pending. Default is `$DEFAULT_SEND_BUFFER_LIMIT_BYTES` bytes, if too small operations that send messages to the server (e.g. `publish`) may throw an exception
 - `drain_timeout`: Timeout for the drain process. After the timeout in case of not everything is processed drain will stop and an error will be reported.
 - `drain_poll`: Interval for `drain` to check if all messages in buffers are processed.
+- `inbox_prefix`: prefix of the subjects replies to requests come on, without a trailing dot. Default is `"$DEFAULT_INBOX_PREFIX"`, change it when server permissions allow replies only under another prefix
 - `monitoring_throttle_seconds`: How often problems of subscriptions (handler errors, full channel, too many handlers) are reported in logs. Default is `$DEFAULT_SUBSCRIPTION_ERROR_THROTTLING_SECONDS` seconds
 - `monitoring_handlers_limit`: How many handlers of a subscription can run at once before a warning is reported in logs. Default is `$DEFAULT_SUBSCRIPTION_HANDLERS_LIMIT`
 - `monitoring_channel_level`: Fraction of the subscription channel in use above which a warning is reported in logs. Default is `$DEFAULT_SUBSCRIPTION_CHANNEL_LEVEL`
@@ -315,6 +317,10 @@ function connect_with_options(url::String, options::ConnectOptions)
     elseif options.tls_verify_hostname == false
         @warn "TLS hostname verification is disabled (`tls_verify_hostname = false`), any trusted certificate is accepted."
     end
+    # Reply subjects are the prefix, a dot and random tokens, so wildcards would subscribe to more than replies.
+    if isempty(options.inbox_prefix) || endswith(options.inbox_prefix, '.') || occursin(r"[\s*>]", options.inbox_prefix)
+        error("Invalid `inbox_prefix` \"$(options.inbox_prefix)\", it must be a subject without wildcards or a trailing dot.")
+    end
     nc = Connection(;
         url,
         info = nothing,
@@ -322,11 +328,14 @@ function connect_with_options(url::String, options::ConnectOptions)
         pong_received_at = 0.0,
         reconnect_count = 0,
         connect_init_count = 0,
+        request_counter = 0,
+        request_subscription = nothing,
         send_buffer_flushed = true,
         options.send_buffer_limit,
         options.send_enqueue_when_disconnected,
         options.drain_timeout,
-        options.drain_poll)
+        options.drain_poll,
+        options.inbox_prefix)
     # Delays can be of any type, passed as a keyword argument they would compile the constructor for that type.
     nc.send_retry_delays = options.send_retry_delays
     read_stream = nothing

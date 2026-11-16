@@ -24,7 +24,7 @@ mutable struct Stats
     @atomic msgs_handled::Int64
     "Count of msgs that caused a handler function error."
     @atomic msgs_errored::Int64
-    "Msgs that was not put to a subscription channel because it was full or `sid` was not known."
+    "Msgs dropped because their subscription or request was unavailable, full, or stopped before consuming them."
     @atomic msgs_dropped::Int64
     "Msgs published count."
     @atomic msgs_published::Int64

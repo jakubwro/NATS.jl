@@ -9,7 +9,8 @@ using NATS
             send_enqueue_when_disconnected = true,
             pong_count = 0, pong_received_at = 0.0,
             connect_init_count = 0, reconnect_count = 0,
-            send_buffer_flushed = true, drain_timeout = 0.1, drain_poll = 0.0)
+            send_buffer_flushed = true, drain_timeout = 0.1, drain_poll = 0.0,
+            request_counter = 0, request_subscription = nothing)
     end
 
     function finishes(f)
@@ -84,6 +85,26 @@ using NATS
             # Release a regressed sender that missed the replacement notification.
             @lock nc.send_buffer_cond notify(nc.send_buffer_cond)
             finishes(() -> istaskdone(sender))
+        end
+    end
+
+    @testset "The first request inbox survives a concurrent buffer replacement" begin
+        # The child inserts a scheduling point without changing send dispatch in this test process.
+        regression = joinpath(@__DIR__, "request_inbox_reconnect.jl")
+        @test success(`$(Base.julia_cmd()) --startup-file=no --project=$(dirname(@__DIR__)) $regression`)
+    end
+
+    @testset "A rejected first request does not register an inbox" begin
+        for connection_status in (NATS.DRAINING, NATS.DRAINED)
+            nc = offline_connection(connection_status)
+            @test_throws ErrorException NATS.new_inbox(nc)
+            @test isnothing(@atomic nc.request_subscription)
+            @test isempty(take!(nc.send_buffer))
+            NATS.status(nc, NATS.CONNECTED)
+            inbox, id = NATS.new_inbox(nc)
+            sub = @atomic nc.request_subscription
+            @test inbox == chop(sub.subject) * string(id)
+            @test String(take!(nc.send_buffer)) == sprint(show, NATS.MIME_PROTOCOL(), sub)
         end
     end
 
