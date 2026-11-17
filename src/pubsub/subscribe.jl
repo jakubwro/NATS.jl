@@ -42,7 +42,7 @@ function subscribe(
         _start_tasks(f_typed, sub_stats, connection.stats, spawn, subject, subscription_channel)
     end
     @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock())
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, true, ReentrantLock(), false)
     end
     try
         send(connection, sub)
@@ -78,7 +78,7 @@ function subscribe(
     sub_stats = Stats()
     subscription_channel = Channel{Vector{MsgRaw}}(channel_size)
     @lock connection.lock begin
-        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock())
+        connection.sub_data[sid] = SubscriptionData(sub, subscription_channel, sub_stats, false, ReentrantLock(), false)
     end
     try
         send(connection, sub)

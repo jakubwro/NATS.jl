@@ -60,7 +60,7 @@ Requests for multiple replies. Vector of messages is returned after receiving `n
 Can return less messages than specified (also an empty array if a timeout occurs), errors are not filtered.
 
 Optional keyword arguments are:
-- `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds, `NATS.SendDeadlineExceeded` is thrown if the request could not be queued for sending in that time
+- `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds
 - `stop_on_status`: a collection of status codes, a reply with one of them is the last collected and the remaining replies are not waited for. By default it is every error status (`$DEFAULT_REQUEST_STOP_ON_STATUS`), what includes `503` sent by the server when there are no responders. Replies with other statuses are collected as any other reply, pass an empty collection to always wait for `nreplies` replies or the `timeout`.
 
 # Examples

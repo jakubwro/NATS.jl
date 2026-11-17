@@ -19,12 +19,13 @@
 
 include("stats.jl")
 
-struct SubscriptionData
+mutable struct SubscriptionData
     sub::Sub
     channel::Channel{Vector{MsgRaw}}
     stats::Stats
     is_async::Bool
     lock::ReentrantLock
+    draining::Bool # Protected by the connection lock, also read during reconnect.
 end
 
 @kwdef mutable struct Connection
