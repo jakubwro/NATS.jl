@@ -52,11 +52,13 @@ take_wire(nc) = @lock nc.send_buffer_cond String(take!(nc.send_buffer))
                 expected = sprint(show, NATS.MIME_PROTOCOL(), active)
                 @test restored == expected * (unsub_sent ? "" : unsub)
                 @test haskey(nc.sub_data, sub.sid)
+                @test sub.sid in nc.draining_sids
 
                 notify(release)
                 @test timedwait(() -> istaskdone(draining), 5.0) == :ok
                 fetch(draining)
                 @test !haskey(nc.sub_data, sub.sid)
+                @test isempty(nc.draining_sids)
                 @test (@atomic nc.stats.msgs_handled) == 1
                 @test (@atomic nc.stats.msgs_dropped) == 0
                 @test isempty(take_wire(nc))
@@ -67,6 +69,69 @@ take_wire(nc) = @lock nc.send_buffer_cond String(take!(nc.send_buffer))
             end
         end
     end
+end
+
+@testset "Draining an absent subscription is a no-op" begin
+    nc = offline_connection()
+    sub = NATS.subscribe(nc, "drain.again")
+    take_wire(nc)
+    @test NATS.drain(nc, sub) === nothing
+    @test take_wire(nc) == "UNSUB $(sub.sid) 0\r\n"
+    @test !haskey(nc.sub_data, sub.sid)
+    for status in (NATS.CONNECTED, NATS.DRAINED)
+        NATS.status(nc, status)
+        @test NATS.drain(nc, sub) === nothing
+        @test isempty(take_wire(nc))
+    end
+end
+
+@testset "Buffered synchronous subscriptions stay excluded until consumed" begin
+    nc = offline_connection()
+    sub = NATS.subscribe(nc, "drain.buffered")
+    NATS.unsubscribe(nc, sub; max_msgs = 2)
+    take_wire(nc)
+    parser = NATS.ParserData()
+    NATS.parse_buffer(IOBuffer(), Vector{UInt8}("MSG drain.buffered $(sub.sid) 1\r\nx\r\n"), parser)
+    NATS.process(nc, parser.results)
+
+    # A timeout closes the channel but keeps its buffered message available to next.
+    @test_logs (:error, r"Timeout for drain exceeded") NATS.drain(nc, sub; timeout = 0.0)
+    @test haskey(nc.sub_data, sub.sid)
+    @test haskey(nc.unsubs, sub.sid)
+    @test sub.sid in nc.draining_sids
+    take_wire(nc) # UNSUB has reached the old server.
+    NATS.reopen_send_buffer(nc)
+    @test isempty(take_wire(nc))
+
+    @test NATS.payload(NATS.next(nc, sub)) == "x"
+    @test !haskey(nc.sub_data, sub.sid)
+    @test isempty(nc.unsubs)
+    @test isempty(nc.draining_sids)
+end
+
+@testset "Connection shutdown cannot race the subscription lookup" begin
+    nc = offline_connection()
+    sub = NATS.subscribe(nc, "drain.shutdown")
+    take_wire(nc)
+    entered = Base.Event()
+    draining = nothing
+    lock(nc.send_buffer_cond)
+    try
+        draining = @async begin
+            notify(entered)
+            NATS.drain(nc, sub)
+        end
+        # This same-thread task must block on the buffer lock before looking up the subscription.
+        wait(entered)
+        @test !istaskdone(draining)
+        NATS.cleanup_sub_resources(nc, sub.sid)
+        NATS.status(nc, NATS.DRAINED)
+    finally
+        unlock(nc.send_buffer_cond)
+    end
+    @test timedwait(() -> istaskdone(draining), 5.0) == :ok
+    @test fetch(draining) === nothing
+    @test isempty(take_wire(nc))
 end
 
 end # module

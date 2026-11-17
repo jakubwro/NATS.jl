@@ -7,7 +7,8 @@ const buffer_consumer = Ref{Task}()
 
 function NATS.send(nc::NATS.Connection, sub::NATS.Sub; deadline::Nanosecond = typemax(Nanosecond))
     invoke(NATS.send, Tuple{NATS.Connection, Union{NATS.ProtocolMessage, Vector{NATS.Pub}}}, nc, sub; deadline)
-    # Try to flush and reconnect immediately after send returns, before new_inbox can register its SUB.
+    # Try to flush and reconnect after send returns, before new_inbox registers its SUB.
+    # The outer send buffer lock must keep both actions atomic.
     yield(buffer_consumer[])
 end
 

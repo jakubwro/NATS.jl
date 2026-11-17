@@ -17,6 +17,7 @@ include("util.jl")
 include("protocol.jl")
 include("parser_fragmentation.jl")
 include("reconnect_events.jl")
+include("send_buffer.jl")
 include("drain_reconnect.jl")
 include("jetdict_concurrency.jl")
 

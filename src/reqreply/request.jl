@@ -135,9 +135,9 @@ end
 
 function new_inbox(nc::Connection)
     id = @atomic nc.request_counter += 1
-    sub = @atomic nc.request_subscription
-    if isnothing(sub)
-        sub = @lock nc.request_lock begin
+    request_subscription = @atomic nc.request_subscription
+    if isnothing(request_subscription)
+        request_subscription = @lock nc.request_lock begin
             if isnothing(@atomic nc.request_subscription)
                 new_random_prefix = "$(nc.inbox_prefix).$(randstring(RandomDevice(), 10))"
                 all_replies_subject = "$(new_random_prefix).>"
@@ -151,7 +151,7 @@ function new_inbox(nc::Connection)
             @atomic nc.request_subscription
         end
     end
-    return sub.subject[begin:end-1] * string(id), id
+    return request_subscription.subject[begin:end-1] * string(id), id
 end
 
 # Called by the receiver with the replies of a batch, it takes the lock once, so it rarely waits for requesters. It must

@@ -32,11 +32,13 @@ Optional keyword arguments:
 """
 function drain(connection::Connection, sub::Sub; timeout::Union{Real, Period} = connection.drain_timeout)
     sub_stats = @lock connection.send_buffer_cond begin
-        sub_data = @lock connection.lock get(connection.sub_data, sub.sid, nothing)
-        isnothing(sub_data) && return # Already drained.
-        send(connection, Unsub(sub.sid, 0))
-        @lock connection.lock sub_data.draining = true
-        sub_data.stats
+        @lock connection.lock begin
+            sub_data = get(connection.sub_data, sub.sid, nothing)
+            isnothing(sub_data) && return # Already drained, even if the connection has closed.
+            send(connection, Unsub(sub.sid, 0))
+            push!(connection.draining_sids, sub.sid)
+            sub_data.stats
+        end
     end
     sleep(connection.drain_poll)
     isok = :ok == timedwait(timeout; pollint = connection.drain_poll) do
