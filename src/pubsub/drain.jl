@@ -31,11 +31,15 @@ Optional keyword arguments:
 - `timeout`: an error will be thrown if the drain is not finished until `timeout` expires. Default value is configurable per connection on `connect` with `drain_timeout`. It can be also set globally with the `NATS_DRAIN_TIMEOUT_SECONDS` environment variable. If not set explicitly the default drain timeout is `$DEFAULT_DRAIN_TIMEOUT_SECONDS` seconds.
 """
 function drain(connection::Connection, sub::Sub; timeout::Union{Real, Period} = connection.drain_timeout)
-    sub_stats = stats(connection, sub)
-    if isnothing(sub_stats)
-        return # Already drained.
+    sub_stats = @lock connection.send_buffer_cond begin
+        @lock connection.lock begin
+            sub_data = get(connection.sub_data, sub.sid, nothing)
+            isnothing(sub_data) && return # Already drained, even if the connection has closed.
+            send(connection, Unsub(sub.sid, 0))
+            push!(connection.draining_sids, sub.sid)
+            sub_data.stats
+        end
     end
-    send(connection, Unsub(sub.sid, 0))
     sleep(connection.drain_poll)
     isok = :ok == timedwait(timeout; pollint = connection.drain_poll) do
         is_every_message_handled(sub_stats)

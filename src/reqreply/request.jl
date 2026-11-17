@@ -60,7 +60,7 @@ Requests for multiple replies. Vector of messages is returned after receiving `n
 Can return less messages than specified (also an empty array if a timeout occurs), errors are not filtered.
 
 Optional keyword arguments are:
-- `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds, `NATS.SendDeadlineExceeded` is thrown if the request could not be queued for sending in that time
+- `timeout`: an empty vector will be returned if no replies are received until `timeout` number of seconds
 - `stop_on_status`: a collection of status codes, a reply with one of them is the last collected and the remaining replies are not waited for. By default it is every error status (`$DEFAULT_REQUEST_STOP_ON_STATUS`), what includes `503` sent by the server when there are no responders. Replies with other statuses are collected as any other reply, pass an empty collection to always wait for `nreplies` replies or the `timeout`.
 
 # Examples
@@ -135,9 +135,9 @@ end
 
 function new_inbox(nc::Connection)
     id = @atomic nc.request_counter += 1
-    sub = @atomic nc.request_subscription
-    if isnothing(sub)
-        sub = @lock nc.request_lock begin
+    request_subscription = @atomic nc.request_subscription
+    if isnothing(request_subscription)
+        request_subscription = @lock nc.request_lock begin
             if isnothing(@atomic nc.request_subscription)
                 new_random_prefix = "$(nc.inbox_prefix).$(randstring(RandomDevice(), 10))"
                 all_replies_subject = "$(new_random_prefix).>"
@@ -151,7 +151,7 @@ function new_inbox(nc::Connection)
             @atomic nc.request_subscription
         end
     end
-    return sub.subject[begin:end-1] * string(id), id
+    return request_subscription.subject[begin:end-1] * string(id), id
 end
 
 # Called by the receiver with the replies of a batch, it takes the lock once, so it rarely waits for requesters. It must

@@ -2,12 +2,19 @@
 
 include("encode.jl")
 
+struct JetDictRevisions
+    values::Dict{String, UInt64}
+    lock::ReentrantLock
+end
+
+JetDictRevisions() = JetDictRevisions(Dict{String, UInt64}(), ReentrantLock())
+
 struct JetDict{T} <: AbstractDict{String, T}
     connection::NATS.Connection
     bucket::String
     stream_info::StreamInfo
     T::DataType
-    revisions::ScopedValue{Dict{String, UInt64}}
+    revisions::ScopedValue{JetDictRevisions}
     encoding::KeyEncoding
 end
 
@@ -30,7 +37,7 @@ function JetDict{T}(connection::NATS.Connection, bucket::String, encoding::Symbo
     NATS.find_msg_conversion_or_throw(T)
     NATS.find_data_conversion_or_throw(T)
     stream = get_jetdict_stream_info(connection, bucket, encoding)
-    JetDict{T}(connection, bucket, stream, T, ScopedValue{Dict{String, UInt64}}(), KeyEncoding{encoding}())
+    JetDict{T}(connection, bucket, stream, T, ScopedValue{JetDictRevisions}(), KeyEncoding{encoding}())
 end
 
 function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
@@ -38,10 +45,11 @@ function setindex!(jetdict::JetDict{T}, value::T, key::String) where T
     validate_key(escaped)
     revisions = ScopedValues.get(jetdict.revisions)
     if !isnothing(revisions)
-        revision = get(revisions.value, key, 0)
+        revisions = revisions.value
+        revision = @lock revisions.lock get(revisions.values, key, 0)
         ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value, revision)
         @assert ack isa PubAck
-        revisions.value[key] = ack.seq
+        @lock revisions.lock revisions.values[key] = ack.seq
     else
         ack = keyvalue_put(jetdict.connection, jetdict.bucket, escaped, value)
         @assert ack isa PubAck
@@ -67,7 +75,8 @@ function getindex(jetdict::JetDict, key::String)
     revisions = ScopedValues.get(jetdict.revisions)
     if !isnothing(revisions)
         seq = NATS.header(msg, "Nats-Sequence")
-        revisions.value[key] = parse(UInt64, seq)
+        revisions = revisions.value
+        @lock revisions.lock revisions.values[key] = parse(UInt64, seq)
     end
     convert(jetdict.T, msg) # invoke latest?
 end
@@ -141,7 +150,8 @@ function empty!(jetdict::JetDict)
 end
 
 function with_optimistic_concurrency(f, kv::JetDict)
-    with(f, kv.revisions => Dict{String, UInt64}())
+    # Spawned tasks inherit this scope, including its mutable revision table.
+    with(f, kv.revisions => JetDictRevisions())
 end
 
 function isdeleted(msg)

@@ -36,9 +36,8 @@ function unsubscribe(
     sid::Int64;
     max_msgs::Union{Int, Nothing} = nothing
 )
-    usnub = Unsub(sid, max_msgs)
     @lock connection.send_buffer_cond begin
-        send(connection, usnub)
+        send(connection, Unsub(sid, max_msgs))
         if isnothing(max_msgs) || max_msgs == 0
             cleanup_sub_resources(connection, sid)
         else

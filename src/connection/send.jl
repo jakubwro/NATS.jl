@@ -154,6 +154,7 @@ function reopen_send_buffer(nc::Connection)
                 show(new_send_buffer, MIME_PROTOCOL(), request_subscription)
             end
             for (sid, sub_data) in pairs(nc.sub_data)
+                sid in nc.draining_sids && continue
                 show(new_send_buffer, MIME_PROTOCOL(), sub_data.sub)
                 unsub_max_msgs = get(nc.unsubs, sid, nothing)
                 isnothing(unsub_max_msgs) || show(new_send_buffer, MIME_PROTOCOL(), Unsub(sid, unsub_max_msgs))

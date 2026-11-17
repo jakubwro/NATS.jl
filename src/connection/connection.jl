@@ -34,6 +34,7 @@ end
     info::Union{Info, Nothing}
     sub_data::Dict{Int64, SubscriptionData} = Dict{Int64, SubscriptionData}()
     unsubs::Dict{Int64, Int64} = Dict{Int64, Int64}()
+    draining_sids::Set{Int64} = Set{Int64}() # Protected by lock, like sub_data and unsubs.
     lock::ReentrantLock = ReentrantLock()
     rng::AbstractRNG = Xoshiro()
     last_sid::Int64 = 0

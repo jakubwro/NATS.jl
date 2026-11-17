@@ -49,9 +49,7 @@ function subscribe(
     catch
        if status(connection) in (DRAINED, DRAINING)
             close(subscription_channel)
-            @lock connection.lock begin
-                delete!(connection.sub_data, sid)
-            end
+            delete_sub_resources(connection, sid)
         end
         rethrow()
     end
@@ -85,9 +83,7 @@ function subscribe(
     catch
         if status(connection) in (DRAINED, DRAINING)
             close(subscription_channel)
-            @lock connection.lock begin
-                delete!(connection.sub_data, sid)
-            end
+            delete_sub_resources(connection, sid)
         end
         rethrow()
     end
@@ -113,10 +109,7 @@ function next(connection::Connection, sub::Sub; no_wait = false, no_throw = fals
     ch = sub_data.channel
     if no_wait && Base.n_avail(ch) == 0 # Double check emptiness for thread safety.
         if !isopen(ch) && Base.n_avail(ch) == 0 
-            @lock connection.lock begin
-                delete!(connection.sub_data, sub.sid)
-                delete!(connection.unsubs, sub.sid)
-            end
+            delete_sub_resources(connection, sub.sid)
         end
         return nothing
     end
@@ -140,10 +133,7 @@ function next(connection::Connection, sub::Sub; no_wait = false, no_throw = fals
             rethrow()
         finally
             if !isopen(ch) && Base.n_avail(ch) == 0
-                @lock connection.lock begin
-                    delete!(connection.sub_data, sub.sid)
-                    delete!(connection.unsubs, sub.sid)
-                end
+                delete_sub_resources(connection, sub.sid)
             end
         end
     dec_stats(:msgs_pending, 1, sub_data.stats, connection.stats, state.stats)

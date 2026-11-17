@@ -62,7 +62,7 @@ function _do_drain(nc::Connection, is_connected::Bool; timeout::Union{Real, Peri
         sleep(nc.drain_poll)
     end
     close(timer)
-    @lock nc.lock empty!(nc.sub_data)
+    delete_sub_resources(nc)
 end
 
 """

@@ -41,22 +41,41 @@ function connection(id::Integer)
     end
 end
 
-# """
+# Remove bookkeeping together. Callers decide when to close the channel and whether
+# buffered synchronous messages must remain available to `next`.
+function delete_sub_resources(nc::Connection, sid::Int64)
+    @lock nc.lock begin
+        delete!(nc.sub_data, sid)
+        delete!(nc.unsubs, sid)
+        delete!(nc.draining_sids, sid)
+    end
+    nothing
+end
+
+# A completed connection drain discards all remaining subscription bookkeeping.
+function delete_sub_resources(nc::Connection)
+    @lock nc.lock begin
+        empty!(nc.sub_data)
+        empty!(nc.unsubs)
+        empty!(nc.draining_sids)
+    end
+    nothing
+end
+
 # Cleanup subscription data when no more messages are expected.
-# """
 function cleanup_sub_resources(nc::Connection, sid::Int64)
     @lock nc.lock begin
         sub_data = get(nc.sub_data, sid, nothing)
         if isnothing(sub_data)
             # Already cleaned up by another task.
+            delete_sub_resources(nc, sid)
             return
         end
         close(sub_data.channel)
         if sub_data.is_async == true || Base.n_avail(sub_data.channel) == 0
             # `next` rely on lookup of sub data, in this case let sub data stay and do cleanup
             # when `next` gets the last message of a closed channel.
-            delete!(nc.sub_data, sid)
-            delete!(nc.unsubs, sid)
+            delete_sub_resources(nc, sid)
         end
     end
 end
