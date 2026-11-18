@@ -175,6 +175,45 @@ end
     NATS.status()
 end
 
+@testset "Parallel requests per second." begin
+    nc = NATS.connect()
+    sub = reply(nc, "foo") do msg
+        "bar"
+    end
+    msgs = ["Request $i" for i in 1:10_000]
+    ntasks = 512
+
+    # Returns the error instead of throwing it, so one failed request does not stop the others.
+    function request_foo(msg)
+        try
+            request(nc, "foo", msg)
+        catch err
+            err
+        end
+    end
+
+    # `asyncmap` runs its tasks on the thread of the caller, here the main thread.
+    with_asyncmap(msgs) = asyncmap(request_foo, msgs; ntasks)
+    # With an interactive thread (`-t N,1`, the default since Julia 1.12) the spawned task runs on another thread.
+    with_asyncmap_in_spawn(msgs) = fetch(Threads.@spawn asyncmap(request_foo, msgs; ntasks))
+    function with_spawn_per_chunk(msgs)
+        chunks = Iterators.partition(msgs, cld(length(msgs), ntasks))
+        tasks = [Threads.@spawn map(request_foo, chunk) for chunk in chunks]
+        reduce(vcat, fetch.(tasks))
+    end
+
+    for (name, f) in ["asyncmap" => with_asyncmap,
+                      "asyncmap in Threads.@spawn" => with_asyncmap_in_spawn,
+                      "Threads.@spawn per chunk" => with_spawn_per_chunk]
+        f(msgs[1:100]) # Warm up, so compilation is not measured.
+        replies, elapsed = @timed f(msgs)
+        failed = count(result -> result isa Exception, replies)
+        @info "$name: $(round(Int, length(msgs) / elapsed)) requests / second, $failed failed."
+    end
+    drain(nc, sub)
+    NATS.status()
+end
+
 @testset "Publisher benchmark." begin
     connection = NATS.connect()
 
